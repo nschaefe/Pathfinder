@@ -15,7 +15,7 @@ public class Agent implements ClassFileTransformer {
      */
     static final String[] EXCLUDES = new String[]{};
 
-    static final String[] INCLUDEES = new String[]{};
+    static final String[] INCLUDES = new String[]{"client/Client"};
 
     /**
      * add agent
@@ -32,13 +32,13 @@ public class Agent implements ClassFileTransformer {
 
         System.out.println(className);
 
-        for (int i = 0; i < EXCLUDES.length; i++) {
-            if (className.startsWith(EXCLUDES[i])) {
-                return bytes;
-            }
-        }
-        for (int i = 0; i < INCLUDEES.length; i++) {
-            if (className.startsWith(INCLUDEES[i])) {
+//        for (int i = 0; i < EXCLUDES.length; i++) {
+//            if (className.startsWith(EXCLUDES[i])) {
+//                return bytes;
+//            }
+//        }
+        for (int i = 0; i < INCLUDES.length; i++) {
+            if (className.startsWith(INCLUDES[i])) {
               return transformClass(className, clazz, bytes);
             }
         }
@@ -52,15 +52,15 @@ public class Agent implements ClassFileTransformer {
     private byte[] transformClass(final String name, final Class cl, byte[] b) {
         ClassPool cp = ClassPool.getDefault();
         try {
-            CtClass ctCl = cp.get(name);
+            CtClass ctCl = cp.get(name.replace('/', '.'));
             CtClass agentCl = cp.get(this.getClass().getName());
 
             CodeConverter conv = new CodeConverter();
-            for (CtField f : ctCl.getDeclaredFields()) {
-                //conv.replaceFieldRead(f, agentCl, "readField");
-                conv.replaceArrayAccess(agentCl, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
-            }
-
+//            for (CtField f : ctCl.getDeclaredFields()) {
+//                //conv.replaceFieldRead(f, agentCl, "readField");
+//
+//            }
+            conv.replaceArrayAccess(agentCl, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
             ctCl.instrument(conv);
             return ctCl.toBytecode();
         } catch (Exception e) {
@@ -69,15 +69,15 @@ public class Agent implements ClassFileTransformer {
         return b;
     }
 
-     public static int arrayReadInt(int[] arr, int index) {
-         System.out.println("array read by: "+Thread.currentThread().getId());
-        return arr[index];
+     public static int arrayReadInt(Object arr, int index) {
+        System.out.println("array read by: "+Thread.currentThread().getId());
+        return ((int[])arr)[index];
 
     }
 
-    public static void arrayWriteInt(int[] arr, int index, int value) {
+    public static void arrayWriteInt(Object arr, int index, int value) {
         System.out.println("array write by: "+Thread.currentThread().getId());
-        arr[index] = value;
+        ((int[])arr)[index] = value;
     }
 
 

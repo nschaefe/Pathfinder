@@ -15,13 +15,13 @@ public class Client {
     public static void main(String[] args) {
         try {
             Client c = new Client();
-
             Thread t = new Thread(() -> c.addMessage(1));
             t.start();
             t.join();
 
             Thread t2 = new Thread(() -> c.getMessage());
             t2.start();
+            t2.join();
 
         } catch (InterruptedException e) {
             e.printStackTrace();
