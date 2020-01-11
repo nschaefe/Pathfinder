@@ -2,7 +2,7 @@ package client;
 
 public class Client {
 
-    private int[] messages = new int[1];
+    private int[] messages = new int[2];
 
     public synchronized void addMessage(int i) {
         messages[0] = i;

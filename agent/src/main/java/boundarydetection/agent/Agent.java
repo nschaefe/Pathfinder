@@ -6,6 +6,7 @@ import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Type;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -34,7 +35,7 @@ public class Agent implements ClassFileTransformer {
     public byte[] transform(final ClassLoader loader, final String className, final Class clazz,
                             final java.security.ProtectionDomain domain, final byte[] bytes) {
 
-       // System.out.println(className);
+        // System.out.println(className);
 
 //        for (int i = 0; i < EXCLUDES.length; i++) {
 //            if (className.startsWith(EXCLUDES[i])) {
@@ -103,7 +104,37 @@ public class Agent implements ClassFileTransformer {
 
     public synchronized static void arrayRead(ArrayField f) {
         FieldAccessMeta meta = accesses.get(f);
-        if (meta!=null && meta.hasOtherWriter()) System.out.println("Reading what other thread has written");
+        if (meta == null) return;
+
+        // TODO log code location explicitly
+        List<Writer> l = meta.otherWriter();
+        StringBuilder s = new StringBuilder();
+        for (Writer w : l) {
+            s.append("Reader");
+            s.append("(" + Thread.currentThread().getId() + ")");
+            s.append(" trace:");
+            s.append(System.lineSeparator());
+            s.append(toString(Thread.currentThread().getStackTrace()));
+            s.append(System.lineSeparator());
+            s.append("----------------");
+            s.append(System.lineSeparator());
+            s.append("Writer");
+            s.append("(" + w.getId() + ")");
+            s.append(" trace:");
+            s.append(System.lineSeparator());
+            s.append(toString(w.getStackTrace()));
+        }
+        System.out.println(s.toString());
+
+    }
+
+    private static String toString(StackTraceElement[] trace) {
+        StringBuilder s = new StringBuilder();
+        for (StackTraceElement el : trace) {
+            s.append(el);
+            s.append(System.lineSeparator());
+        }
+        return s.toString();
     }
 
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
