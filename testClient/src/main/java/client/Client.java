@@ -6,20 +6,18 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 public class Client {
 
-    transient Object[] messages = new Object[2];
-    private ArrayList<Integer> q = new ArrayList<>();
+    private Object[] messages = new Object[2];
+    private ArrayDeque<Integer> q = new ArrayDeque<>();
 
     public synchronized void addMessage(int i) {
         Object[] m = messages;
         m[0] = i;
-        //q.add(i);
-
+        q.add(i);
     }
 
     public synchronized int getMessage() {
-        //return q.get(0);
-        return (Integer) messages[0];
-
+        return q.poll();
+        //return (Integer) messages[0];
     }
 
     public static void main(String[] args) {

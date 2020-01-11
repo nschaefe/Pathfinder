@@ -60,7 +60,7 @@
                             -javaagent:/home/user/Dokumente/BoundaryDetection/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
                         </argument>
                         <argument>
-                            -Xbootclasspath/a:/home/user/Dokumente/BoundaryDetection/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
+                            -Xbootclasspath/p:/home/user/Dokumente/BoundaryDetection/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
                         </argument>
                         <argument>-jar</argument>
                         <argument>
