@@ -56,9 +56,9 @@
                 <configuration>
                     <executable>java</executable>
                     <arguments>
-                        <argument>-javaagent:/home/user/Dokumente/boundaryDetection/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar</argument>
+                        <argument>-javaagent:/home/user/Dokumente/BoundaryDetection/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar</argument>
                     <argument>-jar</argument>
-                    <argument>/home/user/Dokumente/boundaryDetection/testClient/target/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar</argument>
+                    <argument>/home/user/Dokumente/BoundaryDetection/testClient/target/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar</argument>
                     </arguments>
                 </configuration>
                 <dependencies>

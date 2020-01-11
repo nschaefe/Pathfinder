@@ -4,9 +4,13 @@ import javassist.*;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
+ *
  */
 public class Agent implements ClassFileTransformer {
 
@@ -30,7 +34,7 @@ public class Agent implements ClassFileTransformer {
     public byte[] transform(final ClassLoader loader, final String className, final Class clazz,
                             final java.security.ProtectionDomain domain, final byte[] bytes) {
 
-        System.out.println(className);
+       // System.out.println(className);
 
 //        for (int i = 0; i < EXCLUDES.length; i++) {
 //            if (className.startsWith(EXCLUDES[i])) {
@@ -39,7 +43,7 @@ public class Agent implements ClassFileTransformer {
 //        }
         for (int i = 0; i < INCLUDES.length; i++) {
             if (className.startsWith(INCLUDES[i])) {
-              return transformClass(className, clazz, bytes);
+                return transformClass(className, clazz, bytes);
             }
         }
 
@@ -69,16 +73,40 @@ public class Agent implements ClassFileTransformer {
         return b;
     }
 
-     public static int arrayReadInt(Object arr, int index) {
-        System.out.println("array read by: "+Thread.currentThread().getId());
-        return ((int[])arr)[index];
+    public static int arrayReadInt(Object arr, int index) {
+        //System.out.println("array read by: " + Thread.currentThread().getId());
 
+        ArrayField f = new ArrayField(int[].class, arr, index);
+        arrayRead(f);
+
+        return ((int[]) arr)[index];
     }
 
     public static void arrayWriteInt(Object arr, int index, int value) {
-        System.out.println("array write by: "+Thread.currentThread().getId());
-        ((int[])arr)[index] = value;
+        //System.out.println("array write by: " + Thread.currentThread().getId());
+
+        ArrayField f = new ArrayField(int[].class, arr, index);
+        arrayWrite(f);
+
+        ((int[]) arr)[index] = value;
     }
+
+    public synchronized static void arrayWrite(ArrayField f) {
+        FieldAccessMeta meta = accesses.get(f);
+        if (meta == null) {
+            meta = new FieldAccessMeta();
+            accesses.put(f, meta);
+        }
+
+        meta.registerWriter();
+    }
+
+    public synchronized static void arrayRead(ArrayField f) {
+        FieldAccessMeta meta = accesses.get(f);
+        if (meta!=null && meta.hasOtherWriter()) System.out.println("Reading what other thread has written");
+    }
+
+    private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
 
 
 //  arrayReadByteOrBoolean
