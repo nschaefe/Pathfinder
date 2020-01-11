@@ -2,6 +2,7 @@ package boundarydetection.agent;
 
 import javassist.*;
 
+import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Type;
@@ -18,9 +19,24 @@ public class Agent implements ClassFileTransformer {
     /**
      * classes to always not to instrument
      */
-    static final String[] EXCLUDES = new String[]{};
+    static final String[] EXCLUDES = new String[]{
+            "java/lang/invoke",
+            "java/lang/ClassValue",
+            "java/lang/NoSuchFieldException"};
 
-    static final String[] INCLUDES = new String[]{"client/Client"};
+    static final String[] INCLUDES = new String[]{"client/Client",
+//            "java/util/ArrayDeque",
+//            "java/util/AbstractCollection"
+//    };
+
+            "java/util/Arrays$ArrayList",
+            "java/util/AbstractList",
+            "java/util/AbstractCollection"};
+
+//            "java/util/concurrent/ArrayBlockingQueue",
+//            "java/util/concurrent/BlockingQueue",
+//            "java/util/AbstractQueue",
+//            "java/util/AbstractCollection"};
 
     /**
      * add agent
@@ -31,47 +47,51 @@ public class Agent implements ClassFileTransformer {
 
     /**
      * instrument class
+     * <p>
+     * Not found exception + JVM crash
+     * https://stackoverflow.com/questions/51227630/java-lang-noclassdeffounderror-javassist
      */
     public byte[] transform(final ClassLoader loader, final String className, final Class clazz,
                             final java.security.ProtectionDomain domain, final byte[] bytes) {
-
-        // System.out.println(className);
+        System.out.println(className);
+        if (className == null) return bytes;
 
 //        for (int i = 0; i < EXCLUDES.length; i++) {
 //            if (className.startsWith(EXCLUDES[i])) {
 //                return bytes;
 //            }
 //        }
+
         for (int i = 0; i < INCLUDES.length; i++) {
             if (className.startsWith(INCLUDES[i])) {
-                return transformClass(className, clazz, bytes);
+                try {
+                    return transformClass(className, clazz, bytes);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
             }
         }
-
         return bytes;
     }
 
     /**
      * instrument class with javasisst
      */
-    private byte[] transformClass(final String name, final Class cl, byte[] b) {
+    private byte[] transformClass(final String name, final Class cl, byte[] b) throws CannotCompileException, NotFoundException, IOException {
         ClassPool cp = ClassPool.getDefault();
-        try {
-            CtClass ctCl = cp.get(name.replace('/', '.'));
-            CtClass agentCl = cp.get(this.getClass().getName());
+        CtClass ctCl = cp.get(name.replace('/', '.'));
+        CtClass agentCl = cp.get(this.getClass().getName());
 
-            CodeConverter conv = new CodeConverter();
+        CodeConverter conv = new CodeConverter();
 //            for (CtField f : ctCl.getDeclaredFields()) {
 //                //conv.replaceFieldRead(f, agentCl, "readField");
 //
 //            }
-            conv.replaceArrayAccess(agentCl, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
-            ctCl.instrument(conv);
-            return ctCl.toBytecode();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return b;
+        conv.replaceArrayAccess(agentCl, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
+        ctCl.instrument(conv);
+        return ctCl.toBytecode();
+
     }
 
     public static int arrayReadInt(Object arr, int index) {
@@ -92,7 +112,20 @@ public class Agent implements ClassFileTransformer {
         ((int[]) arr)[index] = value;
     }
 
+    public static Object arrayReadObject(Object arr, int index) {
+        ArrayField f = new ArrayField(Object[].class, arr, index);
+        arrayRead(f);
+        return ((Object[]) arr)[index];
+    }
+
+    public static void arrayWriteObject(Object arr, int index, Object value) {
+        ArrayField f = new ArrayField(Object[].class, arr, index);
+        arrayWrite(f);
+        ((Object[]) arr)[index] = value;
+    }
+
     public synchronized static void arrayWrite(ArrayField f) {
+        System.out.println("WRITE: " + toString(Thread.currentThread().getStackTrace()));
         FieldAccessMeta meta = accesses.get(f);
         if (meta == null) {
             meta = new FieldAccessMeta();
@@ -103,6 +136,7 @@ public class Agent implements ClassFileTransformer {
     }
 
     public synchronized static void arrayRead(ArrayField f) {
+        System.out.println("READ: " + toString(Thread.currentThread().getStackTrace()));
         FieldAccessMeta meta = accesses.get(f);
         if (meta == null) return;
 
@@ -152,8 +186,6 @@ public class Agent implements ClassFileTransformer {
 //  arrayWriteInt
 //  arrayReadLong
 //  arrayWriteLong
-//  arrayReadObject
-//  arrayWriteObject
 //  arrayReadShort
 //  arrayWriteShort
 

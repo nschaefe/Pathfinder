@@ -48,19 +48,12 @@
     </build>
 
     <dependencies>
-        <!-- used to modify classes at runtime -->
         <dependency>
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
-            <version>3.18.2-GA</version>
+            <version>3.26.0-GA</version>
         </dependency>
 
-        <!-- only for using org.slf4j.instrumentation.JavassistHelper class -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-ext</artifactId>
-            <version>1.6.1</version>
-        </dependency>
     </dependencies>
 
 

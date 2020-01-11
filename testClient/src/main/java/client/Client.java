@@ -1,25 +1,35 @@
 package client;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.concurrent.ArrayBlockingQueue;
+
 public class Client {
 
-    private int[] messages = new int[2];
+    transient Object[] messages = new Object[2];
+    private ArrayList<Integer> q = new ArrayList<>();
 
     public synchronized void addMessage(int i) {
-        messages[0] = i;
+        Object[] m = messages;
+        m[0] = i;
+        //q.add(i);
+
     }
 
     public synchronized int getMessage() {
-        return messages[0];
+        //return q.get(0);
+        return (Integer) messages[0];
+
     }
 
     public static void main(String[] args) {
         try {
             Client c = new Client();
-            Thread t = new Thread(() -> c.addMessage(1));
+            Thread t = new Thread(() -> c.addMessage(42));
             t.start();
             t.join();
 
-            Thread t2 = new Thread(() -> c.getMessage());
+            Thread t2 = new Thread(() -> System.out.println("" + c.getMessage()));
             t2.start();
             t2.join();
 

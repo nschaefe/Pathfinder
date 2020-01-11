@@ -14,10 +14,6 @@ public class FieldAccessMeta {
     }
 
     public void registerWriter() {
-        // Only stacktrace matters because I care if the same thread comes from different traces.
-        // This can be a different tasks executed by the same thread pool.
-        // If the Id is different it could still be another task executed by the same thread from a thread pool
-        // So id does not give a distinction. Execution path is what matters.
         long id = Thread.currentThread().getId();
         StackTraceElement[] trace = Thread.currentThread().getStackTrace();
         writer.add(new Writer(id, trace));
