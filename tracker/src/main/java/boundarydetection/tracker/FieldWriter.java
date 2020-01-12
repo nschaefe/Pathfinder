@@ -1,11 +1,11 @@
-package boundarydetection.agent;
+package boundarydetection.tracker;
 
-public class Writer {
+public class FieldWriter {
 
     private long id;
     private StackTraceElement[] trace;
 
-    public Writer(long id, StackTraceElement[] trace) {
+    public FieldWriter(long id, StackTraceElement[] trace) {
         this.id = id;
         this.trace = trace;
     }

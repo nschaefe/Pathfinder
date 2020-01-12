@@ -9,7 +9,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>agent</artifactId>
+    <artifactId>tracker</artifactId>
 
     <build>
         <plugins>
@@ -27,9 +27,6 @@
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                         </manifest>
                         <manifestEntries>
-                            <Premain-Class>boundarydetection.agent.Agent</Premain-Class>
-                            <Can-Redefine-Classes>true</Can-Redefine-Classes>
-                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
                         </manifestEntries>
                     </archive>
                 </configuration>
@@ -48,15 +45,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-            <version>3.26.0-GA</version>
-        </dependency>
-
-    </dependencies>
-
 
 </project>

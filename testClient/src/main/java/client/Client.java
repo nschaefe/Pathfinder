@@ -2,22 +2,22 @@ package client;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.concurrent.ArrayBlockingQueue;
 
 public class Client {
 
-    private Object[] messages = new Object[2];
+    private int[] messages = new int[2];
     private ArrayDeque<Integer> q = new ArrayDeque<>();
+    private ArrayList<Integer> a = new ArrayList<>();
 
     public synchronized void addMessage(int i) {
-        Object[] m = messages;
+        int[] m = messages;
         m[0] = i;
         q.add(i);
+        a.add(i);
     }
 
     public synchronized int getMessage() {
-        return q.poll();
-        //return (Integer) messages[0];
+        return a.get(0) + q.poll() + messages[0];
     }
 
     public static void main(String[] args) {
@@ -30,7 +30,6 @@ public class Client {
             Thread t2 = new Thread(() -> System.out.println("" + c.getMessage()));
             t2.start();
             t2.join();
-
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
