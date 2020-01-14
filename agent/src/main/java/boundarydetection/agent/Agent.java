@@ -12,9 +12,18 @@ public class Agent implements ClassFileTransformer {
 
 
     static final String[] EXCLUDES = new String[]{
-            "java/lang/invoke",
-            "java/lang/ClassValue",
-            "java/lang/NoSuchFieldException"};
+            "java.lang.invoke",
+            "javassist",
+            "sun",
+            //"sun.reflect"
+            //"sun.instrument",
+            "java.security",
+            "java.lang.reflect",
+            "java.lang.annotation",
+            "[",
+            "java.lang.instrument",
+            "boundarydetection.tracker.AccessTracker"
+    };
 
     static final String[] INCLUDES = new String[]{"client/Client",
             "java/util/ArrayDeque",
@@ -22,9 +31,9 @@ public class Agent implements ClassFileTransformer {
 
             "java/util/ArrayList",
             "java/util/AbstractList",
-            "java/util/AbstractCollection"};
+            "java/util/AbstractCollection",
 
-//            "java/util/concurrent/ArrayBlockingQueue",
+           "java/util/concurrent/ArrayBlockingQueue"};
 //            "java/util/concurrent/BlockingQueue",
 //            "java/util/AbstractQueue",
 //            "java/util/AbstractCollection"};
@@ -32,16 +41,24 @@ public class Agent implements ClassFileTransformer {
 
     public static void premain(final String agentArgument, final Instrumentation instrumentation) {
         instrumentation.addTransformer(new Agent(), true);
-        try {
-            // call for classes where agent is dependent on or that are used while bootstrapping
-            instrumentation.retransformClasses(Class.forName("java.util.ArrayDeque"), Class.forName("java.util.ArrayList"));
-//            for(Class c:instrumentation.getAllLoadedClasses())
-//                instrumentation.retransformClasses(c);
-        } catch (UnmodifiableClassException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+
+        // call for classes where agent is dependent on or that are used while bootstrapping
+        // instrumentation.retransformClasses(Class.forName("java.util.ArrayDeque"), Class.forName("java.util.ArrayList"));
+        for (Class c : instrumentation.getAllLoadedClasses()) {
+            if (!isExcluded(c.getName())) {
+                //System.out.println("RETRA: " + c.getName());
+                try {
+                    instrumentation.retransformClasses(c);
+                } catch (UnmodifiableClassException e) {
+                    System.out.println("Unmodifiable: " + c.getName()+ ", continue");
+                    e.printStackTrace();
+                }
+            }
         }
+
+//        catch (ClassNotFoundException e) {
+//            e.printStackTrace();
+//        }
 
     }
 
@@ -60,14 +77,11 @@ public class Agent implements ClassFileTransformer {
 //            }
 //        }
 
-        for (int i = 0; i < INCLUDES.length; i++) {
-            if (className.startsWith(INCLUDES[i])) {
-                try {
-                    return transformClass(className, clazz, bytes);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
+        if (isIncluded(className)) {
+            try {
+                return transformClass(className, clazz, bytes);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
         return bytes;
@@ -91,5 +105,21 @@ public class Agent implements ClassFileTransformer {
         return ctCl.toBytecode();
 
     }
+
+    //TODO can be optimized (binary search)
+    private static boolean isExcluded(String name) {
+        for (int i = 0; i < EXCLUDES.length; i++) {
+            if (name.replace('/', '.').startsWith(EXCLUDES[i])) return true;
+        }
+        return false;
+    }
+
+    private static boolean isIncluded(String name) {
+        for (int i = 0; i < INCLUDES.length; i++) {
+            if (name.startsWith(INCLUDES[i])) return true;
+        }
+        return false;
+    }
+
 
 }
