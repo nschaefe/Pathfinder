@@ -6,7 +6,7 @@ import java.util.List;
 public class AccessTracker {
 
     static {
-        Logger.initLogger("/home/user/Dokumente/hbase/hbase_inst/logs");
+        Logger.initLogger("./");
     }
 
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
