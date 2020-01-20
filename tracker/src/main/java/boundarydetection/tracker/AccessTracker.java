@@ -10,53 +10,71 @@ public class AccessTracker {
     }
 
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
+    // A thread local is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
+    private static ThreadLocal<Boolean> insideTracker = new ThreadLocal<Boolean>();
 
     public synchronized static void arrayWrite(ArrayField f) {
         arrayWrite(f, false);
     }
 
     public synchronized static void arrayWrite(ArrayField f, boolean valueIsNull) {
-        // System.out.println("WRITE: " + toString(Thread.currentThread().getStackTrace()));
-        // TODO do not track if set value is null, so an entry is deleted
-        if (valueIsNull) return;
-        FieldAccessMeta meta = accesses.get(f);
-        if (meta == null) {
-            meta = new FieldAccessMeta();
-            accesses.put(f, meta);
+        // To break the recursion
+        if (insideTracker.get() != null) return;
+        try {
+            insideTracker.set(true);
+
+            // System.out.println("WRITE: " + toString(Thread.currentThread().getStackTrace()));
+            // TODO do not track if set value is null, so an entry is deleted
+            if (valueIsNull) return;
+            FieldAccessMeta meta = accesses.get(f);
+            if (meta == null) {
+                meta = new FieldAccessMeta();
+                accesses.put(f, meta);
+            }
+
+            meta.registerWriter();
+        } finally {
+            insideTracker.remove();
         }
 
-        meta.registerWriter();
     }
 
     public synchronized static void arrayRead(ArrayField f) {
-        // System.out.println("READ: " + toString(Thread.currentThread().getStackTrace()));
-        FieldAccessMeta meta = accesses.get(f);
-        if (meta == null) return;
+        // To break the recursion
+        if (insideTracker.get() != null) return;
+        try {
+            insideTracker.set(true);
+            // System.out.println("READ: " + toString(Thread.currentThread().getStackTrace()));
+            FieldAccessMeta meta = accesses.get(f);
+            if (meta == null) return;
 
-        // TODO log code location explicitly
-        List<FieldWriter> l = meta.otherWriter();
-        if (l.isEmpty()) return;
+            // TODO log code location explicitly
+            List<FieldWriter> l = meta.otherWriter();
+            if (l.isEmpty()) return;
 
-        StringBuilder s = new StringBuilder();
-        for (FieldWriter w : l) {
-            s.append("CONCURRENT WRITE/READ DETECTED");
-            s.append(System.lineSeparator());
-            s.append("Reader");
-            s.append("(" + Thread.currentThread().getId() + ")");
-            s.append(" trace:");
-            s.append(System.lineSeparator());
-            s.append(toString(Thread.currentThread().getStackTrace()));
-            s.append(System.lineSeparator());
-            s.append("----------------");
-            s.append(System.lineSeparator());
-            s.append("Writer");
-            s.append("(" + w.getId() + ")");
-            s.append(" trace:");
-            s.append(System.lineSeparator());
-            s.append(toString(w.getStackTrace()));
+            StringBuilder s = new StringBuilder();
+            //for (FieldWriter w : l) {
+            for (FieldWriter w: l) {
+                s.append("CONCURRENT WRITE/READ DETECTED");
+                s.append(System.lineSeparator());
+                s.append("Reader");
+                s.append("(" + Thread.currentThread().getId() + ")");
+                s.append(" trace:");
+                s.append(System.lineSeparator());
+                s.append(toString(Thread.currentThread().getStackTrace()));
+                s.append(System.lineSeparator());
+                s.append("----------------");
+                s.append(System.lineSeparator());
+                s.append("Writer");
+                s.append("(" + w.getId() + ")");
+                s.append(" trace:");
+                s.append(System.lineSeparator());
+                s.append(toString(w.getStackTrace()));
+            }
+            Logger.getLogger().log(s.toString());
+        } finally {
+            insideTracker.remove();
         }
-        Logger.getLogger().log(s.toString());
-
     }
 
     public static int arrayReadInt(Object arr, int index) {

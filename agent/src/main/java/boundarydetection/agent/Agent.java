@@ -22,14 +22,15 @@ public class Agent implements ClassFileTransformer {
             "java.lang.annotation",
             "[",
             "java.lang.instrument",
-            "boundarydetection.tracker"
+            "boundarydetection.tracker",
+
     };
 
     static final String[] INCLUDES = new String[]{"client/Client",
             "java/util/ArrayDeque",
             //"java/util/AbstractCollection",
 
-            //"java/util/ArrayList",
+            "java/util/ArrayList",
             //"java/util/AbstractList",
             //"java/util/AbstractCollection",
 
