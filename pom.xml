@@ -21,37 +21,4 @@
         <module>tracker</module>
     </modules>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <executable>java</executable>
-                    <arguments>
-                        <argument>
-                            -javaagent:${maven.multiModuleProjectDirectory}/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
-                        </argument>
-                        <argument>
-                            -Xbootclasspath/p:${maven.multiModuleProjectDirectory}/tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
-                        </argument>
-                        <argument>-jar</argument>
-                        <argument>
-                            ${maven.multiModuleProjectDirectory}/testClient/target/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar
-                        </argument>
-                    </arguments>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
-
 </project>

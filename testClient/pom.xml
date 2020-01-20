@@ -41,6 +41,42 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <executable>java</executable>
+                    <arguments>
+                        <argument>
+                            -javaagent:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
+                        </argument>
+                        <argument>
+                            -Xbootclasspath/p:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
+                        </argument>
+                        <argument>-jar</argument>
+                        <argument>
+                            ${project.build.directory}/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar
+                        </argument>
+                    </arguments>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>boundaryDetection</groupId>
+                        <artifactId>agent</artifactId>
+                        <version>0.1-SNAPSHOT</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
         </plugins>
     </build>
 
