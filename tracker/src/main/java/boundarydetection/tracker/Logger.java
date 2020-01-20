@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 public class Logger {
 
     private static Logger logger;
+
     public static Logger getLogger() {
         if (logger == null) {
             throw new IllegalStateException("logger not inited");
@@ -18,20 +19,20 @@ public class Logger {
     }
 
     public static void initLogger(String path) {
-        logger= new Logger(path);
+        logger = new Logger(path);
     }
 
     private Path path;
 
     public Logger(String path) {
-        String name = Util.getCurrentTime() + "_tracker_report";
-                //"_" + Util.getProcessID() + "_" + Util.getProcessName() + "_" + Util.getHost();
+        String name = "tracker_report";
+        //"_" + Util.getProcessID() + "_" + Util.getProcessName() + "_" + Util.getHost();
         this.path = Paths.get(path, name);
     }
 
     public void log(String mess) {
         try (OutputStream fos = getOutputStream()) {
-            mess= Util.getCurrentTime()+"_"+mess;
+            mess = Util.getCurrentTime() + "_" + mess;
             fos.write(mess.getBytes());
         } catch (IOException e) {
             e.printStackTrace();
@@ -39,7 +40,7 @@ public class Logger {
     }
 
     private OutputStream getOutputStream() throws FileNotFoundException {
-        return new FileOutputStream(path.toFile());
+        return new FileOutputStream(path.toFile(),true);
     }
 
 }

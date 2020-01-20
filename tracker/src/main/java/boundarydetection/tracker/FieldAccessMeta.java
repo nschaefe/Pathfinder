@@ -1,4 +1,4 @@
-package  boundarydetection.tracker;
+package boundarydetection.tracker;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -17,9 +17,22 @@ public class FieldAccessMeta {
         this.writer = new LinkedList<>();
     }
 
+    // TODO Meta class should not contain decision logic
+    private boolean check(StackTraceElement[] tr) {
+        // currently a hack to get rid of these class loading reports
+        for (int i = 0; i < tr.length; i++) {
+            String cl = tr[i].getClassName();
+            if (cl.startsWith("java.util.zip.ZipFile") ||
+                    cl.startsWith("edu.brown.cs.systems")
+            ) return false;
+        }
+        return true;
+    }
+
     public void registerWriter() {
         long id = Thread.currentThread().getId();
         StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+        if (!check(trace)) return;
         writer.add(new FieldWriter(id, trace));
     }
 

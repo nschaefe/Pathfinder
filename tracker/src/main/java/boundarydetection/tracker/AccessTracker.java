@@ -5,15 +5,20 @@ import java.util.List;
 
 public class AccessTracker {
 
-    static{
+    static {
         Logger.initLogger("/home/user/Dokumente/hbase/hbase_inst/logs");
     }
 
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
 
     public synchronized static void arrayWrite(ArrayField f) {
+        arrayWrite(f, false);
+    }
+
+    public synchronized static void arrayWrite(ArrayField f, boolean valueIsNull) {
         // System.out.println("WRITE: " + toString(Thread.currentThread().getStackTrace()));
         // TODO do not track if set value is null, so an entry is deleted
+        if (valueIsNull) return;
         FieldAccessMeta meta = accesses.get(f);
         if (meta == null) {
             meta = new FieldAccessMeta();
@@ -76,7 +81,7 @@ public class AccessTracker {
 
     public static void arrayWriteObject(Object arr, int index, Object value) {
         ArrayField f = new ArrayField(Object[].class, arr, index);
-        arrayWrite(f);
+        arrayWrite(f, value == null);
         ((Object[]) arr)[index] = value;
     }
 

@@ -21,8 +21,8 @@ public class Client {
         b.add(i);
     }
 
-    public synchronized int getMessage() {
-        return a.get(0) + q.poll() + b.poll() + messages[0];
+    public synchronized String getMessage() {
+        return ""+a.get(0) + q.poll() + b.poll() + messages[0]+q.poll();
     }
 
     public static void main(String[] args) {
