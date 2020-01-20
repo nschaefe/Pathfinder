@@ -68,7 +68,7 @@ public class Agent implements ClassFileTransformer {
      */
     public byte[] transform(final ClassLoader loader, final String className, final Class clazz,
                             final java.security.ProtectionDomain domain, final byte[] bytes) {
-        System.out.println(className + " " + clazz);
+       // System.out.println(className + " " + clazz);
         if (className == null) return bytes;
 
 //        for (int i = 0; i < EXCLUDES.length; i++) {

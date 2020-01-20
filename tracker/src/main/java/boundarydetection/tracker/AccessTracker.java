@@ -5,6 +5,10 @@ import java.util.List;
 
 public class AccessTracker {
 
+    static{
+        Logger.initLogger("/home/user/Dokumente/hbase/hbase_inst/logs");
+    }
+
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
 
     public synchronized static void arrayWrite(ArrayField f) {
@@ -46,7 +50,7 @@ public class AccessTracker {
             s.append(System.lineSeparator());
             s.append(toString(w.getStackTrace()));
         }
-        System.out.println(s.toString());
+        Logger.getLogger().log(s.toString());
 
     }
 
