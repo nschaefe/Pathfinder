@@ -4,11 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FieldAccessMeta {
-    // WARNING HACKY
-    // I use here LinkedList because it is currently not instrumented, using an instrumented class leads to recursion:
-    // e.g. arraylist.add -> tracker ->arralist.add ->tracker....
-    // this is a hack. We need a custom/renamed version that is not instrumented here
-
     private List<Long> reader;
     private List<FieldWriter> writer;
 
@@ -18,15 +13,18 @@ public class FieldAccessMeta {
     }
 
     // TODO Meta class should not contain decision logic
+    // TODO exclude eclipse compiler, jdi stuff
     private boolean check(StackTraceElement[] tr) {
         // currently a hack to get rid of these class loading reports
+        boolean r = true;
         for (int i = 0; i < tr.length; i++) {
             String cl = tr[i].getClassName();
             if (cl.startsWith("java.util.zip.ZipFile") ||
                     cl.startsWith("edu.brown.cs.systems")
             ) return false;
+            //if (cl.contains("hbase")) r = true;
         }
-        return true;
+        return r;
     }
 
     public void clearWriters() {

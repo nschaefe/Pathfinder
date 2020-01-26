@@ -44,7 +44,6 @@ public class Agent implements ClassFileTransformer {
         instrumentation.addTransformer(new Agent(), true);
 
         // call for classes where agent is dependent on or that are used while bootstrapping
-        // instrumentation.retransformClasses(Class.forName("java.util.ArrayDeque"), Class.forName("java.util.ArrayList"));
         for (Class c : instrumentation.getAllLoadedClasses()) {
             if (!isExcluded(c.getName())) {
                 //System.out.println("RETRA: " + c.getName());
@@ -56,11 +55,6 @@ public class Agent implements ClassFileTransformer {
                 }
             }
         }
-
-//        catch (ClassNotFoundException e) {
-//            e.printStackTrace();
-//        }
-
     }
 
     /**
@@ -78,6 +72,7 @@ public class Agent implements ClassFileTransformer {
 //            }
 //        }
 
+        // for debugging, isIncluded will disappear
         if (isIncluded(className)) {
             try {
                 return transformClass(className, clazz, bytes);

@@ -10,21 +10,26 @@ public class AccessTracker {
     }
 
 
-    // TODO remove metadata of accesses to objects that died
-    // TODO mark fieldwriter with readers, if we already saw this reader reading from the same writer case, do not report again
-    // TODO refactor, keep complexity of redundancy recognition outside of basic recognition
-    // TODO reading and writing an object to another array index or another array (copied), does
+    //TODO remove metadata of accesses to objects that died
+    // do this with weakreferences + periodic garbage collection
+
+    //TODO mark fieldwriter with readers, if we already saw this reader reading from the same writer case, do not report again
+    //TODO refactor, keep complexity of redundancy recognition outside of basic recognition
+    //TODO reading and writing an object to another array index or another array (copied), does
     // not loose old writers, if we associate writers with an object.
     // easy way for refactoring-> We currently look at accesses to ArrayFields or Fields (represent locations) and track accesses to them
     // we just have to redefine what an access location is. Instead of fields and arrays we say objects if we have
     // an object at hand or the field location (array index, field) if it is a primitive.
 
-    // TODO when do we remove writers from the list?
+    //TODO when do we remove writers from the list?
     // Problem: when a thread initiates an object and spawns a thread that works over a queue inside that object
     // the worker reads the field for every access. This gives a write/read relation for every access between the
     // thread that initiated that class and the thread that works over it.
     // this is actually a false positive.
     // if the writer disappears at some point we could reduce the amount of false positives.
+
+    //TODO report write/read in a distinct way (easiest way for now): just make write/read reports pair wise and make
+    // entries in file distinct by post processing it. make entry start and end easy to parse, see distinct.py
 
 
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
@@ -66,15 +71,15 @@ public class AccessTracker {
             if (l.isEmpty()) return;
 
             StringBuilder s = new StringBuilder();
-            s.append("CONCURRENT WRITE/READ DETECTED");
-            s.append(System.lineSeparator());
-            s.append("Reader");
-            s.append("(" + Thread.currentThread().getId() + ")");
-            s.append(" trace:");
-            s.append(System.lineSeparator());
-            s.append(Util.toString(Thread.currentThread().getStackTrace()));
-            s.append(System.lineSeparator());
             for (FieldWriter w : l) {
+                s.append("$$CONCURRENT WRITE/READ DETECTED");
+                s.append(System.lineSeparator());
+                s.append("Reader");
+                s.append("(" + Thread.currentThread().getId() + ")");
+                s.append(" trace:");
+                s.append(System.lineSeparator());
+                s.append(Util.toString(Thread.currentThread().getStackTrace()));
+                s.append(System.lineSeparator());
                 s.append("----------------");
                 s.append(System.lineSeparator());
                 s.append("Writer");
