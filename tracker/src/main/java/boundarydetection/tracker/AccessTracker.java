@@ -25,14 +25,13 @@ public class AccessTracker {
 
             // System.out.println("WRITE: " + toString(Thread.currentThread().getStackTrace()));
             // TODO do not track if set value is null, so an entry is deleted
-            if (valueIsNull) return;
             FieldAccessMeta meta = accesses.get(f);
             if (meta == null) {
                 meta = new FieldAccessMeta();
                 accesses.put(f, meta);
             }
-
-            meta.registerWriter();
+            if (valueIsNull) meta.clearWriters();
+            else meta.registerWriter();
         } finally {
             insideTracker.remove();
         }
@@ -54,14 +53,14 @@ public class AccessTracker {
 
             StringBuilder s = new StringBuilder();
             //for (FieldWriter w : l) {
-            for (FieldWriter w: l) {
+            for (FieldWriter w : l) {
                 s.append("CONCURRENT WRITE/READ DETECTED");
                 s.append(System.lineSeparator());
                 s.append("Reader");
                 s.append("(" + Thread.currentThread().getId() + ")");
                 s.append(" trace:");
                 s.append(System.lineSeparator());
-                s.append(toString(Thread.currentThread().getStackTrace()));
+                s.append(Util.toString(Thread.currentThread().getStackTrace()));
                 s.append(System.lineSeparator());
                 s.append("----------------");
                 s.append(System.lineSeparator());
@@ -69,7 +68,7 @@ public class AccessTracker {
                 s.append("(" + w.getId() + ")");
                 s.append(" trace:");
                 s.append(System.lineSeparator());
-                s.append(toString(w.getStackTrace()));
+                s.append(Util.toString(w.getStackTrace()));
             }
             Logger.getLogger().log(s.toString());
         } finally {
@@ -103,15 +102,6 @@ public class AccessTracker {
         ((Object[]) arr)[index] = value;
     }
 
-    //TODO move to util
-    private static String toString(StackTraceElement[] trace) {
-        StringBuilder s = new StringBuilder();
-        for (StackTraceElement el : trace) {
-            s.append(el);
-            s.append(System.lineSeparator());
-        }
-        return s.toString();
-    }
 
     //  arrayReadByteOrBoolean
 //  arrayWriteByteOrBoolean

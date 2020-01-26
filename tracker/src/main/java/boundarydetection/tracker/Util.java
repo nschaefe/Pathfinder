@@ -78,4 +78,13 @@ public class Util {
         return host;
     }
 
+    public static String toString(StackTraceElement[] trace) {
+        StringBuilder s = new StringBuilder();
+        for (StackTraceElement el : trace) {
+            s.append(el);
+            s.append(System.lineSeparator());
+        }
+        return s.toString();
+    }
+
 }

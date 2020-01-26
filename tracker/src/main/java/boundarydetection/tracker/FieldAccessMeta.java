@@ -29,6 +29,10 @@ public class FieldAccessMeta {
         return true;
     }
 
+    public void clearWriters(){
+        writer.clear();
+    }
+
     public void registerWriter() {
         long id = Thread.currentThread().getId();
         StackTraceElement[] trace = Thread.currentThread().getStackTrace();
