@@ -45,12 +45,17 @@ public class Client {
                     c.addMessageArr(42);
                     // double write should not be a new write
                 }
-                c.setNull(); //reads from null should not appear as detected case
+                // c.setNull(); //reads from null should not appear as detected case
             });
             t.start();
             t.join();
 
-            Thread t2 = new Thread(() -> System.out.println("" + c.getMessageArr()));
+            Thread t2 = new Thread(() -> {
+                for (int i = 0; i < 2; i++) {
+                    // reading from the same position written by the same writer from the same path should not detected twice
+                    System.out.println("" + c.getMessageArr());
+                }
+            });
             t2.start();
             t2.join();
         } catch (InterruptedException e) {

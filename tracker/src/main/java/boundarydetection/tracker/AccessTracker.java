@@ -9,6 +9,24 @@ public class AccessTracker {
         Logger.initLogger("./");
     }
 
+
+    // TODO remove metadata of accesses to objects that died
+    // TODO mark fieldwriter with readers, if we already saw this reader reading from the same writer case, do not report again
+    // TODO refactor, keep complexity of redundancy recognition outside of basic recognition
+    // TODO reading and writing an object to another array index or another array (copied), does
+    // not loose old writers, if we associate writers with an object.
+    // easy way for refactoring-> We currently look at accesses to ArrayFields or Fields (represent locations) and track accesses to them
+    // we just have to redefine what an access location is. Instead of fields and arrays we say objects if we have
+    // an object at hand or the field location (array index, field) if it is a primitive.
+
+    // TODO when do we remove writers from the list?
+    // Problem: when a thread initiates an object and spawns a thread that works over a queue inside that object
+    // the worker reads the field for every access. This gives a write/read relation for every access between the
+    // thread that initiated that class and the thread that works over it.
+    // this is actually a false positive.
+    // if the writer disappears at some point we could reduce the amount of false positives.
+
+
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
     // A thread local is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static ThreadLocal<Boolean> insideTracker = new ThreadLocal<Boolean>();
@@ -22,9 +40,6 @@ public class AccessTracker {
         if (insideTracker.get() != null) return;
         try {
             insideTracker.set(true);
-
-            // System.out.println("WRITE: " + toString(Thread.currentThread().getStackTrace()));
-            // TODO do not track if set value is null, so an entry is deleted
             FieldAccessMeta meta = accesses.get(f);
             if (meta == null) {
                 meta = new FieldAccessMeta();
@@ -47,7 +62,6 @@ public class AccessTracker {
             FieldAccessMeta meta = accesses.get(f);
             if (meta == null) return;
 
-            // TODO log code location explicitly
             List<FieldWriter> l = meta.otherWriter();
             if (l.isEmpty()) return;
 
