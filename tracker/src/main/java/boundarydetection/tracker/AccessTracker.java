@@ -52,16 +52,15 @@ public class AccessTracker {
             if (l.isEmpty()) return;
 
             StringBuilder s = new StringBuilder();
-            //for (FieldWriter w : l) {
+            s.append("CONCURRENT WRITE/READ DETECTED");
+            s.append(System.lineSeparator());
+            s.append("Reader");
+            s.append("(" + Thread.currentThread().getId() + ")");
+            s.append(" trace:");
+            s.append(System.lineSeparator());
+            s.append(Util.toString(Thread.currentThread().getStackTrace()));
+            s.append(System.lineSeparator());
             for (FieldWriter w : l) {
-                s.append("CONCURRENT WRITE/READ DETECTED");
-                s.append(System.lineSeparator());
-                s.append("Reader");
-                s.append("(" + Thread.currentThread().getId() + ")");
-                s.append(" trace:");
-                s.append(System.lineSeparator());
-                s.append(Util.toString(Thread.currentThread().getStackTrace()));
-                s.append(System.lineSeparator());
                 s.append("----------------");
                 s.append(System.lineSeparator());
                 s.append("Writer");
@@ -69,6 +68,7 @@ public class AccessTracker {
                 s.append(" trace:");
                 s.append(System.lineSeparator());
                 s.append(Util.toString(w.getStackTrace()));
+                s.append(System.lineSeparator());
             }
             Logger.getLogger().log(s.toString());
         } finally {

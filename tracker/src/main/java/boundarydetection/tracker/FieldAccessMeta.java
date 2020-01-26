@@ -1,6 +1,6 @@
 package boundarydetection.tracker;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 public class FieldAccessMeta {
@@ -13,8 +13,8 @@ public class FieldAccessMeta {
     private List<FieldWriter> writer;
 
     FieldAccessMeta() {
-        this.reader = new LinkedList<>();
-        this.writer = new LinkedList<>();
+        //this.reader = new LinkedList<>();
+        this.writer = new ArrayList<>();
     }
 
     // TODO Meta class should not contain decision logic
@@ -29,7 +29,7 @@ public class FieldAccessMeta {
         return true;
     }
 
-    public void clearWriters(){
+    public void clearWriters() {
         writer.clear();
     }
 
@@ -37,7 +37,8 @@ public class FieldAccessMeta {
         long id = Thread.currentThread().getId();
         StackTraceElement[] trace = Thread.currentThread().getStackTrace();
         if (!check(trace)) return;
-        writer.add(new FieldWriter(id, trace));
+        FieldWriter wr = new FieldWriter(id, trace);
+        if (writer.indexOf(wr) < 0) writer.add(wr);
     }
 
     public FieldWriter otherWriterSingle() {
@@ -48,7 +49,7 @@ public class FieldAccessMeta {
 
     public List<FieldWriter> otherWriter() {
         long id = Thread.currentThread().getId();
-        List<FieldWriter> list = new LinkedList<>();
+        List<FieldWriter> list = new ArrayList<>();
         for (FieldWriter w : writer) {
             if (w.getId() != id) {
                 list.add(w);
