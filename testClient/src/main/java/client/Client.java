@@ -3,6 +3,7 @@ package client;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 
 public class Client {
@@ -12,10 +13,14 @@ public class Client {
     private ArrayList<Integer> a = new ArrayList<>();
     private ArrayBlockingQueue<Integer> b = new ArrayBlockingQueue<Integer>(5);
 //  private HashSet<Integer> h= new HashSet<>();
+    private Integer i= new Integer(11);
+    private LinkedList<Integer> li= new LinkedList<>();
 
     public synchronized void addMessageArr(int i) {
         Integer[] m = messages;
         m[0] = i;
+        this.i=i;
+        li.add(i);
     }
 
     public synchronized void setNull() {
@@ -30,7 +35,7 @@ public class Client {
 
 
     public synchronized String getMessageArr() {
-        return "" + messages[0];
+        return "" +li.get(0)+ messages[0]+" "+this.i;
     }
 
     public synchronized String getMessage() {
@@ -41,7 +46,7 @@ public class Client {
         try {
             Client c = new Client();
             Thread t = new Thread(() -> {
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 1; i++) {
                     c.addMessageArr(42);
                     // double write should not be a new write
                 }
@@ -51,7 +56,7 @@ public class Client {
             t.join();
 
             Thread t2 = new Thread(() -> {
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 1; i++) {
                     // reading from the same position written by the same writer from the same path should not detected twice
                     System.out.println("" + c.getMessageArr());
                 }
