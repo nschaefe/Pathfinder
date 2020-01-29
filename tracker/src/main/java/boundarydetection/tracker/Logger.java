@@ -30,6 +30,7 @@ public class Logger {
         this.path = Paths.get(path, name);
     }
 
+    //TODO speed this up
     public void log(String mess) {
         try (OutputStream fos = getOutputStream()) {
             mess = Util.getCurrentTime() + "_" + mess;

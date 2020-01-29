@@ -36,7 +36,8 @@ public class FieldAccessMeta {
         StackTraceElement[] trace = Thread.currentThread().getStackTrace();
         if (!check(trace)) return;
         FieldWriter wr = new FieldWriter(id, trace);
-        if (!writer.contains(wr)) writer.add(wr);
+        if (writer.size() == 0) writer.add(wr);
+        else writer.set(0, wr);
     }
 
     public FieldWriter otherWriterSingle() {
