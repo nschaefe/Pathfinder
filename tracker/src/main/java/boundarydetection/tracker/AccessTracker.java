@@ -10,10 +10,12 @@ public class AccessTracker {
     }
 
 
+    //TODO only track the last direct writer to a field (not for move, arraycopy), this simplifies most of the other TODOs, reasoning on record
+
     //TODO remove metadata of accesses to objects that died
     // do this with weakreferences + periodic garbage collection
 
-    //TODO mark fieldwriter with readers, if we already saw this reader reading from the same writer case, do not report again
+    //TODO mark fieldwriter with readers, if we already saw this reader reading from the same writer case, do not report again (currently solved by distinct.py)
     //TODO refactor, keep complexity of redundancy recognition outside of basic recognition
     //TODO reading and writing an object to another array index or another array (copied), does
     // not loose old writers, if we associate writers with an object.
@@ -28,8 +30,7 @@ public class AccessTracker {
     // this is actually a false positive.
     // if the writer disappears at some point we could reduce the amount of false positives.
 
-    //TODO report write/read in a distinct way (easiest way for now): just make write/read reports pair wise and make
-    // entries in file distinct by post processing it. make entry start and end easy to parse, see distinct.py
+
 
 
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
