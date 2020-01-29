@@ -37,11 +37,11 @@ public class AccessTracker {
     // A thread local is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static ThreadLocal<Boolean> insideTracker = new ThreadLocal<Boolean>();
 
-    public synchronized static void arrayWrite(ArrayField f) {
-        arrayWrite(f, false);
+    public synchronized static void writeAccess(IField f) {
+        writeAccess(f, false);
     }
 
-    public synchronized static void arrayWrite(ArrayField f, boolean valueIsNull) {
+    public synchronized static void writeAccess(IField f, boolean valueIsNull) {
         // To break the recursion
         if (insideTracker.get() != null) return;
         try {
@@ -59,7 +59,7 @@ public class AccessTracker {
 
     }
 
-    public synchronized static void arrayRead(ArrayField f) {
+    public synchronized static void readAccess(IField f) {
         // To break the recursion
         if (insideTracker.get() != null) return;
         try {
@@ -98,28 +98,39 @@ public class AccessTracker {
 
     public static int arrayReadInt(Object arr, int index) {
         ArrayField f = new ArrayField(int[].class, arr, index);
-        arrayRead(f);
+        readAccess(f);
 
         return ((int[]) arr)[index];
     }
 
     public static void arrayWriteInt(Object arr, int index, int value) {
         ArrayField f = new ArrayField(int[].class, arr, index);
-        arrayWrite(f);
+        writeAccess(f);
 
         ((int[]) arr)[index] = value;
     }
 
     public static Object arrayReadObject(Object arr, int index) {
         ArrayField f = new ArrayField(Object[].class, arr, index);
-        arrayRead(f);
+        readAccess(f);
         return ((Object[]) arr)[index];
     }
 
     public static void arrayWriteObject(Object arr, int index, Object value) {
         ArrayField f = new ArrayField(Object[].class, arr, index);
-        arrayWrite(f, value == null);
+        writeAccess(f, value == null);
         ((Object[]) arr)[index] = value;
+    }
+
+
+    public static void readObject(Object value, Object parent, String location) {
+        Field f = new Field(location, Object.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeObject(Object value, Object parent,  String location) {
+        Field f = new Field(location, Object.class, parent);
+        writeAccess(f, value == null);
     }
 
 
