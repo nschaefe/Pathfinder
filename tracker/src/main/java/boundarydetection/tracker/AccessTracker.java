@@ -92,6 +92,16 @@ public class AccessTracker {
         }
     }
 
+    public static void readObject(Object value, Object parent, String location) {
+        Field f = new Field(location, Object.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeObject(Object value, Object parent, String location) {
+        Field f = new Field(location, Object.class, parent);
+        writeAccess(f, value == null);
+    }
+
     public static int arrayReadInt(Object arr, int index) {
         ArrayField f = new ArrayField(int[].class, arr, index);
         readAccess(f);
@@ -118,17 +128,48 @@ public class AccessTracker {
         ((Object[]) arr)[index] = value;
     }
 
+    public static void arrayWriteLong(Object arr, int index, long value) {
+        ArrayField f = new ArrayField(long[].class, arr, index);
+        writeAccess(f);
+        ((long[]) arr)[index] = value;
+    }
 
-    public static void readObject(Object value, Object parent, String location) {
-        Field f = new Field(location, Object.class, parent);
+    public static long arrayReadLong(Object arr, int index) {
+        ArrayField f = new ArrayField(long[].class, arr, index);
         readAccess(f);
+        return ((long[]) arr)[index];
     }
 
-    public static void writeObject(Object value, Object parent,  String location) {
-        Field f = new Field(location, Object.class, parent);
-        writeAccess(f, value == null);
+    public static void arrayWriteByteOrBoolean(Object arr, int index, byte value) {
+        ArrayField f = new ArrayField(byte[].class, arr, index);
+        writeAccess(f);
+        if (arr instanceof byte[])
+            ((byte[]) arr)[index] = value;
+        else
+            ((boolean[]) arr)[index] = value == 1;
+
     }
 
+    public static byte arrayReadByteOrBoolean(Object arr, int index) {
+        ArrayField f = new ArrayField(byte[].class, arr, index);
+        readAccess(f);
+        if (arr instanceof byte[])
+            return ((byte[]) arr)[index] ;
+        else
+            return (byte)(((boolean[]) arr)[index] ? 1 : 0);
+    }
+
+    public static void arrayWriteChar(Object arr, int index, char value) {
+        ArrayField f = new ArrayField(char[].class, arr, index);
+        writeAccess(f);
+        ((char[]) arr)[index] = value;
+    }
+
+    public static char arrayReadChar(Object arr, int index) {
+        ArrayField f = new ArrayField(char[].class, arr, index);
+        readAccess(f);
+        return ((char[]) arr)[index];
+    }
 
     //  arrayReadByteOrBoolean
 //  arrayWriteByteOrBoolean

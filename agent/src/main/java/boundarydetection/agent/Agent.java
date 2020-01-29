@@ -24,11 +24,30 @@ public class Agent implements ClassFileTransformer {
             "java.lang.annotation",
             "[",
             "java.lang.instrument",
-            "boundarydetection.tracker",
+            "boundarydetection",
+            "java.lang.ThreadLocal", //TODO
+            "java.lang.ref",
+//            "java.lang.Long",
+//            "java.lang.Integer",
+//            "java.lang.Short",
+//            "java.lang.Byte",
+//            "java.lang.Double",
+//            "java.lang.Float",
+//            "java.lang.Number",
+//            "java.lang.Character",
+//            "java.lang.Boolean",
+//            "java.lang.String",
+//            "jdk.internal",
+            "java.lang" //TODO
+            //TODO no exceptions,
+            // no errors
+
 
     };
 
-    static final String[] INCLUDES = new String[]{"client/Client",
+
+    static final String[] INCLUDES = new String[]{
+            "client/Client",
             "java/util/ArrayDeque",
             //"java/util/AbstractCollection",
 
@@ -69,6 +88,13 @@ public class Agent implements ClassFileTransformer {
         // System.out.println(className + " " + clazz);
         if (className == null) return bytes;
 
+        if (!isExcluded(className)) {
+            try {
+                return transformClass(className, clazz, bytes);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 //        for (int i = 0; i < EXCLUDES.length; i++) {
 //            if (className.startsWith(EXCLUDES[i])) {
 //                return bytes;
@@ -76,13 +102,13 @@ public class Agent implements ClassFileTransformer {
 //        }
 
         // for debugging, isIncluded will disappear
-        if (isIncluded(className)) {
-            try {
-                return transformClass(className, clazz, bytes);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+//        if (isIncluded(className)) {
+//            try {
+//                return transformClass(className, clazz, bytes);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
         return bytes;
     }
 
