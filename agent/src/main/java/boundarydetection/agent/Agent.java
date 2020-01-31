@@ -27,6 +27,9 @@ public class Agent implements ClassFileTransformer {
             "boundarydetection",
             "java.lang.ThreadLocal", //TODO
             "java.lang.ref",
+
+            "edu.brown.cs", //TODO Detached baggage instru fails
+            "org.apache.log4j",
 //            "java.lang.Long",
 //            "java.lang.Integer",
 //            "java.lang.Short",
@@ -37,8 +40,18 @@ public class Agent implements ClassFileTransformer {
 //            "java.lang.Character",
 //            "java.lang.Boolean",
 //            "java.lang.String",
-//            "jdk.internal",
-            "java.lang" //TODO
+            "jdk.internal",
+            "java.util.jar",
+            "java.lang", //TODO
+            "java.net",
+            "java.io",
+            "java.nio",
+            "java",
+            "com.sun",
+            "org.aspectj",
+            "com.google.comm" //TODO has to go, only debug
+            // "org.apache.hadoop.hbase.master.HMaster",
+            // "org.apache.hadoop.hbase.regionserver.HRegionServer",
             //TODO no exceptions,
             // no errors
 
@@ -92,6 +105,7 @@ public class Agent implements ClassFileTransformer {
             try {
                 return transformClass(className, clazz, bytes);
             } catch (Exception e) {
+                System.err.println("INST ERROR " + className);
                 e.printStackTrace();
             }
         }
@@ -113,62 +127,21 @@ public class Agent implements ClassFileTransformer {
     }
 
     private byte[] transformClass(final String name, final Class cl, byte[] b) throws CannotCompileException, NotFoundException, IOException {
-        System.out.println("INST: " + name);
         ClassPool cp = ClassPool.getDefault();
         CtClass ctCl = cp.get(name.replace('/', '.'));
+        if (ctCl.isInterface()) return b;
+        System.out.println("INST: " + name);
         CtClass tracker = cp.get("boundarydetection.tracker.AccessTracker");
 
-        CodeConverter conv = new CodeConverter();
-
-//      for (CtField f : ctCl.getDeclaredFields()) {
-//          conv.replaceFieldRead(f, agentCl, "readField");
-//      }
-
+        CodeConverter conv = new CodeConv();
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
-        ctCl.instrument(conv);
-        ctCl.instrument(new ExprEditor() {
-            @Override
-            public void edit(FieldAccess f) throws CannotCompileException {
-//                $0	The object containing the field accessed by the expression. This is not equivalent to this.
-//                this represents the object that the method including the expression is invoked on.
-//                $0 is null if the field is static.
-//
-//
-//                $1	The value that would be stored in the field if the expression is write access.
-//                        Otherwise, $1 is not available.
-//
-//                        $_	The resulting value of the field access if the expression is read access.
-//                        Otherwise, the value stored in $_ is discarded.
-//
-//                $r	The type of the field if the expression is read access.
-//                        Otherwise, $r is void.
-//
-//                        $class    	A java.lang.Class object representing the class declaring the field.
-//                $type	A java.lang.Class object representing the field type.
-//                $proceed    	The name of a virtual method executing the original field access. .
-//
-
-                String ss = f.getSignature();
-                String locationAsString = '"' + f.getClassName() + "." + f.getFieldName() + '"';
-                if (ss.startsWith("L")) {
-                    if (f.isReader()) {
-                        f.replace(
-                                "$_ = $proceed($$); " +
-                                        "boundarydetection.tracker.AccessTracker.readObject($_, $0," + locationAsString + "); ");
-
-                        // for value manipulation
-                        // "$_ = (" + type + ")boundarydetection.tracker.AccessTracker.readObject($proceed($$), $0,\"" + ss + "\"); ";
-                    } else {
-                        f.replace("$proceed($$); " +
-                                "boundarydetection.tracker.AccessTracker.writeObject($1, $0," + locationAsString + "); ");
-                    }
-
-                }
+        //if (name.equals("client/Test")) {
+            for (CtField field : ctCl.getDeclaredFields()) {
+                conv.replaceFieldRead(field, tracker, "readObject");
             }
+        //}
 
-        });
-
-
+        ctCl.instrument(conv);
         ctCl.debugWriteFile();
         return ctCl.toBytecode();
 

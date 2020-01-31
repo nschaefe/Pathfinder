@@ -92,10 +92,16 @@ public class AccessTracker {
         }
     }
 
-    public static void readObject(Object value, Object parent, String location) {
+    public static void readObject(Object parent, String location) {
         Field f = new Field(location, Object.class, parent);
         readAccess(f);
     }
+
+//    public static Object readObject(Object value, Object parent, String location) {
+//        Field f = new Field(location, Object.class, parent);
+//        readAccess(f);
+//        return  value;
+//    }
 
     public static void writeObject(Object value, Object parent, String location) {
         Field f = new Field(location, Object.class, parent);
@@ -154,9 +160,9 @@ public class AccessTracker {
         ArrayField f = new ArrayField(byte[].class, arr, index);
         readAccess(f);
         if (arr instanceof byte[])
-            return ((byte[]) arr)[index] ;
+            return ((byte[]) arr)[index];
         else
-            return (byte)(((boolean[]) arr)[index] ? 1 : 0);
+            return (byte) (((boolean[]) arr)[index] ? 1 : 0);
     }
 
     public static void arrayWriteChar(Object arr, int index, char value) {
@@ -171,20 +177,41 @@ public class AccessTracker {
         return ((char[]) arr)[index];
     }
 
-    //  arrayReadByteOrBoolean
-//  arrayWriteByteOrBoolean
-//  arrayReadChar
-//  arrayWriteChar
-//  arrayReadDouble
-//  arrayWriteDouble
-//  arrayReadFloat
-//  arrayWriteFloat
-//  arrayReadInt
-//  arrayWriteInt
-//  arrayReadLong
-//  arrayWriteLong
-//  arrayReadShort
-//  arrayWriteShort
+    public static void arrayWriteDouble(Object arr, int index, double value) {
+        ArrayField f = new ArrayField(double[].class, arr, index);
+        writeAccess(f);
+        ((double[]) arr)[index] = value;
+    }
+
+    public static double arrayReadDouble(Object arr, int index) {
+        ArrayField f = new ArrayField(double[].class, arr, index);
+        readAccess(f);
+        return ((double[]) arr)[index];
+    }
+
+    public static void arrayWriteFloat(Object arr, int index, char value) {
+        ArrayField f = new ArrayField(float[].class, arr, index);
+        writeAccess(f);
+        ((float[]) arr)[index] = value;
+    }
+
+    public static float arrayReadFloat(Object arr, int index) {
+        ArrayField f = new ArrayField(float[].class, arr, index);
+        readAccess(f);
+        return ((float[]) arr)[index];
+    }
+
+    public static void arrayWriteShort(Object arr, int index, short value) {
+        ArrayField f = new ArrayField(short[].class, arr, index);
+        writeAccess(f);
+        ((short[]) arr)[index] = value;
+    }
+
+    public static short arrayReadShort(Object arr, int index) {
+        ArrayField f = new ArrayField(short[].class, arr, index);
+        readAccess(f);
+        return ((short[]) arr)[index];
+    }
 
 
 }

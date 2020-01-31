@@ -6,20 +6,31 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 
-public class Client {
+public class Client extends ClientBase {
 
-    private Integer[] messages = new Integer[2];
-    private ArrayDeque<Integer> q = new ArrayDeque<>();
-    private ArrayList<Integer> a = new ArrayList<>();
-    private ArrayBlockingQueue<Integer> b = new ArrayBlockingQueue<Integer>(5);
-//  private HashSet<Integer> h= new HashSet<>();
-    private Integer i= new Integer(11);
-    private LinkedList<Integer> li= new LinkedList<>();
+    private Integer[] messages;
+    private ArrayDeque<Integer> q;
+    private ArrayList<Integer> a;
+    private ArrayBlockingQueue<Integer> b;
+    private Integer i;
+    private LinkedList<Integer> li;
+
+
+    public Client() {
+        super(42);
+        messages = new Integer[2];
+        q = new ArrayDeque<>();
+        a = new ArrayList<>();
+        b = new ArrayBlockingQueue<Integer>(5);
+        i = new Integer(11);
+        li = new LinkedList<>();
+    }
+
 
     public synchronized void addMessageArr(int i) {
         Integer[] m = messages;
         m[0] = i;
-        this.i=i;
+        this.i = i;
         li.add(i);
     }
 
@@ -35,7 +46,7 @@ public class Client {
 
 
     public synchronized String getMessageArr() {
-        return "" +li.get(0)+ messages[0]+" "+this.i;
+        return "" + li.get(0) + messages[0] + " " + this.i;
     }
 
     public synchronized String getMessage() {
@@ -44,6 +55,7 @@ public class Client {
 
     public static void main(String[] args) {
         try {
+            Test tt = new Test();
             Client c = new Client();
             Thread t = new Thread(() -> {
                 for (int i = 0; i < 1; i++) {
