@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@Deprecated
 public class Logger {
 
     private static Logger logger;

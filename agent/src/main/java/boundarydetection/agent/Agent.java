@@ -49,7 +49,16 @@ public class Agent implements ClassFileTransformer {
             "java",
             "com.sun",
             "org.aspectj",
-            "com.google.comm" //TODO has to go, only debug
+            "org.jruby",
+            "jnr",
+            "org.joni",
+            "org.apache.hbase.thirdparty.com.google.common.util.concurrent.Monitor", //TODO Stackmap in excpetion handler problem
+            "org.joda",
+            "org.apache.hadoop.hbase.regionserver.HRegion", //TODO Stackmap in excpetion handler problem
+            "com.google.comm",
+            "org.tinylog"
+
+            //TODO has to go, only debug
             // "org.apache.hadoop.hbase.master.HMaster",
             // "org.apache.hadoop.hbase.regionserver.HRegionServer",
             //TODO no exceptions,
@@ -68,6 +77,7 @@ public class Agent implements ClassFileTransformer {
             "java/util/LinkedList",
             //"java/util/AbstractList",
             //"java/util/AbstractCollection",
+            "org/apache/hadoop/hbase",
 
             "java/util/concurrent/ArrayBlockingQueue"};
 //            "java/util/concurrent/BlockingQueue",
@@ -80,7 +90,7 @@ public class Agent implements ClassFileTransformer {
 
         // call for classes where agent is dependent on or that are used while bootstrapping
         for (Class c : instrumentation.getAllLoadedClasses()) {
-            if (!isExcluded(c.getName())) {
+            if ((true ||isIncluded(c.getName()))&& !isExcluded(c.getName())) {
                 //System.out.println("RETRA: " + c.getName());
                 try {
                     instrumentation.retransformClasses(c);
@@ -101,7 +111,8 @@ public class Agent implements ClassFileTransformer {
         // System.out.println(className + " " + clazz);
         if (className == null) return bytes;
 
-        if (!isExcluded(className)) {
+        //!isExcluded(className)
+        if ( (true||isIncluded(className)) &&!isExcluded(className)) {
             try {
                 return transformClass(className, clazz, bytes);
             } catch (Exception e) {
@@ -109,20 +120,9 @@ public class Agent implements ClassFileTransformer {
                 e.printStackTrace();
             }
         }
-//        for (int i = 0; i < EXCLUDES.length; i++) {
-//            if (className.startsWith(EXCLUDES[i])) {
-//                return bytes;
-//            }
-//        }
 
         // for debugging, isIncluded will disappear
-//        if (isIncluded(className)) {
-//            try {
-//                return transformClass(className, clazz, bytes);
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//        }
+
         return bytes;
     }
 
@@ -142,7 +142,7 @@ public class Agent implements ClassFileTransformer {
         //}
 
         ctCl.instrument(conv);
-        ctCl.debugWriteFile();
+        //ctCl.debugWriteFile();
         return ctCl.toBytecode();
 
     }
@@ -157,7 +157,7 @@ public class Agent implements ClassFileTransformer {
 
     private static boolean isIncluded(String name) {
         for (int i = 0; i < INCLUDES.length; i++) {
-            if (name.startsWith(INCLUDES[i])) return true;
+            if (name.replace('.', '/').startsWith(INCLUDES[i])) return true;
         }
         return false;
     }

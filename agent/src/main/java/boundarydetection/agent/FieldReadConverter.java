@@ -81,63 +81,6 @@ public class FieldReadConverter extends TransformReadField {
         return s.length() != 1;//TODO
     }
 
-//    @Override
-//    public int transform(CtClass tclazz, int pos, CodeIterator iterator,
-//                         ConstPool cp) throws BadBytecode {
-//
-//        int c = iterator.byteAt(pos);
-//        if (c == GETFIELD || c == GETSTATIC) {
-//            int index = iterator.u16bitAt(pos + 1);
-//            String typedesc = isField(tclazz.getClassPool(), cp,
-//                    fieldClass, fieldname, isPrivate, index);
-//            if (typedesc != null && isObjectSig(typedesc)) {
-////                if (c == GETSTATIC) {
-////                    iterator.move(pos);
-////
-////                    pos = iterator.insertGap(1); // insertGap() may insert 4 bytes.
-////                    iterator.writeByte(ACONST_NULL, pos);
-////                    pos = iterator.next();
-////                }
-//
-//                pos = iterator.insertGap(1);
-//                if (c == GETSTATIC) iterator.writeByte(ACONST_NULL, pos);
-//                else iterator.writeByte(Opcode.ALOAD_0, pos);
-//                pos += 1;
-//
-//                int str_index = cp.addStringInfo("infoString");
-//                //TODO this is worst case , move this
-//
-//
-//                pos = addLdc(str_index, iterator, pos);
-//
-//                pos = iterator.insertGap(3);
-//                String type = "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)"
-//                        //+typedesc;
-//                        + "Ljava/lang/Object;";
-//                int mi = cp.addClassInfo(methodClassname);
-//                int methodref = cp.addMethodrefInfo(mi, methodName, type);
-//                iterator.writeByte(INVOKESTATIC, pos);
-//                iterator.write16bit(methodref, pos + 1);
-//                pos += 3;
-//
-//                String cast_type = typedesc.substring(1, typedesc.length() - 1);
-//                int cast_index = cp.addClassInfo(cast_type);
-//                pos = iterator.insertGap(3);
-//                iterator.writeByte(CHECKCAST, pos);
-//                iterator.write16bit(cast_index, pos + 1);
-//                pos += 3;
-//
-//                CodeAttribute ca = iterator.get();
-//                ca.setMaxStack(ca.getMaxStack() + 4);
-//
-//                return pos;
-//            }
-//        }
-//        return pos;
-//    }
-
-
-
     @Override
     public int transform(CtClass tclazz, int pos, CodeIterator iterator,
                          ConstPool cp) throws BadBytecode {
@@ -148,17 +91,6 @@ public class FieldReadConverter extends TransformReadField {
             String typedesc = isField(tclazz.getClassPool(), cp,
                     fieldClass, fieldname, isPrivate, index);
             if (typedesc != null && isObjectSig(typedesc)) {
-//                if (c == GETSTATIC) {
-//                    iterator.move(pos);
-//
-//                    pos = iterator.insertGap(1); // insertGap() may insert 4 bytes.
-//                    iterator.writeByte(ACONST_NULL, pos);
-//                    pos = iterator.next();
-//                }
-
-//                pos = iterator.insertGap(1);
-//                iterator.writeByte(DUP, pos);
-//                pos += 1;
 
                 pos = iterator.insertGap(1);
                 if (true|| c == GETSTATIC) iterator.writeByte(ACONST_NULL, pos);
@@ -169,17 +101,14 @@ public class FieldReadConverter extends TransformReadField {
                 pos = addLdc(str_index, iterator, pos);
 
                 pos = iterator.insertGap(3);
-                String type = "(Ljava/lang/Object;Ljava/lang/String;)"
-                        //+typedesc;
-                     //   + "Ljava/lang/Object;";
-                +"V";
+                String type = "(Ljava/lang/Object;Ljava/lang/String;)V";
                 int mi = cp.addClassInfo(methodClassname);
                 int methodref = cp.addMethodrefInfo(mi, methodName, type);
                 iterator.writeByte(INVOKESTATIC, pos);
                 iterator.write16bit(methodref, pos + 1);
 
                 CodeAttribute ca = iterator.get();
-                ca.setMaxStack(ca.getMaxStack() + 3);
+                ca.setMaxStack(ca.getMaxStack() + 2);
 
                 return pos;
             }

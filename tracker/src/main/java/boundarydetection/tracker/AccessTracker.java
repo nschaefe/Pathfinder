@@ -1,12 +1,18 @@
 package boundarydetection.tracker;
 
+import org.tinylog.configuration.Configuration;
+
 import java.util.HashMap;
 import java.util.List;
 
 public class AccessTracker {
 
     static {
-        Logger.initLogger("./");
+        Configuration.set("writer","file");
+        Configuration.set("writer.file","./tracker_report.txt");
+        Configuration.set("writer.append", "true");
+        Configuration.set("writer.buffered", "true");
+        Configuration.set("writingthread", "true");
     }
 
     //TODO it would be useful to have a no-false-positives and a no-false-negative mode
@@ -86,7 +92,7 @@ public class AccessTracker {
                 s.append(Util.toString(w.getStackTrace()));
                 s.append(System.lineSeparator());
             }
-            Logger.getLogger().log(s.toString());
+            org.tinylog.Logger.debug(s.toString());
         } finally {
             insideTracker.remove();
         }
