@@ -115,6 +115,8 @@ public class Agent implements ClassFileTransformer {
         if ( (true||isIncluded(className)) &&!isExcluded(className)) {
             try {
                 return transformClass(className, clazz, bytes);
+            } catch (NotFoundException e) {
+                System.err.println("INST NOT FOUND " + className);
             } catch (Exception e) {
                 System.err.println("INST ERROR " + className);
                 e.printStackTrace();
