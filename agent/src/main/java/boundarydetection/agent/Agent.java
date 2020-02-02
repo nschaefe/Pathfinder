@@ -1,8 +1,6 @@
 package boundarydetection.agent;
 
 import javassist.*;
-import javassist.expr.ExprEditor;
-import javassist.expr.FieldAccess;
 
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
@@ -122,8 +120,6 @@ public class Agent implements ClassFileTransformer {
                 e.printStackTrace();
             }
         }
-
-        // for debugging, isIncluded will disappear
 
         return bytes;
     }

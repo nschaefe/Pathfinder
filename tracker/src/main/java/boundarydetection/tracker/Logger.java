@@ -1,48 +1,38 @@
 package boundarydetection.tracker;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import org.tinylog.Level;
+import org.tinylog.configuration.Configuration;
+import org.tinylog.core.TinylogLoggingProvider;
+import org.tinylog.provider.LoggingProvider;
 
-@Deprecated
 public class Logger {
 
     private static Logger logger;
 
     public static Logger getLogger() {
         if (logger == null) {
-            throw new IllegalStateException("logger not inited");
+            logger = new Logger();
         }
         return logger;
     }
 
-    public static void initLogger(String path) {
-        logger = new Logger(path);
+    public static void configureLogger(String path) {
+
     }
 
-    private Path path;
+    private LoggingProvider tinylog;
 
-    public Logger(String path) {
-        String name = "tracker_report";
-        //"_" + Util.getProcessID() + "_" + Util.getProcessName() + "_" + Util.getHost();
-        this.path = Paths.get(path, name);
+    private Logger() {
+        Configuration.set("writer.file","./tracker_report.txt");
+        Configuration.set("writer", "file");
+        Configuration.set("writer.append", "true");
+        Configuration.set("writer.buffered", "true");
+        Configuration.set("writingthread", "true");
+        tinylog = new TinylogLoggingProvider();
     }
 
-    //TODO speed this up
     public void log(String mess) {
-        try (OutputStream fos = getOutputStream()) {
-            mess = Util.getCurrentTime() + "_" + mess;
-            fos.write(mess.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private OutputStream getOutputStream() throws FileNotFoundException {
-        return new FileOutputStream(path.toFile(),true);
+        tinylog.log(2, null, Level.DEBUG, null, mess, null);
     }
 
 }
