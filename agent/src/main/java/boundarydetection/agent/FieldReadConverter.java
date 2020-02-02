@@ -16,20 +16,25 @@ package boundarydetection.agent;
  * License.
  */
 
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtField;
-import javassist.Modifier;
-import javassist.NotFoundException;
+import javassist.*;
 import javassist.bytecode.*;
 import javassist.convert.TransformReadField;
 import javassist.convert.Transformer;
 
 public class FieldReadConverter extends TransformReadField {
 
+    private MethodInfo methodInfo;
+    private boolean skippedConstCall = false;
+
     public FieldReadConverter(Transformer next, CtField field,
                               String methodClassname, String methodName) {
         super(next, field, methodClassname, methodName);
+    }
+
+    @Override
+    public void initialize(ConstPool cp, CtClass clazz, MethodInfo minfo) throws CannotCompileException {
+        methodInfo = minfo;
+        initialize(cp, minfo.getCodeAttribute());
     }
 
     static String isField(ClassPool pool, ConstPool cp, CtClass fclass,
@@ -75,15 +80,35 @@ public class FieldReadConverter extends TransformReadField {
     }
 
 
-
     private boolean isObjectSig(String s) {
         if (s.startsWith("[")) return false;
         return s.length() != 1;//TODO
     }
 
+
+    @Override
+    public void clean() {
+        skippedConstCall = false;
+    }
+
+
+
     @Override
     public int transform(CtClass tclazz, int pos, CodeIterator iterator,
                          ConstPool cp) throws BadBytecode {
+        // jump over all instructions before super or this.
+        // static field accesses can happen before super,
+        // so not doing this can lead to a method call injection before super or this,
+        // what leads to passing uninitializedThis to method call, what is not allowed
+        if (methodInfo.isConstructor() && !skippedConstCall) {
+            int onCallIndex = iterator.skipConstructor();
+            if (onCallIndex != -1) {
+                //jumping over super or this call, pos is after
+                iterator.move(onCallIndex);
+                pos = iterator.next();
+            }
+            skippedConstCall = true;
+        }
 
         int c = iterator.byteAt(pos);
         if (c == GETFIELD || c == GETSTATIC) {
@@ -93,7 +118,7 @@ public class FieldReadConverter extends TransformReadField {
             if (typedesc != null && isObjectSig(typedesc)) {
 
                 pos = iterator.insertGap(1);
-                if (true|| c == GETSTATIC) iterator.writeByte(ACONST_NULL, pos);
+                if (c == GETSTATIC) iterator.writeByte(ACONST_NULL, pos);
                 else iterator.writeByte(Opcode.ALOAD_0, pos);
                 pos += 1;
 

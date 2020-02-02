@@ -90,7 +90,7 @@ public class Agent implements ClassFileTransformer {
 
         // call for classes where agent is dependent on or that are used while bootstrapping
         for (Class c : instrumentation.getAllLoadedClasses()) {
-            if ((true ||isIncluded(c.getName()))&& !isExcluded(c.getName())) {
+            if ((true || isIncluded(c.getName())) && !isExcluded(c.getName())) {
                 //System.out.println("RETRA: " + c.getName());
                 try {
                     instrumentation.retransformClasses(c);
@@ -112,7 +112,7 @@ public class Agent implements ClassFileTransformer {
         if (className == null) return bytes;
 
         //!isExcluded(className)
-        if ( (true||isIncluded(className)) &&!isExcluded(className)) {
+        if ((true || isIncluded(className)) && !isExcluded(className)) {
             try {
                 return transformClass(className, clazz, bytes);
             } catch (NotFoundException e) {
@@ -137,11 +137,9 @@ public class Agent implements ClassFileTransformer {
 
         CodeConverter conv = new CodeConv();
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
-        //if (name.equals("client/Test")) {
-            for (CtField field : ctCl.getDeclaredFields()) {
-                conv.replaceFieldRead(field, tracker, "readObject");
-            }
-        //}
+        for (CtField field : ctCl.getDeclaredFields()) {
+            conv.replaceFieldRead(field, tracker, "readObject");
+        }
 
         ctCl.instrument(conv);
         //ctCl.debugWriteFile();
