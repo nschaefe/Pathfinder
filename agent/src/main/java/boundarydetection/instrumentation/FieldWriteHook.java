@@ -48,6 +48,7 @@ public class FieldWriteHook extends FieldAccessHook {
                     fieldClass, fieldname, isPrivate, index);
             if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
 
+                iterator.move(pos);
                 if (isStatic) {
                     pos = iterator.insertGap(1);
                     iterator.writeByte(ACONST_NULL, pos);
@@ -57,18 +58,13 @@ public class FieldWriteHook extends FieldAccessHook {
                 } else {
                     // putfield takes a reference, this reference must be passed to our tracker method, copy this ref:
                     // swap ref, value -> value, ref ; dup ref on second level -> ref, value, ref ; swap again -> ref, ref, value
-                    iterator.move(pos);
-
-                    pos = iterator.insertGap(3);
+                    pos = iterator.insertGap(2);
                     iterator.writeByte(Opcode.SWAP, pos);
-                    iterator.writeByte(Opcode.DUP_X1, pos+1);
-                    iterator.writeByte(Opcode.SWAP, pos+2);
-
+                    iterator.writeByte(Opcode.DUP, pos+1);
+                    pos+=2;
                     CodeAttribute ca = iterator.get();
-                    ca.setMaxStack(ca.getMaxStack() + 2);
-                    pos= iterator.next();
+                    ca.setMaxStack(ca.getMaxStack() + 1);
                 }
-
 
                 int str_index = cp.addStringInfo(fieldClass.getName() + '.' + fieldname);
                 pos = addLdc(str_index, iterator, pos);
@@ -81,8 +77,15 @@ public class FieldWriteHook extends FieldAccessHook {
                 int methodref = cp.addMethodrefInfo(mi, methodName, type);
                 iterator.writeByte(INVOKESTATIC, pos);
                 iterator.write16bit(methodref, pos + 1);
+                pos+=3;
 
+                if (!isStatic) {
+                    pos = iterator.insertGap(1);
+                    iterator.writeByte(Opcode.SWAP, pos);
+                    pos+=1;
+                }
 
+                iterator.next();
                 return pos;
             }
         }
