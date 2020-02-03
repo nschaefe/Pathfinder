@@ -17,13 +17,14 @@ public class Logger {
     }
 
     public static void configureLogger(String path) {
-
+        Logger.path=path;
     }
 
+    private static String path;
     private LoggingProvider tinylog;
 
     private Logger() {
-        Configuration.set("writer.file","./tracker_report.txt");
+        Configuration.set("writer.file",path);
         Configuration.set("writer", "file");
         Configuration.set("writer.append", "true");
         Configuration.set("writer.buffered", "true");

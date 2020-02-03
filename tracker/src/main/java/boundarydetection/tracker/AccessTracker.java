@@ -8,6 +8,9 @@ import java.util.List;
 
 public class AccessTracker {
 
+    static{
+        Logger.configureLogger("./tracker_report.txt");
+    }
 
     //TODO it would be useful to have a no-false-positives and a no-false-negative mode
     // --> no-false-positives only gives sensible boundaries that need to be supported, but could miss some cases
@@ -103,9 +106,9 @@ public class AccessTracker {
 //        return  value;
 //    }
 
-    public static void writeObject(Object value, Object parent, String location) {
+    public static void writeObject(Object parent, String location) {
         Field f = new Field(location, Object.class, parent);
-        writeAccess(f, value == null);
+        writeAccess(f);
     }
 
     public static int arrayReadInt(Object arr, int index) {

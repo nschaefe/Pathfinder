@@ -2,10 +2,8 @@ package boundarydetection.instrumentation;
 
 import javassist.CtClass;
 import javassist.CtField;
-import javassist.bytecode.BadBytecode;
-import javassist.bytecode.CodeAttribute;
-import javassist.bytecode.CodeIterator;
-import javassist.bytecode.ConstPool;
+import javassist.bytecode.*;
+import javassist.convert.TransformWriteField;
 import javassist.convert.Transformer;
 
 public class FieldWriteHook extends FieldAccessHook {
@@ -14,40 +12,123 @@ public class FieldWriteHook extends FieldAccessHook {
         super(next, field, methodClassname, methodName);
     }
 
-    public int transform(CtClass tclazz, int pos, CodeIterator iterator, ConstPool cp) throws BadBytecode {
-        int c = iterator.byteAt(pos);
-        if (c == 181 || c == 179) {
-            int index = iterator.u16bitAt(pos + 1);
-            String typedesc = isField(tclazz.getClassPool(), cp, this.fieldClass, this.fieldname, this.isPrivate, index);
-            if (typedesc != null) {
-                if (c == 179) {
-                    CodeAttribute ca = iterator.get();
-                    iterator.move(pos);
-                    char c0 = typedesc.charAt(0);
-                    if (c0 != 'J' && c0 != 'D') {
-                        pos = iterator.insertGap(2);
-                        iterator.writeByte(1, pos);
-                        iterator.writeByte(95, pos + 1);
-                        ca.setMaxStack(ca.getMaxStack() + 1);
-                    } else {
-                        pos = iterator.insertGap(3);
-                        iterator.writeByte(1, pos);
-                        iterator.writeByte(91, pos + 1);
-                        iterator.writeByte(87, pos + 2);
-                        ca.setMaxStack(ca.getMaxStack() + 2);
-                    }
+    private boolean skippedConstCall = false;
 
-                    pos = iterator.next();
-                }
+    @Override
+    public void clean() {
+        skippedConstCall = false;
+    }
 
-                int mi = cp.addClassInfo(this.methodClassname);
-                String type = "(Ljava/lang/Object;" + typedesc + ")V";
-                int methodref = cp.addMethodrefInfo(mi, this.methodName, type);
-                iterator.writeByte(184, pos);
-                iterator.write16bit(methodref, pos + 1);
+    @Override
+    public int transform(CtClass tclazz, int pos, CodeIterator iterator,
+                         ConstPool cp) throws BadBytecode {
+        // jump over all instructions before super or this.
+        // static field accesses can happen before super,
+        // so not doing this can lead to a method call injection before super or this,
+        // what leads to passing uninitializedThis to method call, what is not allowed
+        if (methodInfo.isConstructor() && !skippedConstCall) {
+            int onCallIndex = iterator.skipConstructor();
+            if (onCallIndex != -1) {
+                //jumping over super or this call, pos is after
+                iterator.move(onCallIndex);
+                pos = iterator.next();
             }
+            skippedConstCall = true;
         }
 
+        int c = iterator.byteAt(pos);
+        boolean isFieldRead = c == GETFIELD || c == GETSTATIC;
+        boolean isFieldWrite = c == PUTFIELD || c == PUTSTATIC;
+        boolean isFieldAccess = isFieldRead || isFieldWrite;
+        boolean isStatic = c == GETSTATIC || c == PUTSTATIC;
+
+        if (isFieldWrite) {
+            int index = iterator.u16bitAt(pos + 1);
+            String typedesc = isField(tclazz.getClassPool(), cp,
+                    fieldClass, fieldname, isPrivate, index);
+            if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
+
+                if (isStatic) {
+                    pos = iterator.insertGap(1);
+                    iterator.writeByte(ACONST_NULL, pos);
+                    pos += 1;
+                    CodeAttribute ca = iterator.get();
+                    ca.setMaxStack(ca.getMaxStack() + 1);
+                } else {
+                    // putfield takes a reference, this reference must be passed to our tracker method, copy this ref:
+                    // swap ref, value -> value, ref ; dup ref on second level -> ref, value, ref ; swap again -> ref, ref, value
+                    iterator.move(pos);
+
+                    pos = iterator.insertGap(3);
+                    iterator.writeByte(Opcode.SWAP, pos);
+                    iterator.writeByte(Opcode.DUP_X1, pos+1);
+                    iterator.writeByte(Opcode.SWAP, pos+2);
+
+                    CodeAttribute ca = iterator.get();
+                    ca.setMaxStack(ca.getMaxStack() + 2);
+                    pos= iterator.next();
+                }
+
+
+                int str_index = cp.addStringInfo(fieldClass.getName() + '.' + fieldname);
+                pos = addLdc(str_index, iterator, pos);
+                CodeAttribute ca = iterator.get();
+                ca.setMaxStack(ca.getMaxStack() + 1);
+
+                pos = iterator.insertGap(3);
+                String type = "(Ljava/lang/Object;Ljava/lang/String;)V";
+                int mi = cp.addClassInfo(methodClassname);
+                int methodref = cp.addMethodrefInfo(mi, methodName, type);
+                iterator.writeByte(INVOKESTATIC, pos);
+                iterator.write16bit(methodref, pos + 1);
+
+
+                return pos;
+            }
+        }
         return pos;
     }
+
+
+//
+//    public int transform(CtClass tclazz, int pos, CodeIterator iterator, ConstPool cp) throws BadBytecode {
+//
+//        int c = iterator.byteAt(pos);
+//        if (c == PUTFIELD || c == PUTSTATIC) {
+//            int index = iterator.u16bitAt(pos + 1);
+//            String typedesc = isField(tclazz.getClassPool(), cp,
+//                    fieldClass, fieldname, isPrivate, index);
+//            if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
+//                if (c == PUTSTATIC) {
+//                    CodeAttribute ca = iterator.get();
+//                    iterator.move(pos);
+//                    char c0 = typedesc.charAt(0);
+//                    if (c0 == 'J' || c0 == 'D') {       // long or double
+//                        // insertGap() may insert 4 bytes.
+//                        pos = iterator.insertGap(3);
+//                        iterator.writeByte(ACONST_NULL, pos);
+//                        iterator.writeByte(DUP_X2, pos + 1);
+//                        iterator.writeByte(POP, pos + 2);
+//                        ca.setMaxStack(ca.getMaxStack() + 2);
+//                    } else {
+//                        // insertGap() may insert 4 bytes.
+//                        pos = iterator.insertGap(2);
+//                        iterator.writeByte(ACONST_NULL, pos);
+//                        iterator.writeByte(SWAP, pos + 1);
+//                        ca.setMaxStack(ca.getMaxStack() + 1);
+//                    }
+//
+//                    pos = iterator.next();
+//                }
+//
+//                int mi = cp.addClassInfo(methodClassname);
+//                String type = "(Ljava/lang/Object;" + typedesc + ")V";
+//                int methodref = cp.addMethodrefInfo(mi, methodName, type);
+//                iterator.writeByte(INVOKESTATIC, pos);
+//                iterator.write16bit(methodref, pos + 1);
+//            }
+//        }
+//
+//        return pos;
+//    }
 }

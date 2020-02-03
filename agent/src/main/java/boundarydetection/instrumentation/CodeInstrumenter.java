@@ -123,7 +123,7 @@ public class CodeInstrumenter extends CodeConverter {
      */
     public void replaceFieldWrite(CtField field,
                                   CtClass calledClass, String calledMethod) {
-        transformers = new TransformWriteField(transformers, field,
+        transformers = new FieldWriteHook(transformers, field,
                 calledClass.getName(),
                 calledMethod);
     }

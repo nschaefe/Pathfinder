@@ -50,19 +50,25 @@ public class FieldReadHook extends FieldAccessHook {
             skippedConstCall = true;
         }
 
+
         int c = iterator.byteAt(pos);
-        if (c == GETFIELD || c == GETSTATIC) {
+        boolean isFieldRead = c == GETFIELD || c == GETSTATIC;
+        boolean isFieldWrite = c == PUTFIELD || c == PUTSTATIC;
+        boolean isFieldAccess = isFieldRead || isFieldWrite;
+        boolean isStatic = c == GETSTATIC || c == PUTSTATIC;
+
+        if (isFieldRead) {
             int index = iterator.u16bitAt(pos + 1);
             String typedesc = isField(tclazz.getClassPool(), cp,
                     fieldClass, fieldname, isPrivate, index);
             if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
 
                 pos = iterator.insertGap(1);
-                if (c == GETSTATIC) iterator.writeByte(ACONST_NULL, pos);
+                if (isStatic) iterator.writeByte(ACONST_NULL, pos);
                 else iterator.writeByte(Opcode.ALOAD_0, pos);
                 pos += 1;
 
-                int str_index = cp.addStringInfo("infoString");
+                int str_index = cp.addStringInfo(fieldClass.getName()+'.'+fieldname);
                 pos = addLdc(str_index, iterator, pos);
 
                 pos = iterator.insertGap(3);

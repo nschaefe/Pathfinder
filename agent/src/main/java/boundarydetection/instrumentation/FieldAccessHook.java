@@ -29,12 +29,13 @@ public abstract class FieldAccessHook extends Transformer {
     @Override
     public void initialize(ConstPool cp, CtClass clazz, MethodInfo minfo) throws CannotCompileException {
         methodInfo = minfo;
+        methodInfo.doPreverify=true;
         initialize(cp, minfo.getCodeAttribute());
     }
 
 
     protected static String isField(ClassPool pool, ConstPool cp, CtClass fclass,
-                          String fname, boolean is_private, int index) {
+                                    String fname, boolean is_private, int index) {
         if (!cp.getFieldrefName(index).equals(fname))
             return null;
 
