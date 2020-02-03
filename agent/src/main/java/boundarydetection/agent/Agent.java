@@ -1,5 +1,6 @@
 package boundarydetection.agent;
 
+import boundarydetection.instrumentation.CodeInstrumenter;
 import javassist.*;
 
 import java.io.IOException;
@@ -131,7 +132,7 @@ public class Agent implements ClassFileTransformer {
         System.out.println("INST: " + name);
         CtClass tracker = cp.get("boundarydetection.tracker.AccessTracker");
 
-        CodeConverter conv = new CodeConv();
+        CodeConverter conv = new CodeInstrumenter();
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
         for (CtField field : ctCl.getDeclaredFields()) {
             conv.replaceFieldRead(field, tracker, "readObject");

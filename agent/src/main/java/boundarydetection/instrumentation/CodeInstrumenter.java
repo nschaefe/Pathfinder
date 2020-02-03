@@ -1,4 +1,4 @@
-package boundarydetection.agent;
+package boundarydetection.instrumentation;
 
 /*
  * Javassist, a Java-bytecode translator toolkit.
@@ -19,7 +19,6 @@ package boundarydetection.agent;
 
 import javassist.*;
 import javassist.convert.TransformWriteField;
-import javassist.convert.Transformer;
 
 /**
  * Simple translator of method bodies
@@ -47,7 +46,7 @@ import javassist.convert.Transformer;
  *
  * @see javassist.expr.ExprEditor
  */
-public class CodeConv extends CodeConverter {
+public class CodeInstrumenter extends CodeConverter {
     /**
      * Modify a method body so that an expression reading the specified
      * field is replaced with a call to the specified <i>static</i> method.
@@ -83,7 +82,7 @@ public class CodeConv extends CodeConverter {
      */
     public void replaceFieldRead(CtField field,
                                  CtClass calledClass, String calledMethod) {
-        transformers = new FieldReadConverter(transformers, field,
+        transformers = new FieldReadHook(transformers, field,
                 calledClass.getName(),
                 calledMethod);
     }

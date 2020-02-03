@@ -1,4 +1,4 @@
-package boundarydetection.agent;
+package boundarydetection.instrumentation;
 
 /*
  * Javassist, a Java-bytecode translator toolkit.
@@ -18,80 +18,20 @@ package boundarydetection.agent;
 
 import javassist.*;
 import javassist.bytecode.*;
-import javassist.convert.TransformReadField;
 import javassist.convert.Transformer;
 
-public class FieldReadConverter extends TransformReadField {
+public class FieldReadHook extends FieldAccessHook {
 
-    private MethodInfo methodInfo;
     private boolean skippedConstCall = false;
 
-    public FieldReadConverter(Transformer next, CtField field,
-                              String methodClassname, String methodName) {
+    public FieldReadHook(Transformer next, CtField field, String methodClassname, String methodName) {
         super(next, field, methodClassname, methodName);
     }
-
-    @Override
-    public void initialize(ConstPool cp, CtClass clazz, MethodInfo minfo) throws CannotCompileException {
-        methodInfo = minfo;
-        initialize(cp, minfo.getCodeAttribute());
-    }
-
-    static String isField(ClassPool pool, ConstPool cp, CtClass fclass,
-                          String fname, boolean is_private, int index) {
-        if (!cp.getFieldrefName(index).equals(fname))
-            return null;
-
-        try {
-            CtClass c = pool.get(cp.getFieldrefClassName(index));
-            if (c == fclass || (!is_private && isFieldInSuper(c, fclass, fname)))
-                return cp.getFieldrefType(index);
-        } catch (NotFoundException e) {
-        }
-        return null;
-    }
-
-    static boolean isFieldInSuper(CtClass clazz, CtClass fclass, String fname) {
-        if (!clazz.subclassOf(fclass))
-            return false;
-
-        try {
-            CtField f = clazz.getField(fname);
-            return f.getDeclaringClass() == fclass;
-        } catch (NotFoundException e) {
-        }
-        return false;
-    }
-
-    private int addLdc(int i, CodeIterator iterator, int pos) throws BadBytecode {
-        if (i > 0xFF) {
-            pos = iterator.insertGap(3);
-            iterator.writeByte(LDC_W, pos);
-            iterator.write16bit(i, pos + 1);
-            pos += 3;
-
-        } else {
-            pos = iterator.insertGap(2);
-            iterator.writeByte(LDC, pos);
-            iterator.writeByte(i, pos + 1);
-            pos += 2;
-        }
-        return pos;
-    }
-
-
-    private boolean isObjectSig(String s) {
-        if (s.startsWith("[")) return false;
-        return s.length() != 1;//TODO
-    }
-
 
     @Override
     public void clean() {
         skippedConstCall = false;
     }
-
-
 
     @Override
     public int transform(CtClass tclazz, int pos, CodeIterator iterator,
@@ -115,7 +55,7 @@ public class FieldReadConverter extends TransformReadField {
             int index = iterator.u16bitAt(pos + 1);
             String typedesc = isField(tclazz.getClassPool(), cp,
                     fieldClass, fieldname, isPrivate, index);
-            if (typedesc != null && isObjectSig(typedesc)) {
+            if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
 
                 pos = iterator.insertGap(1);
                 if (c == GETSTATIC) iterator.writeByte(ACONST_NULL, pos);
