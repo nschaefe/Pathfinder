@@ -50,20 +50,22 @@ public class FieldWriteHook extends FieldAccessHook {
 
                 iterator.move(pos);
                 if (isStatic) {
-                    pos = iterator.insertGap(1);
-                    iterator.writeByte(ACONST_NULL, pos);
-                    pos += 1;
+                    pos = iterator.insertGap(3);
+                    iterator.writeByte(Opcode.DUP, pos);
+                    iterator.writeByte(ACONST_NULL, pos+1);
+                    iterator.writeByte(Opcode.SWAP, pos+2);
+                    pos += 3;
                     CodeAttribute ca = iterator.get();
-                    ca.setMaxStack(ca.getMaxStack() + 1);
+                    ca.setMaxStack(ca.getMaxStack() + 2);
                 } else {
-                    // putfield takes a reference, this reference must be passed to our tracker method, copy this ref:
-                    // swap ref, value -> value, ref ; dup ref on second level -> ref, value, ref ; swap again -> ref, ref, value
-                    pos = iterator.insertGap(2);
+                    pos = iterator.insertGap(4);
                     iterator.writeByte(Opcode.SWAP, pos);
-                    iterator.writeByte(Opcode.DUP, pos+1);
-                    pos+=2;
+                    iterator.writeByte(Opcode.DUP_X1, pos + 1);
+                    iterator.writeByte(Opcode.SWAP, pos + 2);
+                    iterator.writeByte(Opcode.DUP_X1, pos + 3);
+                    pos += 4;
                     CodeAttribute ca = iterator.get();
-                    ca.setMaxStack(ca.getMaxStack() + 1);
+                    ca.setMaxStack(ca.getMaxStack() + 2);
                 }
 
                 int str_index = cp.addStringInfo(fieldClass.getName() + '.' + fieldname);
@@ -72,20 +74,14 @@ public class FieldWriteHook extends FieldAccessHook {
                 ca.setMaxStack(ca.getMaxStack() + 1);
 
                 pos = iterator.insertGap(3);
-                String type = "(Ljava/lang/Object;Ljava/lang/String;)V";
+                String type = "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V";
                 int mi = cp.addClassInfo(methodClassname);
                 int methodref = cp.addMethodrefInfo(mi, methodName, type);
                 iterator.writeByte(INVOKESTATIC, pos);
                 iterator.write16bit(methodref, pos + 1);
-                pos+=3;
+                pos += 3;
 
-                if (!isStatic) {
-                    pos = iterator.insertGap(1);
-                    iterator.writeByte(Opcode.SWAP, pos);
-                    pos+=1;
-                }
-
-                iterator.next();
+                pos=iterator.next();
                 return pos;
             }
         }

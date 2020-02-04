@@ -106,7 +106,7 @@ public class AccessTracker {
 //        return  value;
 //    }
 
-    public static void writeObject(Object parent, String location) {
+    public static void writeObject(Object parent,Object value, String location) {
         Field f = new Field(location, Object.class, parent);
         writeAccess(f);
     }

@@ -55,7 +55,9 @@ public class Agent implements ClassFileTransformer {
             "org.joda",
             "org.apache.hadoop.hbase.regionserver.HRegion", //TODO Stackmap in excpetion handler problem
             "com.google.comm",
-            "org.tinylog"
+            "org.tinylog",
+            "org.apache.zookeeper" //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation
+                                   // only VM reset is possible then
 
             //TODO has to go, only debug
             // "org.apache.hadoop.hbase.master.HMaster",
