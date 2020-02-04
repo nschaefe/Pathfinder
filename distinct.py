@@ -1,22 +1,23 @@
 import sys
-path = sys.argv[1]
-#path="./tracker_report"
-f = open(path, "r")
-lines = f.readlines() 
-f.close()
-
-s = set()
+import mmh3
+#path = sys.argv[1]
+path = "./tracker_report"
+path_out = path+"_distinct"
 buff = ""
+s = set()
 
-for line in lines: 
-    if "CONCURRENT WRITE/READ DETECTED" in line :
-        s.add(buff)
-        buff = line
-    else:
-        buff += line
+with open(path, "r") as fp_in:
+    with open(path_out, "w") as fp_out:
+        line = fp_in.readline()
+        while line:
+            if "CONCURRENT WRITE/READ DETECTED" in line:
+                ha = mmh3.hash128(buff, 42)
+                if ha not in s:
+                    s.add(ha)
+                    fp_out.write(buff+"\n")
 
+                buff = line
+            else:
+                buff += line
 
-path = path+"_distinct"
-f = open(path, 'w')
-f.write('\n'.join(s))
-f.close()
+            line = fp_in.readline()
