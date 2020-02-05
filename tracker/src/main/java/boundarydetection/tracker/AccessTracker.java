@@ -32,6 +32,10 @@ public class AccessTracker {
     // we just have to redefine what an access location is. Instead of fields and arrays we say objects if we have
     // an object at hand or the field location (array index, field) if it is a primitive.
 
+    // TODO REFACTOR: Accesscontroller as accesspoint from outside
+    // Access tracker as buisness tracker model that makes the decisions, move code from field access meta to tracker
+    // field access meta as pure datastructure/infrastructure
+
     private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
     // A thread local is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static ThreadLocal<Boolean> insideTracker = new ThreadLocal<Boolean>();
