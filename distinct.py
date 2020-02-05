@@ -1,7 +1,7 @@
 import sys
 import mmh3
-#path = sys.argv[1]
-path = "./tracker_report"
+path = sys.argv[1]
+#path = "./tracker_report"
 path_out = path+"_distinct"
 buff = ""
 s = set()
