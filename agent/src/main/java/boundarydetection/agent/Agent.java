@@ -45,6 +45,7 @@ public class Agent implements ClassFileTransformer {
 
             // APPLICATION PACKAGES BLACKLIST (HBase)
             "org.apache.log4j",
+            "org.slf4j",
             "org.aspectj",
             "org.jruby",
             "jnr",
@@ -54,6 +55,7 @@ public class Agent implements ClassFileTransformer {
             "org.apache.hadoop.hbase.regionserver.HRegion", //TODO Stackmap in excpetion handler problem
             "org.apache.zookeeper", //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation, only VM reset is possible then
             "com.google.comm", //TODO remove this
+            "org.apache.htrace", //built in tracing
 
             //DEBUG
             "java.net",
@@ -124,6 +126,7 @@ public class Agent implements ClassFileTransformer {
 
     private byte[] transformClass(final String name, final Class cl, byte[] b) throws CannotCompileException, NotFoundException, IOException {
         ClassPool cp = ClassPool.getDefault();
+
         CtClass ctCl = cp.get(name.replace('/', '.'));
         if (ctCl.isInterface()) return b;
         System.out.println("INST: " + name);

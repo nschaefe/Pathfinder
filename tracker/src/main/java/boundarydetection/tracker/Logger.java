@@ -24,6 +24,10 @@ public class Logger {
     private LoggingProvider tinylog;
 
     private Logger() {
+        // REMARK: DO NOT use tinylog through the normal interface (Logger.debug etc). Because of late binding, the lib is "manually" loaded
+        // at runtime. Since the tracker and tinylog is accessed via datastructures that are used while class loading,
+        // this leads to a cyclic class loading error.
+        // So we prevent this loading via a direct dependency of what should be loaded, what is the provider.
         Configuration.set("writer.file",path);
         Configuration.set("writer", "file");
         Configuration.set("writer.append", "true");
