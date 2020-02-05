@@ -13,22 +13,19 @@ public class Agent implements ClassFileTransformer {
 
 
     static final String[] EXCLUDES = new String[]{
-            "java.lang.invoke",
-            "javassist",
-            "sun",
-            //"sun.reflect"
-            //"sun.instrument",
-            "java.security",
-            "java.lang.reflect",
-            "java.lang.annotation",
+            // JAVA INTERNALS
             "[",
-            "java.lang.instrument",
-            "boundarydetection",
-            "java.lang.ThreadLocal", //TODO
-            "java.lang.ref",
-
-            "edu.brown.cs", //TODO Detached baggage instru fails
-            "org.apache.log4j",
+            "sun",
+            "com.sun",
+            "jdk.internal",
+            "java.util.jar",
+            "java.lang", // TODO also includes Thread what needs special treatment
+//            "java.lang.ThreadLocal",
+//            "java.lang.ref",
+//            "java.lang.invoke",
+//            "java.lang.reflect",
+//            "java.lang.instrument",
+//            "java.lang.annotation",
 //            "java.lang.Long",
 //            "java.lang.Integer",
 //            "java.lang.Short",
@@ -39,33 +36,31 @@ public class Agent implements ClassFileTransformer {
 //            "java.lang.Character",
 //            "java.lang.Boolean",
 //            "java.lang.String",
-            "jdk.internal",
-            "java.util.jar",
-            "java.lang", //TODO
-            "java.net",
-            "java.io",
-            "java.nio",
-            "java",
-            "com.sun",
+
+            // AGENT/TRACKER INTERNALS
+            "javassist",
+            "boundarydetection",
+            "edu.brown.cs",
+            "org.tinylog",
+
+            // APPLICATION PACKAGES BLACKLIST (HBase)
+            "org.apache.log4j",
             "org.aspectj",
             "org.jruby",
             "jnr",
+            "org.joda",
             "org.joni",
             "org.apache.hbase.thirdparty.com.google.common.util.concurrent.Monitor", //TODO Stackmap in excpetion handler problem
-            "org.joda",
             "org.apache.hadoop.hbase.regionserver.HRegion", //TODO Stackmap in excpetion handler problem
-            "com.google.comm",
-            "org.tinylog",
-            "org.apache.zookeeper" //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation
-                                   // only VM reset is possible then
+            "org.apache.zookeeper", //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation, only VM reset is possible then
+            "com.google.comm", //TODO remove this
 
-            //TODO has to go, only debug
-            // "org.apache.hadoop.hbase.master.HMaster",
-            // "org.apache.hadoop.hbase.regionserver.HRegionServer",
-            //TODO no exceptions,
-            // no errors
-
-
+            //DEBUG
+            "java.net",
+            "java.security",
+            "java.io",
+            "java.nio",
+            "java",
     };
 
 
