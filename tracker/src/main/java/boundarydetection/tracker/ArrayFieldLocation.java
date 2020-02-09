@@ -1,4 +1,4 @@
-package  boundarydetection.tracker;
+package boundarydetection.tracker;
 
 import java.util.Objects;
 
@@ -9,11 +9,13 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
 
 
     public ArrayFieldLocation(Class type, Object ref, int index) {
-        this(null, type, ref, index);
+        //REMARK currently we do not support locations, because we do not need it for now,
+        // we are rather interested in locations when we look at arrays as fields not in index access contexts
+        this("no location " + System.identityHashCode(ref), type, ref, index);
     }
 
     public ArrayFieldLocation(String location, Class type, Object ref, int index) {
-        super(location,type);
+        super(location, type);
         this.ref = ref;
         this.index = index;
     }
@@ -31,7 +33,7 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
         if (!(o instanceof ArrayFieldLocation)) return false;
         ArrayFieldLocation other = (ArrayFieldLocation) o;
 
-        return  Objects.equals(other.getLocation(), getLocation()) &&
+        return Objects.equals(other.getLocation(), getLocation()) &&
                 other.getType().equals(getType()) &&
                 other.ref == ref &&
                 other.index == index;

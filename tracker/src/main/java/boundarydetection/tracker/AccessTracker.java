@@ -9,6 +9,28 @@ public class AccessTracker {
 
     static {
         Logger.configureLogger("./tracker_report.txt");
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                // REMARK it is really unlikely that an array index is used for a once inited often used scenarios,
+                // which we do not want to track. So we do not print them even if they are only written once
+                // (could introduce false negatives if slots are hardly reused or after streching)
+                //TODO verify this statement
+                String[] singleWrite = AccessTracker.getSingleWriteObjectIndependent(false);
+
+                StringBuilder s = new StringBuilder();
+                s.append("$$GLOBAL SINGLE WRITE FIELDS");
+                s.append(System.lineSeparator());
+                s.append(String.join(System.lineSeparator(), singleWrite));
+
+                Logger.getLogger().log(s.toString());
+                try {
+                    Logger.getLogger().shutdown();
+                } catch (InterruptedException e) {
+                    System.err.println("LOGGER SHUTDOWN FAILED");
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     //TODO it would be useful to have a no-false-positives and a no-false-negative mode
@@ -38,6 +60,8 @@ public class AccessTracker {
     // TODO REFACTOR: Accesscontroller as accesspoint from outside
     // Access tracker as buisness tracker model that makes the decisions, move code from field access meta to tracker
     // field access meta as pure datastructure/infrastructure
+
+    //TODO support for fields with other types than object e.g. for array as field (access of the array object)
 
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses = new HashMap<>();
     // A thread local is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
@@ -80,6 +104,7 @@ public class AccessTracker {
             StringBuilder s = new StringBuilder();
             for (FieldWriter w : l) {
                 s.append("$$CONCURRENT WRITE/READ DETECTED");
+                s.append(" at " + f.getLocation());
                 s.append(System.lineSeparator());
                 s.append("Reader");
                 s.append("(" + Thread.currentThread().getId() + ")");
@@ -103,6 +128,7 @@ public class AccessTracker {
         }
     }
 
+
     /**
      * Returns the locations of fields (e.g. java.LinkedList.entries) which were only written once over the whole tracking time.
      * Accesses are counted independent of the instance in which they are accessed. So if a field was accessed once in a particular object (instance)
@@ -111,16 +137,21 @@ public class AccessTracker {
      *
      * @return field locations of fields to which only one write happened globally
      */
-    private String[] getSingleWriteObjectIndependent() {
+
+    public synchronized static String[] getSingleWriteObjectIndependent(boolean considerArrayIndexAccess) {
         HashMap<String, Integer> fieldCodeLineWriteCount = new HashMap<>();
         // there must be only one object dependend write location and for this one there must be only 1 write access
-        for (Map.Entry<AbstractFieldLocation,FieldAccessMeta> f : accesses.entrySet()) {
-            String loc = f.getKey().getLocation();
+        for (Map.Entry<AbstractFieldLocation, FieldAccessMeta> f : accesses.entrySet()) {
+            AbstractFieldLocation fieldloc = f.getKey();
+            //TODO not so nice (instanceof)
+            if (!considerArrayIndexAccess && fieldloc instanceof ArrayFieldLocation) continue;
+
+            String loc = fieldloc.getLocation();
             Integer count = fieldCodeLineWriteCount.get(loc);
             if (count == null) {
                 fieldCodeLineWriteCount.put(loc, f.getValue().getWriteCount());
             } else {
-                fieldCodeLineWriteCount.put(loc, count +  f.getValue().getWriteCount());
+                fieldCodeLineWriteCount.put(loc, count + f.getValue().getWriteCount());
             }
         }
         List<String> singleAccessLocations = new ArrayList<>();
@@ -130,6 +161,8 @@ public class AccessTracker {
         return singleAccessLocations.toArray(new String[singleAccessLocations.size()]);
     }
 
+
+    // ACCESS HOOKS---------------------------------------------
     public static void readObject(Object parent, String location) {
         FieldLocation f = new FieldLocation(location, Object.class, parent);
         readAccess(f);
@@ -149,7 +182,6 @@ public class AccessTracker {
     public static int arrayReadInt(Object arr, int index) {
         ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);
         readAccess(f);
-
         return ((int[]) arr)[index];
     }
 

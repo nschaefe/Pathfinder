@@ -17,7 +17,7 @@ public class Logger {
     }
 
     public static void configureLogger(String path) {
-        Logger.path=path;
+        Logger.path = path;
     }
 
     private static String path;
@@ -28,16 +28,25 @@ public class Logger {
         // at runtime. Since the tracker and tinylog is accessed via datastructures that are used while class loading,
         // this leads to a cyclic class loading error.
         // So we prevent this loading via a direct dependency of what should be loaded, what is the provider.
-        Configuration.set("writer.file",path);
+        Configuration.set("writer.file", path);
         Configuration.set("writer", "file");
         Configuration.set("writer.append", "true");
         Configuration.set("writer.buffered", "true");
+
+        // REMARK: writer format with methodname captures stacktrace
+        Configuration.set("writer.format", "{date} {level}" + System.lineSeparator() + "{message}");
         Configuration.set("writingthread", "true");
+        Configuration.set("autoshutdown", "false");
+
         tinylog = new TinylogLoggingProvider();
     }
 
     public void log(String mess) {
         tinylog.log(2, null, Level.DEBUG, null, mess, null);
+    }
+
+    public void shutdown() throws InterruptedException {
+        tinylog.shutdown();
     }
 
 }

@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FieldAccessMeta {
-    private List<Long> reader;
     private List<FieldWriter> writer;
+    private int writeCounter;
 
     FieldAccessMeta() {
-        //this.reader = new LinkedList<>();
+        this.writeCounter=0;
         this.writer = new ArrayList<>();
     }
 
@@ -38,11 +38,11 @@ public class FieldAccessMeta {
         FieldWriter wr = new FieldWriter(id, trace);
         if (writer.size() == 0) writer.add(wr);
         else writer.set(0, wr);
+        writeCounter++;
     }
 
     public int getWriteCount(){
-        //TODO
-        return 0;
+        return writeCounter;
     }
 
     public FieldWriter otherWriterSingle() {
