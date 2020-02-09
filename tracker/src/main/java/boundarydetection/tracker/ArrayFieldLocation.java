@@ -1,23 +1,19 @@
 package  boundarydetection.tracker;
 
-import java.lang.reflect.Type;
 import java.util.Objects;
 
-public class ArrayField implements IField {
+public class ArrayFieldLocation extends AbstractFieldLocation {
 
-    private String location;
-    private Class type;
     private Object ref;
     private int index;
 
 
-    public ArrayField(Class type, Object ref, int index) {
+    public ArrayFieldLocation(Class type, Object ref, int index) {
         this(null, type, ref, index);
     }
 
-    public ArrayField(String location, Class type, Object ref, int index) {
-        this.location = location;
-        this.type = type;
+    public ArrayFieldLocation(String location, Class type, Object ref, int index) {
+        super(location,type);
         this.ref = ref;
         this.index = index;
     }
@@ -32,11 +28,11 @@ public class ArrayField implements IField {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ArrayField)) return false;
-        ArrayField other = (ArrayField) o;
+        if (!(o instanceof ArrayFieldLocation)) return false;
+        ArrayFieldLocation other = (ArrayFieldLocation) o;
 
-        return  Objects.equals(other.location, location) &&
-                other.type.equals(type) &&
+        return  Objects.equals(other.getLocation(), getLocation()) &&
+                other.getType().equals(getType()) &&
                 other.ref == ref &&
                 other.index == index;
 

@@ -1,10 +1,9 @@
 package boundarydetection.tracker;
 
-
-import org.tinylog.configuration.Configuration;
-
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AccessTracker {
 
@@ -32,19 +31,23 @@ public class AccessTracker {
     // we just have to redefine what an access location is. Instead of fields and arrays we say objects if we have
     // an object at hand or the field location (array index, field) if it is a primitive.
 
+    //TODO use weak refs to get rid of locations (relative to objects) that are dead and should be destroyed
+    // we have to take care of access counters, if we destroy dynamic locations and want to preserve code locations
+    // -> just mark them as archived and destroy parent but keep the rest
+
     // TODO REFACTOR: Accesscontroller as accesspoint from outside
     // Access tracker as buisness tracker model that makes the decisions, move code from field access meta to tracker
     // field access meta as pure datastructure/infrastructure
 
-    private static HashMap<IField, FieldAccessMeta> accesses = new HashMap<>();
+    private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses = new HashMap<>();
     // A thread local is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static ThreadLocal<Boolean> insideTracker = new ThreadLocal<Boolean>();
 
-    public synchronized static void writeAccess(IField f) {
+    public synchronized static void writeAccess(AbstractFieldLocation f) {
         writeAccess(f, false);
     }
 
-    public synchronized static void writeAccess(IField f, boolean valueIsNull) {
+    public synchronized static void writeAccess(AbstractFieldLocation f, boolean valueIsNull) {
         // To break the recursion
         if (insideTracker.get() != null) return;
         try {
@@ -62,7 +65,7 @@ public class AccessTracker {
 
     }
 
-    public synchronized static void readAccess(IField f) {
+    public synchronized static void readAccess(AbstractFieldLocation f) {
         // To break the recursion
         if (insideTracker.get() != null) return;
         try {
@@ -96,11 +99,39 @@ public class AccessTracker {
             Logger.getLogger().log(s.toString());
         } finally {
             insideTracker.remove();
+
         }
     }
 
+    /**
+     * Returns the locations of fields (e.g. java.LinkedList.entries) which were only written once over the whole tracking time.
+     * Accesses are counted independent of the instance in which they are accessed. So if a field was accessed once in a particular object (instance)
+     * but several objects exists that performed these accesses, the field is overall considered as being accessed several times.
+     * Can be seen as accessing the declaration code line.
+     *
+     * @return field locations of fields to which only one write happened globally
+     */
+    private String[] getSingleWriteObjectIndependent() {
+        HashMap<String, Integer> fieldCodeLineWriteCount = new HashMap<>();
+        // there must be only one object dependend write location and for this one there must be only 1 write access
+        for (Map.Entry<AbstractFieldLocation,FieldAccessMeta> f : accesses.entrySet()) {
+            String loc = f.getKey().getLocation();
+            Integer count = fieldCodeLineWriteCount.get(loc);
+            if (count == null) {
+                fieldCodeLineWriteCount.put(loc, f.getValue().getWriteCount());
+            } else {
+                fieldCodeLineWriteCount.put(loc, count +  f.getValue().getWriteCount());
+            }
+        }
+        List<String> singleAccessLocations = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : fieldCodeLineWriteCount.entrySet()) {
+            if (e.getValue() == 1) singleAccessLocations.add(e.getKey());
+        }
+        return singleAccessLocations.toArray(new String[singleAccessLocations.size()]);
+    }
+
     public static void readObject(Object parent, String location) {
-        Field f = new Field(location, Object.class, parent);
+        FieldLocation f = new FieldLocation(location, Object.class, parent);
         readAccess(f);
     }
 
@@ -111,50 +142,50 @@ public class AccessTracker {
 //    }
 
     public static void writeObject(Object parent, Object value, String location) {
-        Field f = new Field(location, Object.class, parent);
+        FieldLocation f = new FieldLocation(location, Object.class, parent);
         writeAccess(f, value == null);
     }
 
     public static int arrayReadInt(Object arr, int index) {
-        ArrayField f = new ArrayField(int[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);
         readAccess(f);
 
         return ((int[]) arr)[index];
     }
 
     public static void arrayWriteInt(Object arr, int index, int value) {
-        ArrayField f = new ArrayField(int[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);
         writeAccess(f);
 
         ((int[]) arr)[index] = value;
     }
 
     public static Object arrayReadObject(Object arr, int index) {
-        ArrayField f = new ArrayField(Object[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(Object[].class, arr, index);
         readAccess(f);
         return ((Object[]) arr)[index];
     }
 
     public static void arrayWriteObject(Object arr, int index, Object value) {
-        ArrayField f = new ArrayField(Object[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(Object[].class, arr, index);
         writeAccess(f, value == null);
         ((Object[]) arr)[index] = value;
     }
 
     public static void arrayWriteLong(Object arr, int index, long value) {
-        ArrayField f = new ArrayField(long[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(long[].class, arr, index);
         writeAccess(f);
         ((long[]) arr)[index] = value;
     }
 
     public static long arrayReadLong(Object arr, int index) {
-        ArrayField f = new ArrayField(long[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(long[].class, arr, index);
         readAccess(f);
         return ((long[]) arr)[index];
     }
 
     public static void arrayWriteByteOrBoolean(Object arr, int index, byte value) {
-        ArrayField f = new ArrayField(byte[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(byte[].class, arr, index);
         writeAccess(f);
         if (arr instanceof byte[])
             ((byte[]) arr)[index] = value;
@@ -164,7 +195,7 @@ public class AccessTracker {
     }
 
     public static byte arrayReadByteOrBoolean(Object arr, int index) {
-        ArrayField f = new ArrayField(byte[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(byte[].class, arr, index);
         readAccess(f);
         if (arr instanceof byte[])
             return ((byte[]) arr)[index];
@@ -173,49 +204,49 @@ public class AccessTracker {
     }
 
     public static void arrayWriteChar(Object arr, int index, char value) {
-        ArrayField f = new ArrayField(char[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(char[].class, arr, index);
         writeAccess(f);
         ((char[]) arr)[index] = value;
     }
 
     public static char arrayReadChar(Object arr, int index) {
-        ArrayField f = new ArrayField(char[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(char[].class, arr, index);
         readAccess(f);
         return ((char[]) arr)[index];
     }
 
     public static void arrayWriteDouble(Object arr, int index, double value) {
-        ArrayField f = new ArrayField(double[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(double[].class, arr, index);
         writeAccess(f);
         ((double[]) arr)[index] = value;
     }
 
     public static double arrayReadDouble(Object arr, int index) {
-        ArrayField f = new ArrayField(double[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(double[].class, arr, index);
         readAccess(f);
         return ((double[]) arr)[index];
     }
 
     public static void arrayWriteFloat(Object arr, int index, char value) {
-        ArrayField f = new ArrayField(float[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(float[].class, arr, index);
         writeAccess(f);
         ((float[]) arr)[index] = value;
     }
 
     public static float arrayReadFloat(Object arr, int index) {
-        ArrayField f = new ArrayField(float[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(float[].class, arr, index);
         readAccess(f);
         return ((float[]) arr)[index];
     }
 
     public static void arrayWriteShort(Object arr, int index, short value) {
-        ArrayField f = new ArrayField(short[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(short[].class, arr, index);
         writeAccess(f);
         ((short[]) arr)[index] = value;
     }
 
     public static short arrayReadShort(Object arr, int index) {
-        ArrayField f = new ArrayField(short[].class, arr, index);
+        ArrayFieldLocation f = new ArrayFieldLocation(short[].class, arr, index);
         readAccess(f);
         return ((short[]) arr)[index];
     }

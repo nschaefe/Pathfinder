@@ -40,6 +40,11 @@ public class FieldAccessMeta {
         else writer.set(0, wr);
     }
 
+    public int getWriteCount(){
+        //TODO
+        return 0;
+    }
+
     public FieldWriter otherWriterSingle() {
         List<FieldWriter> l = otherWriter();
         if (l.isEmpty()) return null;
