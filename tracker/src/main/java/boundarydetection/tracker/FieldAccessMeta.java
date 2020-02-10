@@ -6,9 +6,11 @@ import java.util.List;
 public class FieldAccessMeta {
     private List<FieldWriter> writer;
     private int writeCounter;
+    private boolean matched;
 
     FieldAccessMeta() {
-        this.writeCounter=0;
+        matched = false;
+        this.writeCounter = 0;
         this.writer = new ArrayList<>();
     }
 
@@ -41,7 +43,7 @@ public class FieldAccessMeta {
         writeCounter++;
     }
 
-    public int getWriteCount(){
+    public int getWriteCount() {
         return writeCounter;
     }
 
@@ -59,8 +61,12 @@ public class FieldAccessMeta {
                 list.add(w);
             }
         }
+        //TODO happens implicit, not so nice (rather register writer)
+        if (!list.isEmpty()) matched = true;
         return list;
     }
 
-
+    public boolean hasMatch() {
+        return matched;
+    }
 }

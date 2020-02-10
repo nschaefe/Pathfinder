@@ -15,7 +15,7 @@ public class AccessTracker {
                 // which we do not want to track. So we do not print them even if they are only written once
                 // (could introduce false negatives if slots are hardly reused or after streching)
                 //TODO verify this statement
-                String[] singleWrite = AccessTracker.getSingleWriteObjectIndependent(false);
+                String[] singleWrite = AccessTracker.getSingleWriteObjectIndependent(false,true);
 
                 StringBuilder s = new StringBuilder();
                 s.append("$$GLOBAL SINGLE WRITE FIELDS");
@@ -138,13 +138,14 @@ public class AccessTracker {
      * @return field locations of fields to which only one write happened globally
      */
 
-    public synchronized static String[] getSingleWriteObjectIndependent(boolean considerArrayIndexAccess) {
+    public synchronized static String[] getSingleWriteObjectIndependent(boolean considerArrayIndexAccess, boolean matchedOnly) {
         HashMap<String, Integer> fieldCodeLineWriteCount = new HashMap<>();
         // there must be only one object dependend write location and for this one there must be only 1 write access
         for (Map.Entry<AbstractFieldLocation, FieldAccessMeta> f : accesses.entrySet()) {
             AbstractFieldLocation fieldloc = f.getKey();
             //TODO not so nice (instanceof)
             if (!considerArrayIndexAccess && fieldloc instanceof ArrayFieldLocation) continue;
+            if (matchedOnly && !f.getValue().hasMatch()) continue;
 
             String loc = fieldloc.getLocation();
             Integer count = fieldCodeLineWriteCount.get(loc);
