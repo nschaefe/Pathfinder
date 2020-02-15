@@ -5,6 +5,8 @@ import org.tinylog.configuration.Configuration;
 import org.tinylog.core.TinylogLoggingProvider;
 import org.tinylog.provider.LoggingProvider;
 
+import java.util.Random;
+
 public class Logger {
 
     private static Logger logger;
@@ -21,20 +23,28 @@ public class Logger {
     }
 
     private static String path;
-    private LoggingProvider tinylog;
+    private TinylogLoggingProvider tinylog;
 
     private Logger() {
         // REMARK: DO NOT use tinylog through the normal interface (Logger.debug etc). Because of late binding, the lib is "manually" loaded
         // at runtime. Since the tracker and tinylog is accessed via datastructures that are used while class loading,
         // this leads to a cyclic class loading error.
         // So we prevent this loading via a direct dependency of what should be loaded, what is the provider.
-        Configuration.set("writer.file", path);
-        Configuration.set("writer", "shared file");
+        int random = (new Random()).nextInt(Integer.MAX_VALUE);
+        Configuration.set("writer.file", path + '_' + random);
+        Configuration.set("writer", "file");
         Configuration.set("writer.append", "true");
         Configuration.set("writer.buffered", "true");
+        Configuration.set("writer.tag", "DETECTION");
+        Configuration.set("writer.format", "{message}");// REMARK: writer format with methodname captures stacktrace
 
-        // REMARK: writer format with methodname captures stacktrace
-        Configuration.set("writer.format", "{date} {level}" + System.lineSeparator() + "{message}");
+        Configuration.set("writer2.file", path + "GLOBALS_" + random);
+        Configuration.set("writer2", "file");
+        Configuration.set("writer2.append", "true");
+        Configuration.set("writer2.buffered", "true");
+        Configuration.set("writer2.tag", "GLOBALS");
+        Configuration.set("writer2.format", "{message}");
+
         Configuration.set("writingthread", "true");
         Configuration.set("autoshutdown", "false");
 
@@ -42,7 +52,11 @@ public class Logger {
     }
 
     public void log(String mess) {
-        tinylog.log(2, null, Level.DEBUG, null, mess, null);
+        log(mess, null);
+    }
+
+    public void log(String mess, String tag) {
+        tinylog.log(2, tag, Level.DEBUG, null, mess, null);
     }
 
     public void shutdown() throws InterruptedException {

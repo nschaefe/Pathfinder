@@ -15,14 +15,9 @@ public class AccessTracker {
                 // which we do not want to track. So we do not print them even if they are only written once
                 // (could introduce false negatives if slots are hardly reused or after streching)
                 //TODO verify this statement
-                String[] singleWrite = AccessTracker.getSingleWriteObjectIndependent(false,true);
-
-                StringBuilder s = new StringBuilder();
-                s.append("$$GLOBAL SINGLE WRITE FIELDS");
-                s.append(System.lineSeparator());
-                s.append(String.join(System.lineSeparator(), singleWrite));
-
-                Logger.getLogger().log(s.toString());
+                String[] singleWrite = AccessTracker.getSingleWriteObjectIndependent(false, true);
+                Logger.getLogger().log("WRITE GLOBALS","GLOBALS");
+                Logger.getLogger().log(ReportGenerator.generateSingleAccessedReportJSON(singleWrite),"GLOBALS");
                 try {
                     Logger.getLogger().shutdown();
                 } catch (InterruptedException e) {
@@ -100,28 +95,19 @@ public class AccessTracker {
 
             List<FieldWriter> l = meta.otherWriter();
             if (l.isEmpty()) return;
+            assert (l.size() <= 1);
 
             StringBuilder s = new StringBuilder();
-            for (FieldWriter w : l) {
-                s.append("$$CONCURRENT WRITE/READ DETECTED");
-                s.append(" at " + f.getLocation());
-                s.append(System.lineSeparator());
-                s.append("Reader");
-                s.append("(" + Thread.currentThread().getId() + ")");
-                s.append(" trace:");
-                s.append(System.lineSeparator());
-                s.append(Util.toString(Thread.currentThread().getStackTrace()));
-                s.append(System.lineSeparator());
-                s.append("----------------");
-                s.append(System.lineSeparator());
-                s.append("Writer");
-                s.append("(" + w.getId() + ")");
-                s.append(" trace:");
-                s.append(System.lineSeparator());
-                s.append(Util.toString(w.getStackTrace()));
-                s.append(System.lineSeparator());
-            }
-            Logger.getLogger().log(s.toString());
+            FieldWriter w = l.get(0);
+
+            Logger.getLogger().log(
+                    ReportGenerator.generateDetectionReportJSON(
+                            Thread.currentThread().getId(),
+                            Thread.currentThread().getStackTrace(),
+                            f,
+                            w),"DETECTION");
+
+
         } finally {
             insideTracker.remove();
 

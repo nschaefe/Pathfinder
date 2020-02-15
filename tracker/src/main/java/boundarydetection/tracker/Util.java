@@ -55,14 +55,13 @@ public class Util {
     }
 
 
-    private static Integer processID;
+    private static String process;
 
-    public static int getProcessID() {
-        if (processID == null) {
-            String procname = ManagementFactory.getRuntimeMXBean().getName();
-            processID = Integer.parseInt(procname.substring(0, procname.indexOf('@')));
+    public static String getProcessDesc() {
+        if (process == null) {
+            String process = ManagementFactory.getRuntimeMXBean().getName();
         }
-        return processID;
+        return process;
     }
 
     private static String host;
