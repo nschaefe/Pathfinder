@@ -38,27 +38,6 @@ public class ReportGenerator {
         }
     }
 
-    public static String generateSingleAccessedReportJSON(String[] singleWrite) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        // ByteArrayOutputStream.close has no effect, no closing neccessary
-        try {
-            JsonGenerator g = factory.createGenerator(out);
-            g.writeStartObject();
-            g.writeStringField("time", getTime());
-            g.writeStringField("type", "GLOBALLY WRITTEN ONCE FIELDS");
-            g.writeStringField("pid", Util.getProcessDesc());
-            g.writeArrayFieldStart("fields");
-            for (String s : singleWrite) g.writeString(s);
-            g.writeEndArray();
-            g.writeEndObject();
-            g.close();
-            return out.toString();
-        } catch (IOException e) {
-            System.err.println("BUG");
-            e.printStackTrace();
-            return "$$BUG";
-        }
-    }
 
     public String generateDetectionReportSimple(long readerThreadID, StackTraceElement[] readerTrace, AbstractFieldLocation loc, FieldWriter w) {
         StringBuilder s = new StringBuilder();

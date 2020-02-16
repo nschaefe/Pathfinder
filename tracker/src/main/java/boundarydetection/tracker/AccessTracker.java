@@ -1,31 +1,14 @@
 package boundarydetection.tracker;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Random;
 
 public class AccessTracker {
 
     static {
-        Logger.configureLogger("./tracker_report.txt");
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            public void run() {
-                // REMARK it is really unlikely that an array index is used for a once inited often used scenarios,
-                // which we do not want to track. So we do not print them even if they are only written once
-                // (could introduce false negatives if slots are hardly reused or after streching)
-                //TODO verify this statement
-                String[] singleWrite = AccessTracker.getSingleWriteObjectIndependent(false, true);
-                Logger.getLogger().log("WRITE GLOBALS","GLOBALS");
-                Logger.getLogger().log(ReportGenerator.generateSingleAccessedReportJSON(singleWrite),"GLOBALS");
-                try {
-                    Logger.getLogger().shutdown();
-                } catch (InterruptedException e) {
-                    System.err.println("LOGGER SHUTDOWN FAILED");
-                    e.printStackTrace();
-                }
-            }
-        });
+        int random = (new Random()).nextInt(Integer.MAX_VALUE);
+        Logger.configureLogger("./tracker_report_"+random+".json");
     }
 
     //TODO it would be useful to have a no-false-positives and a no-false-negative mode
@@ -113,41 +96,6 @@ public class AccessTracker {
 
         }
     }
-
-
-    /**
-     * Returns the locations of fields (e.g. java.LinkedList.entries) which were only written once over the whole tracking time.
-     * Accesses are counted independent of the instance in which they are accessed. So if a field was accessed once in a particular object (instance)
-     * but several objects exists that performed these accesses, the field is overall considered as being accessed several times.
-     * Can be seen as accessing the declaration code line.
-     *
-     * @return field locations of fields to which only one write happened globally
-     */
-
-    public synchronized static String[] getSingleWriteObjectIndependent(boolean considerArrayIndexAccess, boolean matchedOnly) {
-        HashMap<String, Integer> fieldCodeLineWriteCount = new HashMap<>();
-        // there must be only one object dependend write location and for this one there must be only 1 write access
-        for (Map.Entry<AbstractFieldLocation, FieldAccessMeta> f : accesses.entrySet()) {
-            AbstractFieldLocation fieldloc = f.getKey();
-            //TODO not so nice (instanceof)
-            if (!considerArrayIndexAccess && fieldloc instanceof ArrayFieldLocation) continue;
-            if (matchedOnly && !f.getValue().hasMatch()) continue;
-
-            String loc = fieldloc.getLocation();
-            Integer count = fieldCodeLineWriteCount.get(loc);
-            if (count == null) {
-                fieldCodeLineWriteCount.put(loc, f.getValue().getWriteCount());
-            } else {
-                fieldCodeLineWriteCount.put(loc, count + f.getValue().getWriteCount());
-            }
-        }
-        List<String> singleAccessLocations = new ArrayList<>();
-        for (Map.Entry<String, Integer> e : fieldCodeLineWriteCount.entrySet()) {
-            if (e.getValue() == 1) singleAccessLocations.add(e.getKey());
-        }
-        return singleAccessLocations.toArray(new String[singleAccessLocations.size()]);
-    }
-
 
     // ACCESS HOOKS---------------------------------------------
     public static void readObject(Object parent, String location) {
