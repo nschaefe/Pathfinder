@@ -2,6 +2,7 @@ package boundarydetection.agent;
 
 import boundarydetection.instrumentation.CodeInstrumenter;
 import javassist.*;
+import javassist.build.JavassistBuildException;
 
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
@@ -9,10 +10,10 @@ import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
 
 
-public class Agent implements ClassFileTransformer {
+public class Agent implements ClassFileTransformer, javassist.build.IClassTransformer {
 
 
-    static final String[] EXCLUDES = new String[]{
+   private static final String[] EXCLUDES = new String[]{
             // JAVA INTERNALS
             "[",
             "sun",
@@ -67,7 +68,7 @@ public class Agent implements ClassFileTransformer {
     };
 
 
-    static final String[] INCLUDES = new String[]{
+    private  static final String[] INCLUDES = new String[]{
             "client/Client",
             "java/util/ArrayDeque",
             //"java/util/AbstractCollection",
@@ -86,10 +87,9 @@ public class Agent implements ClassFileTransformer {
 
     public static void premain(final String agentArgument, final Instrumentation instrumentation) {
         instrumentation.addTransformer(new Agent(), true);
-
         // call for classes where agent is dependent on or that are used while bootstrapping
         for (Class c : instrumentation.getAllLoadedClasses()) {
-            if ((true || isIncluded(c.getName())) && !isExcluded(c.getName())) {
+            if (shouldTransform(c.getName())) {
                 //System.out.println("RETRA: " + c.getName());
                 try {
                     instrumentation.retransformClasses(c);
@@ -111,7 +111,7 @@ public class Agent implements ClassFileTransformer {
         if (className == null) return bytes;
 
         //!isExcluded(className)
-        if ((true || isIncluded(className)) && !isExcluded(className)) {
+        if (shouldTransform(className)) {
             try {
                 return transformClass(className, clazz, bytes);
             } catch (NotFoundException e) {
@@ -129,20 +129,35 @@ public class Agent implements ClassFileTransformer {
         ClassPool cp = ClassPool.getDefault();
 
         CtClass ctCl = cp.get(name.replace('/', '.'));
-        if (ctCl.isInterface()) return b;
-        System.out.println("INST: " + name);
-        CtClass tracker = cp.get("boundarydetection.tracker.AccessTracker");
+        transformClass(ctCl);
 
+        //ctCl.debugWriteFile();
+        return ctCl.toBytecode();
+
+    }
+
+    private  ClassPool cp;
+    private void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
+        if (ctCl.isInterface()) return;
+
+        if(cp==null) {
+            cp = ClassPool.getDefault();
+            cp.insertClassPath(new LoaderClassPath(this.getClass().getClassLoader()));
+            //cp.insertClassPath("/home/user/Dokumente/BoundaryDetection/tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar");
+        }
+
+        System.out.println("INST: " + ctCl.getName());
+        CtClass tracker = null;
+        tracker = cp.get("boundarydetection.tracker.AccessTracker");
         CodeInstrumenter conv = new CodeInstrumenter();
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
         conv.replaceFieldRead(tracker, "readObject");
         conv.replaceFieldWrite(tracker, "writeObject");
         ctCl.instrument(conv);
+    }
 
-        //ctCl.debugWriteFile();
-        b = ctCl.toBytecode();
-        return b;
-
+    public static boolean shouldTransform(String clName) {
+        return (true || isIncluded(clName)) && !isExcluded(clName);
     }
 
     //TODO can be optimized (binary search)
@@ -161,4 +176,19 @@ public class Agent implements ClassFileTransformer {
     }
 
 
+    // -------ACCESS POINTS FOR STATIC INSTRUMENTATION (MAVEN PLUGIN)------
+    @Override
+    public void applyTransformations(CtClass ctCl) throws JavassistBuildException {
+        try {
+            transformClass(ctCl);
+        } catch (NotFoundException | CannotCompileException e) {
+            JavassistBuildException ex = new JavassistBuildException(e);
+            throw ex;
+        }
+    }
+
+    @Override
+    public boolean shouldTransform(CtClass ctClass) throws JavassistBuildException {
+        return shouldTransform(ctClass.getName());
+    }
 }
