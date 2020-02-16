@@ -1,3 +1,6 @@
+reports/
+reports_filtered/
+
 .idea/
 # Compiled class file
 *.class

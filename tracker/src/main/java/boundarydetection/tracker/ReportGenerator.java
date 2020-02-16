@@ -13,7 +13,8 @@ public class ReportGenerator {
     private static final JsonFactory factory = new JsonFactory();
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss-MM.dd.yyyy");
 
-    public static String generateDetectionReportJSON(long readerThreadID, StackTraceElement[] readerTrace, AbstractFieldLocation loc, FieldWriter w) {
+    public static String generateDetectionReportJSON(long readerThreadID, StackTraceElement[] readerTrace,
+                                                     AbstractFieldLocation loc, FieldWriter w, FieldAccessMeta meta) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // ByteArrayOutputStream.close has no effect, no closing neccessary
         try {
@@ -21,11 +22,11 @@ public class ReportGenerator {
             g.writeStartObject();
             g.writeStringField("time", getTime());
             g.writeStringField("type", "CONCURRENT WRITE/READ DETECTION");
-            g.writeStringField("pid", Util.getProcessDesc());
-            g.writeStringField("location", loc.getLocation());
+            loc.toJSON(g);
             g.writeNumberField("reader_thread_id", readerThreadID);
-            g.writeStringField("reader_stacktrace", Util.toString(readerTrace));
             g.writeNumberField("writer_thread_id", w.getId());
+            g.writeNumberField("writer_count", meta.getWriteCount());
+            g.writeStringField("reader_stacktrace", Util.toString(readerTrace));
             g.writeStringField("writer_stacktrace", Util.toString(w.getStackTrace()));
             g.writeEndObject();
             g.close();

@@ -42,7 +42,7 @@ public class Agent implements ClassFileTransformer {
             "boundarydetection",
             "edu.brown.cs",
             "org.tinylog",
-            "com.fasterxml.jackson.core",
+            "com.fasterxml.jackson",
 
             // APPLICATION PACKAGES BLACKLIST (HBase)
             "org.apache.log4j",

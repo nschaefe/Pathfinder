@@ -1,8 +1,11 @@
 package boundarydetection.tracker;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import java.io.IOException;
 import java.util.Objects;
 
 public class ArrayFieldLocation extends AbstractFieldLocation {
+
 
     private Object ref;
     private int index;
@@ -39,4 +42,12 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
                 other.index == index;
 
     }
+
+    @Override
+    public void toJSON(JsonGenerator g) throws IOException {
+        super.toJSON(g);
+        g.writeNumberField("reference", System.identityHashCode(ref));
+        g.writeNumberField("index", index);
+    }
+
 }

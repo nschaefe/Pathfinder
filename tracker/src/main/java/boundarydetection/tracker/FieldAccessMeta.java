@@ -18,13 +18,13 @@ public class FieldAccessMeta {
     // TODO exclude eclipse compiler, jdi stuff
     private boolean check(StackTraceElement[] tr) {
         // currently a hack to get rid of these class loading reports
-        boolean r = true;
+        boolean r = false;
         for (int i = 0; i < tr.length; i++) {
             String cl = tr[i].getClassName();
             if (cl.startsWith("java.util.zip.ZipFile") ||
                     cl.startsWith("edu.brown.cs.systems")
             ) return false;
-            //if (cl.contains("hbase")) r = true;
+            if (cl.contains("hbase")) r = true;
         }
         return r;
     }

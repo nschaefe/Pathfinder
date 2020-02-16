@@ -1,13 +1,16 @@
-package  boundarydetection.tracker;
+package boundarydetection.tracker;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+
+import java.io.IOException;
 import java.lang.reflect.Type;
 
-public class FieldLocation  extends AbstractFieldLocation {
+public class FieldLocation extends AbstractFieldLocation {
 
     private Object parent;
 
     public FieldLocation(String location, Type type, Object parent) {
-        super(location,type);
+        super(location, type);
         this.parent = parent;
     }
 
@@ -28,5 +31,11 @@ public class FieldLocation  extends AbstractFieldLocation {
                 other.parent == parent;
 
 
+    }
+
+    @Override
+    public void toJSON(JsonGenerator g) throws IOException {
+        super.toJSON(g);
+        g.writeNumberField("parent", System.identityHashCode(parent));
     }
 }

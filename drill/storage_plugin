@@ -1,0 +1,28 @@
+{
+  "type": "file",
+  "connection": "file:///",
+  "config": null,
+  "workspaces": {
+    "root": {
+      "location": "/home/user/Dokumente/BoundaryDetection/reports/",
+      "writable": false,
+      "defaultInputFormat": null,
+      "allowAccessOutsideWorkspace": false
+    },
+    "out": {
+      "location": "/home/user/Dokumente/BoundaryDetection/reports_filtered/",
+      "writable": true,
+      "defaultInputFormat": null,
+      "allowAccessOutsideWorkspace": false
+    }
+  },
+  "formats": {
+    "json": {
+      "type": "json",
+      "extensions": [
+        "json"
+      ]
+    }
+  },
+  "enabled": true
+}

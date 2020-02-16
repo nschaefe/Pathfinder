@@ -5,6 +5,6 @@ for i in $files
 do
   cat $i | uniq > tmp4242 
   rm $i
-  mv tmp $i
+  mv tmp4242 $i
 done
 rm tmp4242
