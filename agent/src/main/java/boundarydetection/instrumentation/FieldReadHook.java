@@ -24,8 +24,8 @@ public class FieldReadHook extends FieldAccessHook {
 
     private boolean skippedConstCall = false;
 
-    public FieldReadHook(Transformer next, CtField field, String methodClassname, String methodName) {
-        super(next, field, methodClassname, methodName);
+    public FieldReadHook(Transformer next, String methodClassname, String methodName) {
+        super(next, methodClassname, methodName);
     }
 
     @Override
@@ -59,8 +59,9 @@ public class FieldReadHook extends FieldAccessHook {
 
         if (isFieldRead) {
             int index = iterator.u16bitAt(pos + 1);
-            String typedesc = isField(tclazz.getClassPool(), cp,
-                    fieldClass, fieldname, isPrivate, index);
+
+            String fieldname=cp.getFieldrefName(index);
+            String typedesc = cp.getFieldrefType(index);
             if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
 
                 pos = iterator.insertGap(1);
@@ -68,7 +69,7 @@ public class FieldReadHook extends FieldAccessHook {
                 else iterator.writeByte(Opcode.ALOAD_0, pos);
                 pos += 1;
 
-                int str_index = cp.addStringInfo(fieldClass.getName()+'.'+fieldname);
+                int str_index = cp.addStringInfo(className +'.'+fieldname);
                 pos = addLdc(str_index, iterator, pos);
 
                 pos = iterator.insertGap(3);
@@ -77,6 +78,7 @@ public class FieldReadHook extends FieldAccessHook {
                 int methodref = cp.addMethodrefInfo(mi, methodName, type);
                 iterator.writeByte(INVOKESTATIC, pos);
                 iterator.write16bit(methodref, pos + 1);
+                pos+=3;
 
                 CodeAttribute ca = iterator.get();
                 ca.setMaxStack(ca.getMaxStack() + 2);

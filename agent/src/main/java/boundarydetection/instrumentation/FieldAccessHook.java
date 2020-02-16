@@ -10,26 +10,21 @@ import javassist.convert.Transformer;
 public abstract class FieldAccessHook extends Transformer {
 
     protected MethodInfo methodInfo; //TODO not initialized until init
-    protected String fieldname;
-    protected CtClass fieldClass;
-    protected boolean isPrivate;
+    protected String className;
     protected String methodClassname;
     protected String methodName;
 
-    public FieldAccessHook(Transformer next, CtField field, String methodClassname, String methodName) {
+    public FieldAccessHook(Transformer next, String methodClassname, String methodName) {
         super(next);
-
-        this.fieldClass = field.getDeclaringClass();
-        this.fieldname = field.getName();
         this.methodClassname = methodClassname;
         this.methodName = methodName;
-        this.isPrivate = Modifier.isPrivate(field.getModifiers());
     }
 
     @Override
     public void initialize(ConstPool cp, CtClass clazz, MethodInfo minfo) throws CannotCompileException {
         methodInfo = minfo;
-        methodInfo.doPreverify=true;
+        //methodInfo.doPreverify=true;
+        this.className = clazz.getName();
         initialize(cp, minfo.getCodeAttribute());
     }
 

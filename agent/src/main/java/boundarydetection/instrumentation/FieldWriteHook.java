@@ -1,15 +1,13 @@
 package boundarydetection.instrumentation;
 
 import javassist.CtClass;
-import javassist.CtField;
 import javassist.bytecode.*;
-import javassist.convert.TransformWriteField;
 import javassist.convert.Transformer;
 
 public class FieldWriteHook extends FieldAccessHook {
 
-    public FieldWriteHook(Transformer next, CtField field, String methodClassname, String methodName) {
-        super(next, field, methodClassname, methodName);
+    public FieldWriteHook(Transformer next, String methodClassname, String methodName) {
+        super(next, methodClassname, methodName);
     }
 
     private boolean skippedConstCall = false;
@@ -44,16 +42,16 @@ public class FieldWriteHook extends FieldAccessHook {
 
         if (isFieldWrite) {
             int index = iterator.u16bitAt(pos + 1);
-            String typedesc = isField(tclazz.getClassPool(), cp,
-                    fieldClass, fieldname, isPrivate, index);
+            String fieldname = cp.getFieldrefName(index);
+            String typedesc = cp.getFieldrefType(index);
             if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
 
                 iterator.move(pos);
                 if (isStatic) {
                     pos = iterator.insertGap(3);
                     iterator.writeByte(Opcode.DUP, pos);
-                    iterator.writeByte(ACONST_NULL, pos+1);
-                    iterator.writeByte(Opcode.SWAP, pos+2);
+                    iterator.writeByte(ACONST_NULL, pos + 1);
+                    iterator.writeByte(Opcode.SWAP, pos + 2);
                     pos += 3;
                     CodeAttribute ca = iterator.get();
                     ca.setMaxStack(ca.getMaxStack() + 2);
@@ -68,7 +66,7 @@ public class FieldWriteHook extends FieldAccessHook {
                     ca.setMaxStack(ca.getMaxStack() + 2);
                 }
 
-                int str_index = cp.addStringInfo(fieldClass.getName() + '.' + fieldname);
+                int str_index = cp.addStringInfo(className + '.' + fieldname);
                 pos = addLdc(str_index, iterator, pos);
                 CodeAttribute ca = iterator.get();
                 ca.setMaxStack(ca.getMaxStack() + 1);
@@ -81,7 +79,7 @@ public class FieldWriteHook extends FieldAccessHook {
                 iterator.write16bit(methodref, pos + 1);
                 pos += 3;
 
-                pos=iterator.next();
+                pos = iterator.next();
                 return pos;
             }
         }

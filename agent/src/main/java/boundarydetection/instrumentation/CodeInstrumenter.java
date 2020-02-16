@@ -75,14 +75,12 @@ public class CodeInstrumenter extends CodeConverter {
      * type of <code>target</code>.  The return type must be the same
      * as the field type.
      *
-     * @param field        the field.
      * @param calledClass  the class in which the static method is
      *                     declared.
      * @param calledMethod the name of the static method.
      */
-    public void replaceFieldRead(CtField field,
-                                 CtClass calledClass, String calledMethod) {
-        transformers = new FieldReadHook(transformers, field,
+    public void replaceFieldRead(CtClass calledClass, String calledMethod) {
+        transformers = new FieldReadHook(transformers,
                 calledClass.getName(),
                 calledMethod);
     }
@@ -116,14 +114,13 @@ public class CodeInstrumenter extends CodeConverter {
      * type of <code>target</code>.  The type of the second parameter
      * is the same as the field type.
      *
-     * @param field        the field.
      * @param calledClass  the class in which the static method is
      *                     declared.
      * @param calledMethod the name of the static method.
      */
-    public void replaceFieldWrite(CtField field,
+    public void replaceFieldWrite(
                                   CtClass calledClass, String calledMethod) {
-        transformers = new FieldWriteHook(transformers, field,
+        transformers = new FieldWriteHook(transformers,
                 calledClass.getName(),
                 calledMethod);
     }

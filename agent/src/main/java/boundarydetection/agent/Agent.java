@@ -133,16 +133,15 @@ public class Agent implements ClassFileTransformer {
         System.out.println("INST: " + name);
         CtClass tracker = cp.get("boundarydetection.tracker.AccessTracker");
 
-        CodeConverter conv = new CodeInstrumenter();
+        CodeInstrumenter conv = new CodeInstrumenter();
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
-        for (CtField field : ctCl.getDeclaredFields()) {
-            conv.replaceFieldRead(field, tracker, "readObject");
-            conv.replaceFieldWrite(field, tracker, "writeObject");
-        }
-
+        conv.replaceFieldRead(tracker, "readObject");
+        conv.replaceFieldWrite(tracker, "writeObject");
         ctCl.instrument(conv);
+
         //ctCl.debugWriteFile();
-        return ctCl.toBytecode();
+        b = ctCl.toBytecode();
+        return b;
 
     }
 
