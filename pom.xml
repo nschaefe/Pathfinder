@@ -19,6 +19,7 @@
         <module>testClient</module>
         <module>agent</module>
         <module>tracker</module>
+        <module>javaRT</module>
     </modules>
 
 </project>

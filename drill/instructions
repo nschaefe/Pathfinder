@@ -1,10 +1,7 @@
-alter session set `store.format`='json';
-CREATE TABLE rep.out.`/out.json` AS
-SELECT * FROM rep.root.`/tracker_1249273940.json` WHERE location NOT IN (SELECT FLATTEN(fields) FROM rep.root.`/tracker_1249273940_GLOBALS.json` );
-
-SELECT * FROM rep.root.`/tracker_1249273940.json` WHERE location NOT IN (SELECT FLATTEN(fields) FROM rep.root.`/tracker_1249273940_GLOBALS.json` );
-
 BASIC TEST CASE TO VERIFY STRATEGY: compare Future.done with startup obj init
+
+//get stacktraces for a particular case
+SELECT DISTINCT location, reader_stacktrace,writer_stacktrace FROM rep.root.`./tracker_1714303664.json` WHERE reference is NULL and location ='org.apache.hadoop.hbase.regionserver.ThreadSafeMemStoreSizing.heapSize';
 
 --Compute globally single write fields (location object independent)--
 First (inner select): gets for a field location (specified by parent and location) the actual write count. There can be several reports where readers read from different writes. So we are looking for the max.
@@ -12,15 +9,25 @@ Second: computes the object unrelated write count by summing up all write counts
 Third: Filters the locations that have more than one write
 
 alter session set `store.format`='json';
-CREATE TABLE rep.out.`/out.json` AS
-SELECT A.location, SUM(A.writer_count) as global_write_count FROM (SELECT parent,location, MAX(writer_count) as writer_count FROM rep.root.`./tracker_221915987.json` GROUP BY parent, location) AS A GROUP BY location HAVING global_write_count <=1;
+CREATE TABLE rep.out.`/globals3.json` AS
+SELECT A.location, SUM(A.writer_count) as global_write_count FROM (SELECT parent,location, MAX(writer_count) as writer_count FROM rep.root.`./tracker_1714303664.json` WHERE reference IS NULL GROUP BY parent, location) AS A GROUP BY location HAVING global_write_count <=1;
+
+//get interesting locations
+SELECT DISTINCT location FROM rep.root.`./tracker_1714303664.json` WHERE reference is NULL and location NOT IN (SELECT location FROM rep.out.`/globals3.json`);
 
 --Find different writes on same obj independent location but with same stack trace (as transient writes)--
+Problem: init in a loop results in serveral writes with same stacktrace but is init
 
 Get reported writes (no redundancy)
 SELECT DISTINCT parent, location ,writer_count , writer_stacktrace FROM rep.root.`/tracker_report_291951268.json`;
 
-SELECT location, (NOT (COUNT(writer_stacktrace)-COUNT(DISTINCT writer_stacktrace)) = 0) as double_trace FROM (SELECT DISTINCT parent, location ,writer_count , writer_stacktrace FROM rep.root.`./tracker_221915987.json`) GROUP BY location HAVING double_trace;
+SELECT location, (NOT (COUNT(writer_stacktrace)-COUNT(DISTINCT writer_stacktrace)) = 0) as double_trace FROM (SELECT DISTINCT parent, location ,writer_count , writer_stacktrace FROM rep.root.`./tracker_1714303664.json`) GROUP BY location HAVING double_trace;
+
+Filter the result from : --Find different writes on same obj independent location but with same stack trace (as transient writes)--
+based on having only one reader, statics are read often, transients are only read once
+--problem: sometimes things are read once and cached
+
+SELECT DISTINCT location FROM (SELECT parent, location, writer_count, count(*) as reader_count FROM (SELECT DISTINCT parent, location, writer_count, reader_stacktrace, reader_id FROM rep.root.`./tracker_1714303664.json` WHERE reference is NULL and location NOT IN (SELECT location FROM rep.out.`/globals3.json`)) GROUP BY parent, location, writer_count HAVING reader_count = 1 );
 
 
 

@@ -8,7 +8,7 @@ public class AccessTracker {
 
     static {
         int random = (new Random()).nextInt(Integer.MAX_VALUE);
-        Logger.configureLogger("./tracker_report_"+random+".json");
+        Logger.configureLogger("./tracker_report_" + random + ".json");
     }
 
     //TODO it would be useful to have a no-false-positives and a no-false-negative mode
@@ -42,8 +42,8 @@ public class AccessTracker {
     //TODO support for fields with other types than object e.g. for array as field (access of the array object)
 
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses = new HashMap<>();
-    // A thread local is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
-    private static ThreadLocal<Boolean> insideTracker = new ThreadLocal<Boolean>();
+    // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
+    private static boolean insideTracker = false;
 
     public synchronized static void writeAccess(AbstractFieldLocation f) {
         writeAccess(f, false);
@@ -51,9 +51,9 @@ public class AccessTracker {
 
     public synchronized static void writeAccess(AbstractFieldLocation f, boolean valueIsNull) {
         // To break the recursion
-        if (insideTracker.get() != null) return;
+        if (insideTracker) return;
         try {
-            insideTracker.set(true);
+            insideTracker = true;
             FieldAccessMeta meta = accesses.get(f);
             if (meta == null) {
                 meta = new FieldAccessMeta();
@@ -62,16 +62,16 @@ public class AccessTracker {
             if (valueIsNull) meta.clearWriters();
             else meta.registerWriter();
         } finally {
-            insideTracker.remove();
+            insideTracker = false;
         }
 
     }
 
     public synchronized static void readAccess(AbstractFieldLocation f) {
         // To break the recursion
-        if (insideTracker.get() != null) return;
+        if (insideTracker) return;
         try {
-            insideTracker.set(true);
+            insideTracker = true;
             // System.out.println("READ: " + toString(Thread.currentThread().getStackTrace()));
             FieldAccessMeta meta = accesses.get(f);
             if (meta == null) return;
@@ -88,11 +88,11 @@ public class AccessTracker {
                             Thread.currentThread().getId(),
                             Thread.currentThread().getStackTrace(),
                             f,
-                            w,meta),"DETECTION");
+                            w, meta));
 
 
         } finally {
-            insideTracker.remove();
+            insideTracker = false;
 
         }
     }

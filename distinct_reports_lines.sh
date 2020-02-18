@@ -7,4 +7,3 @@ do
   rm $i
   mv tmp4242 $i
 done
-rm tmp4242
