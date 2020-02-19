@@ -18,6 +18,9 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
+                    <arguments>
+                        <additionalClasspathElements>${project.build.directory}/../../javaRT/rt_inst.jar</additionalClasspathElements>
+                    </arguments>
                     <mainClass>boundaryDetection.RTInstrumentation</mainClass>
                 </configuration>
             </plugin>
@@ -26,6 +29,11 @@
 
 
     <dependencies>
+        <dependency>
+            <groupId>boundaryDetection</groupId>
+            <artifactId>tracker</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>boundaryDetection</groupId>
             <artifactId>agent</artifactId>
@@ -43,7 +51,6 @@
         </dependency>
 
     </dependencies>
-
 
 
 </project>

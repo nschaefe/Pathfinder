@@ -31,7 +31,6 @@ public class Logger {
         Configuration.set("writer", "file");
         Configuration.set("writer.append", "true");
         Configuration.set("writer.buffered", "true");
-        Configuration.set("writer.tag", "DETECTION");
         Configuration.set("writer.format", "{message}");// REMARK: writer format with methodname captures stacktrace
         Configuration.set("writingthread", "true");
         tinylog = new TinylogLoggingProvider();

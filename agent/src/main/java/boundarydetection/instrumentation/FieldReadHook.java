@@ -36,6 +36,7 @@ public class FieldReadHook extends FieldAccessHook {
     @Override
     public int transform(CtClass tclazz, int pos, CodeIterator iterator,
                          ConstPool cp) throws BadBytecode {
+       if(methodInfo.isStaticInitializer()) return pos;
         // jump over all instructions before super or this.
         // static field accesses can happen before super,
         // so not doing this can lead to a method call injection before super or this,

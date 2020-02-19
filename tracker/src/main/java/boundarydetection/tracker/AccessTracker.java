@@ -6,11 +6,6 @@ import java.util.Random;
 
 public class AccessTracker {
 
-    static {
-        int random = (new Random()).nextInt(Integer.MAX_VALUE);
-        Logger.configureLogger("./tracker_report_" + random + ".json");
-    }
-
     //TODO it would be useful to have a no-false-positives and a no-false-negative mode
     // --> no-false-positives only gives sensible boundaries that need to be supported, but could miss some cases
     //     no-false-negatives is the other way round, complete but much
@@ -41,59 +36,79 @@ public class AccessTracker {
 
     //TODO support for fields with other types than object e.g. for array as field (access of the array object)
 
-    private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses = new HashMap<>();
-    // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
-    private static boolean insideTracker = false;
+    private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
 
-    public synchronized static void writeAccess(AbstractFieldLocation f) {
+    //TODO bytecode instrumentation, related problems and solution document
+
+    // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
+    // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
+    private static volatile InheritableThreadLocal<Boolean> insideTracker;
+    private static volatile boolean inited = false;
+
+    private static void init() {
+        if (!inited) {
+            // DO NOT PUT inited AT THE END (NECESSARY FOR RECURSION BREAKING)
+            inited = true;
+
+            int random = (new Random()).nextInt(Integer.MAX_VALUE);
+            Logger.configureLogger("./tracker_report_" + random + ".json");
+
+            accesses = new HashMap<>();
+            insideTracker = new InheritableThreadLocal<>();
+        }
+    }
+
+    public static void writeAccess(AbstractFieldLocation f) {
         writeAccess(f, false);
     }
 
-    public synchronized static void writeAccess(AbstractFieldLocation f, boolean valueIsNull) {
-        // To break the recursion
-        if (insideTracker) return;
+    public static void writeAccess(AbstractFieldLocation f, boolean valueIsNull) {
+        init();
+        // To break the recursion; NULL check is neccessary
+        if (insideTracker == null || insideTracker.get() != null) return;
         try {
-            insideTracker = true;
-            FieldAccessMeta meta = accesses.get(f);
-            if (meta == null) {
-                meta = new FieldAccessMeta();
-                accesses.put(f, meta);
+            synchronized (AccessTracker.class) {
+                insideTracker.set(true);
+                FieldAccessMeta meta = accesses.get(f);
+                if (meta == null) {
+                    meta = new FieldAccessMeta();
+                    accesses.put(f, meta);
+                }
+                if (valueIsNull) meta.clearWriters();
+                else meta.registerWriter();
             }
-            if (valueIsNull) meta.clearWriters();
-            else meta.registerWriter();
         } finally {
-            insideTracker = false;
+            insideTracker.remove();
         }
-
     }
 
-    public synchronized static void readAccess(AbstractFieldLocation f) {
-        // To break the recursion
-        if (insideTracker) return;
+    public static void readAccess(AbstractFieldLocation f) {
+        init();
+        // To break the recursion; NULL check is neccessary
+        if (insideTracker == null || insideTracker.get() != null) return;
         try {
-            insideTracker = true;
-            // System.out.println("READ: " + toString(Thread.currentThread().getStackTrace()));
-            FieldAccessMeta meta = accesses.get(f);
-            if (meta == null) return;
+            synchronized (AccessTracker.class) {
+                insideTracker.set(true);
+                // System.out.println("READ: " + toString(Thread.currentThread().getStackTrace()));
+                FieldAccessMeta meta = accesses.get(f);
+                if (meta == null) return;
 
-            List<FieldWriter> l = meta.otherWriter();
-            if (l.isEmpty()) return;
-            assert (l.size() <= 1);
+                List<FieldWriter> l = meta.otherWriter();
+                if (l.isEmpty()) return;
+                assert (l.size() <= 1);
 
-            StringBuilder s = new StringBuilder();
-            FieldWriter w = l.get(0);
+                StringBuilder s = new StringBuilder();
+                FieldWriter w = l.get(0);
 
-            Logger.getLogger().log(
-                    ReportGenerator.generateDetectionReportJSON(
-                            Thread.currentThread().getId(),
-                            Thread.currentThread().getStackTrace(),
-                            f,
-                            w, meta));
-
-
+                Logger.getLogger().log(
+                        ReportGenerator.generateDetectionReportJSON(
+                                Thread.currentThread().getId(),
+                                Thread.currentThread().getStackTrace(),
+                                f,
+                                w, meta));
+            }
         } finally {
-            insideTracker = false;
-
+            insideTracker.remove();
         }
     }
 

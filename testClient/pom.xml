@@ -82,7 +82,7 @@
                             <executable>java</executable>
                             <arguments>
                                 <argument>
-                                    -Xbootclasspath/p:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
+                                    -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
                                 </argument>
                                 <argument>-jar</argument>
                                 <argument>
