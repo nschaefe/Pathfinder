@@ -13,6 +13,7 @@
 
     <properties>
         <instrument.dynamic>true</instrument.dynamic>
+        <tracingplane.version>4.0</tracingplane.version>
     </properties>
 
 
@@ -20,7 +21,6 @@
         <plugins>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.2.0</version>
                 <configuration>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
@@ -63,12 +63,13 @@
                                     -javaagent:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
                                 </argument>
                                 <argument>
-                                    -Xbootclasspath/p:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
+                                    -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
                                 </argument>
-                                <argument>-jar</argument>
+                                <argument>-cp</argument>
                                 <argument>
-                                    ${project.build.directory}/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar
+                                    ${project.build.directory}/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar:${env.XTRACE_DIST_NO_SLF}
                                 </argument>
+                                <argument>client.Client</argument>
                             </arguments>
                         </configuration>
                     </execution>
@@ -84,16 +85,22 @@
                                 <argument>
                                     -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
                                 </argument>
-                                <argument>-jar</argument>
+                                <argument>-cp</argument>
                                 <argument>
-                                    ${project.build.directory}/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar
+                                    ${project.build.directory}/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar:${env.XTRACE_CONF}:${env.XTRACE_DIST}
                                 </argument>
-                            </arguments>
+                                <argument>client.Client</argument>
+S                            </arguments>
                         </configuration>
                     </execution>
                 </executions>
 
                 <dependencies>
+                    <dependency>
+                        <groupId>boundaryDetection</groupId>
+                        <artifactId>tracker</artifactId>
+                        <version>0.1-SNAPSHOT</version>
+                    </dependency>
                     <dependency>
                         <groupId>boundaryDetection</groupId>
                         <artifactId>agent</artifactId>
@@ -140,4 +147,29 @@
             </plugin>
         </plugins>
     </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>boundaryDetection</groupId>
+            <artifactId>tracker</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.brown.cs.systems</groupId>
+            <artifactId>tracingplane-common</artifactId>
+            <version>${tracingplane.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.brown.cs.systems</groupId>
+            <artifactId>xtrace-common</artifactId>
+            <version>${tracingplane.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>edu.brown.cs.systems</groupId>
+            <artifactId>xtrace-client</artifactId>
+            <version>${tracingplane.version}</version>
+        </dependency>
+    </dependencies>
+
+
 </project>

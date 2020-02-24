@@ -1,5 +1,7 @@
 package boundarydetection.tracker;
 
+import edu.brown.cs.systems.xtrace.XTraceBaggageInterface;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -35,15 +37,15 @@ public class AccessTracker {
     // field access meta as pure datastructure/infrastructure
 
     //TODO support for fields with other types than object e.g. for array as field (access of the array object)
+    //TODO bytecode instrumentation, related problems and solution document
 
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
-
-    //TODO bytecode instrumentation, related problems and solution document
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static volatile InheritableThreadLocal<Boolean> insideTracker;
     private static volatile boolean inited = false;
+    private static volatile boolean enabled = false;
 
     private static void init() {
         if (!inited) {
@@ -58,17 +60,23 @@ public class AccessTracker {
         }
     }
 
+    public static void startTracking() {
+        enabled = true;
+    }
+
     public static void writeAccess(AbstractFieldLocation f) {
         writeAccess(f, false);
     }
 
     public static void writeAccess(AbstractFieldLocation f, boolean valueIsNull) {
+        if (!enabled) return;
         init();
-        // To break the recursion; NULL check is neccessary
+        // To break the recursion; NULL check is neccessary (insideTracker is null when access is done from within InheritableThreadLocal)
         if (insideTracker == null || insideTracker.get() != null) return;
         try {
             synchronized (AccessTracker.class) {
                 insideTracker.set(true);
+                if (!XTraceBaggageInterface.hasTaskID()) return;
                 FieldAccessMeta meta = accesses.get(f);
                 if (meta == null) {
                     meta = new FieldAccessMeta();
@@ -83,6 +91,7 @@ public class AccessTracker {
     }
 
     public static void readAccess(AbstractFieldLocation f) {
+        if (!enabled) return;
         init();
         // To break the recursion; NULL check is neccessary
         if (insideTracker == null || insideTracker.get() != null) return;

@@ -11,11 +11,15 @@
 
     <artifactId>tracker</artifactId>
 
+    <properties>
+        <tracingplane.version>4.0</tracingplane.version>
+    </properties>
+
+
     <build>
         <plugins>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.2.0</version>
                 <configuration>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
@@ -74,7 +78,21 @@
            <artifactId>jackson-databind</artifactId>
            <version>2.9.6</version>
        </dependency>
-
+       <dependency>
+           <groupId>edu.brown.cs.systems</groupId>
+           <artifactId>tracingplane-common</artifactId>
+           <version>${tracingplane.version}</version>
+       </dependency>
+       <dependency>
+           <groupId>edu.brown.cs.systems</groupId>
+           <artifactId>xtrace-common</artifactId>
+           <version>${tracingplane.version}</version>
+       </dependency>
+       <dependency>
+           <groupId>edu.brown.cs.systems</groupId>
+           <artifactId>xtrace-client</artifactId>
+           <version>${tracingplane.version}</version>
+       </dependency>
 
    </dependencies>
 </project>
