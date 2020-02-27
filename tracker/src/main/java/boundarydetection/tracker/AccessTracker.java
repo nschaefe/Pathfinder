@@ -1,7 +1,5 @@
 package boundarydetection.tracker;
 
-import edu.brown.cs.systems.xtrace.XTraceBaggageInterface;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -40,6 +38,7 @@ public class AccessTracker {
     //TODO bytecode instrumentation, related problems and solution document
 
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
+    private static volatile ThreadLocal<Boolean> task;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
@@ -60,6 +59,21 @@ public class AccessTracker {
         }
     }
 
+    public static void startTask() {
+        if (task == null) task = new ThreadLocal<>();
+        task.set(true);
+    }
+
+    public static void stopTask() {
+        if (task == null) task = new ThreadLocal<>();
+        task.set(false);
+    }
+
+    private static boolean hasTask() {
+        if (task == null) task = new ThreadLocal<>();
+        return task.get() != null && task.get();
+    }
+
     public static void startTracking() {
         enabled = true;
     }
@@ -76,7 +90,9 @@ public class AccessTracker {
         try {
             synchronized (AccessTracker.class) {
                 insideTracker.set(true);
-                if (!XTraceBaggageInterface.hasTaskID()) return;
+                if (!hasTask()) return;
+                // System.out.println(Util.toString(Thread.currentThread().getStackTrace()));
+                // if (!XTraceBaggageInterface.hasTaskID()) return;
                 FieldAccessMeta meta = accesses.get(f);
                 if (meta == null) {
                     meta = new FieldAccessMeta();
@@ -85,6 +101,8 @@ public class AccessTracker {
                 if (valueIsNull) meta.clearWriters();
                 else meta.registerWriter();
             }
+        } catch (Exception e) {
+            Logger.getLogger().log(e.getMessage());
         } finally {
             insideTracker.remove();
         }
@@ -116,7 +134,10 @@ public class AccessTracker {
                                 f,
                                 w, meta));
             }
-        } finally {
+        } catch (Exception e) {
+            Logger.getLogger().log(e.getMessage());
+        }
+        finally {
             insideTracker.remove();
         }
     }

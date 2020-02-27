@@ -66,8 +66,9 @@ public class Client extends ClientBase {
             Test tt = new Test();
             Client c = new Client();
             Thread t = new Thread(() -> {
+                AccessTracker.startTask();
                 try {
-                    XTrace.startTask(true);
+                    //XTrace.startTask(true);
                     for (int i = 0; i < 1; i++) {
                         c.addMessageArr(42);
                         // double write should not be a new write
@@ -75,6 +76,7 @@ public class Client extends ClientBase {
                 }catch (Exception e){
                     e.printStackTrace();
                 }
+                AccessTracker.stopTask();
                 // c.setNull(); //reads from null should not appear as detected case
             });
             t.start();

@@ -35,8 +35,14 @@ public class FieldAccessMeta {
 
     public void registerWriter() {
         long id = Thread.currentThread().getId();
-        StackTraceElement[] trace = Thread.currentThread().getStackTrace();
-        if (!check(trace)) return;
+
+        StackTraceElement[] trace;
+        if (matched) {
+            trace = Thread.currentThread().getStackTrace(); // avg trace size 220#
+            if (!check(trace)) return;
+        }
+        else trace = new StackTraceElement[0];
+
         FieldWriter wr = new FieldWriter(id, trace);
         if (writer.size() == 0) writer.add(wr);
         else writer.set(0, wr);

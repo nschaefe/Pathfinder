@@ -28,7 +28,7 @@ public class Logger {
         // this leads to a cyclic class loading error.
         // So we prevent this loading via a direct dependency of what should be loaded, what is the provider.
         Configuration.set("writer.file", path);
-        Configuration.set("writer", "file");
+        Configuration.set("writer", "shared file");
         Configuration.set("writer.append", "true");
         Configuration.set("writer.buffered", "true");
         Configuration.set("writer.format", "{message}");// REMARK: writer format with methodname captures stacktrace

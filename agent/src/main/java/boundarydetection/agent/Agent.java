@@ -58,6 +58,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             "org.apache.zookeeper", //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation, only VM reset is possible then
             "com.google.comm", //TODO remove this
             "org.apache.htrace", //built in tracing
+             // "org.apache.hadoop.hbase", // WHEN STATICLY INTRUMENTED
 
             //DEBUG
             "java.net",
