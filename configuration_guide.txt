@@ -1,0 +1,39 @@
+There are several things that can be configured and have an influence on runtime performance and tracking outputs.
+Some of them include interventions in sensitive code (e.g. classloader). In case of problems, switching them off can be
+a starting point for debugging.
+
+-Task pause and resume:
+To shut down tracking in irrelevant parts of the application a task can be paused and resumed later on.
+Currently this is done when classes are loaded and instrumented. Accesses to any fields and arrays while the classloading
+process is not tracked. This is achived by pausing the current task and bring it back after the classloading call.
+To realize this feature, the rt.jar is instrumented. The class java.lang.ClassLoader is instrumented. This is done in RTInstrumentation.
+This feature provides performance improvements and less tracking outputs that are irrelevant.
+This feature can be switched off by disabling the instrumentation part, or the code behind pause and resume.
+
+-Dynamic vs static instrumentation:
+Parts of the instrumentation is possible to do statically. Currently there is support to instrument the rt.jar statically
+and to statically instrument application code that is not a dependency.
+In principle it is possible to instrument everything dynamically, but because of overhead this is not feasible.
+To turn on static instrumentation the javaRT project needs to be executed to generate a new rt.jar. This rt_inst.jar has to
+be included in the bootstrapclasspath of the JVM.
+To instrument application code statically, the javassist maven plugin is required. The hbase pom includes this plugin.
+There is a property to switch on/off the plugin.
+One should not instrument statically instrumented classes again at runtime.
+So the javaagent should exclude corresponding classes.
+
+-Logging
+TinyLog is used to print out tracking results.
+The logger can be configured.
+Using "writingthread" and "buffered" improves performance but introduces more memory consumption
+Even without "buffered", the writing thread buffers things if it is not able to process outputs fast enough. This can lead
+to a significant blow up in memory.
+
+-Filtering
+Before a write is registered the stacktrace is checked if it contains certain entries that indicate irrelevance. Can be found in
+FieldAccessMeta
+If something is not tracked as expected, too strong filtering can be a reason.
+
+-Hook Size
+Which accesses are tracked has a crucial impact on performance. Not tracking byte array accesses for example leads to a
+better performance if output streams etc. are used in the applications.
+

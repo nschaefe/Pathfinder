@@ -1,15 +1,15 @@
 package boundarydetection.tracker;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.Objects;
 
 public class ArrayFieldLocation extends AbstractFieldLocation {
 
-
-    private Object ref;
     private int index;
-
+    private WeakReference ref;
 
     public ArrayFieldLocation(Class type, Object ref, int index) {
         //REMARK currently we do not support locations, because we do not need it for now,
@@ -19,14 +19,24 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
 
     public ArrayFieldLocation(String location, Class type, Object ref, int index) {
         super(location, type);
-        this.ref = ref;
+        this.ref = new WeakReference<>(ref);
         this.index = index;
+    }
+
+    public Object getRef() {
+        return ref.get();
     }
 
     @Override
     public int hashCode() {
+        // getRef() returns null if object was deleted.
+        // After this happened we consider the FieldLocation as archived and if it can be found in a data structure that uses
+        // hash & equals paradigm is UNDEFINED. So finding something via hash after it was archived is not supported.
+        // We use getRef in hash because it significantly improves the hash quality (and so performance). It is a perfect hash function if used.
+        // For more information see voice record.
         int hash = 17;
-        hash = hash * 31 + System.identityHashCode(ref);
+        hash = hash * 31 + super.hashCode();
+        hash = hash * 31 + System.identityHashCode(getRef());
         hash = hash * 31 + index;
         return hash;
     }
@@ -38,15 +48,16 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
 
         return Objects.equals(other.getLocation(), getLocation()) &&
                 other.getType().equals(getType()) &&
-                other.ref == ref &&
+                other.getRef() == getRef() &&
                 other.index == index;
 
     }
 
+    //TODO hold ref for logging (weak can make it null)
     @Override
     public void toJSON(JsonGenerator g) throws IOException {
         super.toJSON(g);
-        g.writeNumberField("reference", System.identityHashCode(ref));
+        g.writeNumberField("reference", System.identityHashCode(getRef()));
         g.writeNumberField("index", index);
     }
 

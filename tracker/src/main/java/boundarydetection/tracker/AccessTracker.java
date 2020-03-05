@@ -37,8 +37,12 @@ public class AccessTracker {
     //TODO support for fields with other types than object e.g. for array as field (access of the array object)
     //TODO bytecode instrumentation, related problems and solution document
 
+    //TODO string hash equalks use reference instead of actual string
+
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
     private static volatile ThreadLocal<Boolean> task;
+    private static volatile ThreadLocal<Boolean> pausedTask;
+    private static volatile ThreadLocal<Integer> pausedTaskCounter;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
@@ -57,25 +61,6 @@ public class AccessTracker {
             accesses = new HashMap<>();
             insideTracker = new InheritableThreadLocal<>();
         }
-    }
-
-    public static void startTask() {
-        if (task == null) task = new ThreadLocal<>();
-        task.set(true);
-    }
-
-    public static void stopTask() {
-        if (task == null) task = new ThreadLocal<>();
-        task.set(false);
-    }
-
-    private static boolean hasTask() {
-        if (task == null) task = new ThreadLocal<>();
-        return task.get() != null && task.get();
-    }
-
-    public static void startTracking() {
-        enabled = true;
     }
 
     public static void writeAccess(AbstractFieldLocation f) {
@@ -99,7 +84,10 @@ public class AccessTracker {
                     accesses.put(f, meta);
                 }
                 if (valueIsNull) meta.clearWriters();
-                else meta.registerWriter();
+                else {
+                    meta.registerWriter();
+                    //Logger.getLogger().log(f.getLocation() + "\n" + Util.toString(Thread.currentThread().getStackTrace()) + "\n");
+                }
             }
         } catch (Exception e) {
             Logger.getLogger().log(e.getMessage());
@@ -108,7 +96,7 @@ public class AccessTracker {
         }
     }
 
-    public static void readAccess(AbstractFieldLocation f) {
+    public static void readAccess(AbstractFieldLocation field) {
         if (!enabled) return;
         init();
         // To break the recursion; NULL check is neccessary
@@ -117,7 +105,7 @@ public class AccessTracker {
             synchronized (AccessTracker.class) {
                 insideTracker.set(true);
                 // System.out.println("READ: " + toString(Thread.currentThread().getStackTrace()));
-                FieldAccessMeta meta = accesses.get(f);
+                FieldAccessMeta meta = accesses.get(field);
                 if (meta == null) return;
 
                 List<FieldWriter> l = meta.otherWriter();
@@ -125,34 +113,86 @@ public class AccessTracker {
                 assert (l.size() <= 1);
 
                 StringBuilder s = new StringBuilder();
-                FieldWriter w = l.get(0);
+                FieldWriter writer = l.get(0);
 
                 Logger.getLogger().log(
                         ReportGenerator.generateDetectionReportJSON(
                                 Thread.currentThread().getId(),
                                 Thread.currentThread().getStackTrace(),
-                                f,
-                                w, meta));
+                                field,
+                                writer, meta));
             }
         } catch (Exception e) {
             Logger.getLogger().log(e.getMessage());
-        }
-        finally {
+        } finally {
             insideTracker.remove();
         }
     }
+
+      public static void pauseTask() {
+          // This approach uses a stack like counter to support subsequent pause and resume calls (e.g. pause, pause, resume, resume)
+          // we only remember the task state of the really first call of pause and the bring the task back on the corresponding resume call
+          // subsequent pauseTask and resumeTask calls will be just ignored.
+          // We do not use a stack to remember all task states as they stack up and pop them on resume,
+          // because of less dependencies and no recursion over java.util.Stack to AccessTracker.
+          // I also experienced classloader deadlocks. The approach is also faster and is sufficient for the use cases we want to support.
+        if (task == null) task = new ThreadLocal<>();
+        if (pausedTask == null) {
+            pausedTask = new ThreadLocal<>();
+            pausedTaskCounter = new ThreadLocal<>();
+        }
+        if (pausedTaskCounter.get() == null) pausedTaskCounter.set(0);
+
+        int c = pausedTaskCounter.get();
+//        FOR DEBUG
+//        for (int i = 0; i < c; i++) System.out.print(" ");
+//        System.out.println("(");
+        if (c == 0) {
+            pausedTask.set(task.get());
+            task.remove();
+        }
+        pausedTaskCounter.set(c + 1);
+
+    }
+
+    public static void resumeTask() {
+        int c = pausedTaskCounter.get();
+        c--;
+        pausedTaskCounter.set(c);
+        if (c == 0) {
+            task.set(pausedTask.get());
+        }
+//        FOR DEBUG
+//        for (int i = 0; i < c; i++) System.out.print(" ");
+//        System.out.println(")");
+    }
+
+    public static void startTask() {
+        if (task == null) task = new ThreadLocal<>();
+        task.set(true);
+    }
+
+    public static void stopTask() {
+        if (task == null) task = new ThreadLocal<>();
+        task.set(false);
+    }
+
+    public static boolean hasTask() {
+        if (task == null) task = new ThreadLocal<>();
+        boolean b = task.get() != null && task.get();
+        return b;
+    }
+
+    public static void startTracking() {
+        enabled = true;
+    }
+
 
     // ACCESS HOOKS---------------------------------------------
     public static void readObject(Object parent, String location) {
         FieldLocation f = new FieldLocation(location, Object.class, parent);
         readAccess(f);
     }
-
-//    public static Object readObject(Object value, Object parent, String location) {
-//        Field f = new Field(location, Object.class, parent);
-//        readAccess(f);
-//        return  value;
-//    }
 
     public static void writeObject(Object parent, Object value, String location) {
         FieldLocation f = new FieldLocation(location, Object.class, parent);

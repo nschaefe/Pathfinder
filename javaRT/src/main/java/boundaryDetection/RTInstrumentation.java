@@ -1,10 +1,7 @@
 package boundaryDetection;
 
 import boundarydetection.agent.Agent;
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.NotFoundException;
+import javassist.*;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -35,6 +32,9 @@ public class RTInstrumentation {
         String rtpath = "/opt/jdk8/jre/lib/rt.jar";
         String resultPath = "./jar_out";
         cp.insertClassPath(rtpath);
+        //TODO not nice
+        cp.insertClassPath("../tracker/target/tracker-0.1-SNAPSHOT.jar");
+        // DO NOT INCLUDE ANYTHING MORE THAT COULD BE USED INSTEAD OF WHAT IS IN THE RT
         Agent a = new Agent();
         for (String clName : readJarFiles(Paths.get(rtpath))) {
             CtClass cl = null;
@@ -42,6 +42,7 @@ public class RTInstrumentation {
                 cl = cp.get(clName.replace("/", "."));
                 //TODO filtering
                 if (clName.startsWith("java/util") || clName.startsWith("java/io")) a.applyTransformations(cl);
+                if (clName.startsWith("java/lang/ClassLoader")) a.instClassLoader(cl);
             } catch (Exception e) {
                 // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
                 System.err.println("ERROR but continue");

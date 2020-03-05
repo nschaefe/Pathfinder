@@ -13,7 +13,7 @@ import java.lang.instrument.UnmodifiableClassException;
 public class Agent implements ClassFileTransformer, javassist.build.IClassTransformer {
 
 
-   private static final String[] EXCLUDES = new String[]{
+    private static final String[] EXCLUDES = new String[]{
             // JAVA INTERNALS
             "[",
             "sun",
@@ -58,7 +58,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             "org.apache.zookeeper", //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation, only VM reset is possible then
             "com.google.comm", //TODO remove this
             "org.apache.htrace", //built in tracing
-             // "org.apache.hadoop.hbase", // WHEN STATICLY INTRUMENTED
+            // "org.apache.hadoop.hbase", // WHEN STATICLY INTRUMENTED
 
             //DEBUG
             "java.net",
@@ -69,7 +69,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
     };
 
 
-    private  static final String[] INCLUDES = new String[]{
+    private static final String[] INCLUDES = new String[]{
             "client/Client",
             "java/util/ArrayDeque",
             //"java/util/AbstractCollection",
@@ -141,7 +141,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
     private void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
         if (ctCl.isInterface()) return;
 
-        if(cp==null) {
+        if (cp == null) {
             cp = ClassPool.getDefault();
             cp.insertClassPath(new LoaderClassPath(this.getClass().getClassLoader()));
             //cp.insertClassPath("/home/user/Dokumente/BoundaryDetection/tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar");
@@ -156,6 +156,19 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         conv.replaceFieldWrite(tracker, "writeObject");
         ctCl.instrument(conv);
     }
+
+    public void instClassLoader(CtClass ctCl) throws NotFoundException, CannotCompileException {
+        System.out.println("INST: " + ctCl.getName());
+        CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
+        //CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+        instloading(m);
+    }
+
+    private void instloading(CtMethod m) throws CannotCompileException {
+        m.insertBefore("boundarydetection.tracker.AccessTracker.pauseTask();");
+        m.insertAfter("boundarydetection.tracker.AccessTracker.resumeTask();", true);
+    }
+
 
     public static boolean shouldTransform(String clName) {
         return (true || isIncluded(clName)) && !isExcluded(clName);
