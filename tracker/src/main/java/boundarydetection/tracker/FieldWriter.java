@@ -5,9 +5,9 @@ import java.util.Arrays;
 public class FieldWriter {
 
     private long id;
-    private StackTraceElement[] trace;
+    private Throwable trace;
 
-    public FieldWriter(long id, StackTraceElement[] trace) {
+    public FieldWriter(long id, Throwable trace) {
         this.id = id;
         this.trace = trace;
     }
@@ -17,10 +17,11 @@ public class FieldWriter {
     }
 
     public StackTraceElement[] getStackTrace() {
-        return trace;
+        return trace.getStackTrace();
     }
 
 
+    //TODO cash if stacktrace is caputred once
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof FieldWriter)) return false;

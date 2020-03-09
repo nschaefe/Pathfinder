@@ -37,8 +37,6 @@ public class AccessTracker {
     //TODO support for fields with other types than object e.g. for array as field (access of the array object)
     //TODO bytecode instrumentation, related problems and solution document
 
-    //TODO string hash equalks use reference instead of actual string
-
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
     private static volatile ThreadLocal<Boolean> task;
     private static volatile ThreadLocal<Boolean> pausedTask;
@@ -58,7 +56,8 @@ public class AccessTracker {
             int random = (new Random()).nextInt(Integer.MAX_VALUE);
             Logger.configureLogger("./tracker_report_" + random + ".json");
 
-            accesses = new HashMap<>();
+            //TODO magic number
+            accesses = new HashMap<>(10000);
             insideTracker = new InheritableThreadLocal<>();
         }
     }

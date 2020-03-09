@@ -36,13 +36,7 @@ public class FieldAccessMeta {
     public void registerWriter() {
         long id = Thread.currentThread().getId();
 
-        StackTraceElement[] trace;
-        if (matched) {
-            trace = Thread.currentThread().getStackTrace(); // avg trace size 220#
-            if (!check(trace)) return;
-        }
-        else trace = new StackTraceElement[0];
-
+        Throwable trace = new Throwable();
         FieldWriter wr = new FieldWriter(id, trace);
         if (writer.size() == 0) writer.add(wr);
         else writer.set(0, wr);
@@ -67,7 +61,7 @@ public class FieldAccessMeta {
                 list.add(w);
             }
         }
-        //TODO happens implicit, not so nice (rather register writer)
+        //TODO happens implicit, not so nice (rather register reader)
         if (!list.isEmpty()) matched = true;
         return list;
     }

@@ -25,7 +25,6 @@ public class RTInstrumentation {
         }
     }
 
-    //TODO is it ok to omit not instrumented classes (should result in fallback to actual rt)
     private static void transformRT() throws NotFoundException, IOException, CannotCompileException {
         ClassPool cp = new ClassPool();
         //"JAVA_HOME/jre/lib/rt.jar";
