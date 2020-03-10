@@ -1,8 +1,4 @@
 package client;
-
-import boundarydetection.tracker.AccessTracker;
-import edu.brown.cs.systems.xtrace.XTrace;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -17,6 +13,7 @@ public class Client extends ClientBase {
     private Integer i;
     private LinkedList<Integer> li;
 
+    private static Integer si;
 
     public Client() {
         super(42);
@@ -34,6 +31,8 @@ public class Client extends ClientBase {
         m[0] = i;
         this.i = i;
         li.add(i);
+        si = i;
+        Test.y = i;
     }
 
     public synchronized void setNull() {
@@ -48,7 +47,7 @@ public class Client extends ClientBase {
 
 
     public synchronized String getMessageArr() {
-        return "" + li.get(0) + messages[0] + " " + this.i;
+        return "" + Test.y + si + li.toArray().length + li.get(0) + messages[0] + " " + this.i;
     }
 
     public synchronized String getMessage() {
@@ -56,27 +55,14 @@ public class Client extends ClientBase {
     }
 
     public static void main(String[] args) {
-        AccessTracker.startTracking();
-//        XTrace.startTask(true);
-//        XTrace.setLoggingLevel(XTraceLoggingLevel.DEBUG);
-//        XTrace.getDefaultLogger().tag("Example Trace", "Example Trace main");
-//        XTrace.getDefaultLogger().log("adadad");
-
         try {
             Test tt = new Test();
             Client c = new Client();
             Thread t = new Thread(() -> {
-                AccessTracker.startTask();
-                try {
-                    //XTrace.startTask(true);
-                    for (int i = 0; i < 1; i++) {
-                        c.addMessageArr(42);
-                        // double write should not be a new write
-                    }
-                }catch (Exception e){
-                    e.printStackTrace();
+                for (int i = 0; i < 10; i++) {
+                    c.addMessageArr(42);
+                    // double write should not be a new write
                 }
-                AccessTracker.stopTask();
                 // c.setNull(); //reads from null should not appear as detected case
             });
             t.start();

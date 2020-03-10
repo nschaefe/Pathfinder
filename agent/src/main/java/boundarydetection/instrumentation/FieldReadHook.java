@@ -62,16 +62,18 @@ public class FieldReadHook extends FieldAccessHook {
         if (isFieldRead) {
             int index = iterator.u16bitAt(pos + 1);
 
-            String fieldname=cp.getFieldrefName(index);
             String typedesc = cp.getFieldrefType(index);
             if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
 
+                iterator.move(pos);
                 pos = iterator.insertGap(1);
                 if (isStatic) iterator.writeByte(ACONST_NULL, pos);
-                else iterator.writeByte(Opcode.ALOAD_0, pos);
+                else iterator.writeByte(Opcode.DUP, pos);
                 pos += 1;
 
-                int str_index = cp.addStringInfo(className +'.'+fieldname);
+                String classname = cp.getFieldrefClassName(index);
+                String fieldname = cp.getFieldrefName(index);
+                int str_index = cp.addStringInfo(classname + '.' + fieldname);
                 pos = addLdc(str_index, iterator, pos);
 
                 pos = iterator.insertGap(3);
@@ -85,6 +87,7 @@ public class FieldReadHook extends FieldAccessHook {
                 CodeAttribute ca = iterator.get();
                 ca.setMaxStack(ca.getMaxStack() + 2);
 
+                pos=iterator.next();
                 return pos;
             }
         }
