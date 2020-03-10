@@ -47,6 +47,7 @@ public class AccessTracker {
     private static volatile ThreadLocal<Boolean> task;
     private static volatile ThreadLocal<Boolean> pausedTask;
     private static volatile ThreadLocal<Integer> pausedTaskCounter;
+    private static int epoch = 0;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
@@ -124,7 +125,7 @@ public class AccessTracker {
                 FieldWriter writer = l.get(0);
 
                 Logger.getLogger().log(
-                        ReportGenerator.generateDetectionReportJSON(
+                        ReportGenerator.generateDetectionReportJSON(epoch,
                                 Thread.currentThread().getId(),
                                 Thread.currentThread().getStackTrace(),
                                 field,
@@ -177,7 +178,7 @@ public class AccessTracker {
 //        System.out.println(")");
     }
 
-    private static synchronized void initTaskLocals(){
+    private static synchronized void initTaskLocals() {
         if (task == null) task = new ThreadLocal<>();
     }
 
@@ -202,9 +203,10 @@ public class AccessTracker {
     }
 
     public static synchronized void resetTracking() {
-       synchronized (initLock) {
-           accesses = new HashMap<>(MAP_INIT_SIZE);
-       }
+        synchronized (initLock) {
+            accesses = new HashMap<>(MAP_INIT_SIZE);
+            epoch++;
+        }
     }
 
 

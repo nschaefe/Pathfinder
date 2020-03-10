@@ -14,13 +14,14 @@ public class ReportGenerator {
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss-MM.dd.yyyy");
     private static final int STACKTRACE_MAX_DEPTH = 55;
 
-    public static String generateDetectionReportJSON(long readerThreadID, StackTraceElement[] readerTrace,
+    public static String generateDetectionReportJSON(int epoch,long readerThreadID, StackTraceElement[] readerTrace,
                                                      AbstractFieldLocation loc, FieldWriter w, FieldAccessMeta meta) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // ByteArrayOutputStream.close has no effect, no closing neccessary
         try {
             JsonGenerator g = factory.createGenerator(out);
             g.writeStartObject();
+            g.writeNumberField("epoch", epoch);
             g.writeStringField("time", getTime());
             g.writeStringField("type", "CONCURRENT WRITE/READ DETECTION");
             loc.toJSON(g);

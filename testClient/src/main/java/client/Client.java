@@ -1,4 +1,6 @@
 package client;
+import boundarydetection.tracker.AccessTracker;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -56,13 +58,17 @@ public class Client extends ClientBase {
 
     public static void main(String[] args) {
         try {
+            AccessTracker.startTracking();
             Test tt = new Test();
             Client c = new Client();
             Thread t = new Thread(() -> {
+                AccessTracker.startTask();
                 for (int i = 0; i < 10; i++) {
+                    AccessTracker.resetTracking();
                     c.addMessageArr(42);
                     // double write should not be a new write
                 }
+                AccessTracker.stopTask();
                 // c.setNull(); //reads from null should not appear as detected case
             });
             t.start();

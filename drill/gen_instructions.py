@@ -51,6 +51,10 @@ def order_by(col):
     global alias
     return "SELECT * FROM " + alias + " ORDER BY "+col
 
+def filter_epoch(val):
+    global alias
+    return "SELECT * FROM " + alias + " WHERE epoch="+str(val)
+
 
 def with_sql(from_clause, alias):
     return "WITH " + alias + " AS (SELECT * FROM " + from_clause + ")"
@@ -85,7 +89,7 @@ def as_table(query, table_name):
 # list the queries in execution order. The query itself remain simple because they have no subqueries and minimal from clauses.
 
 # table
-table = "./tracker_report_1193542123.json"
+table = "./tracker_report_230685824.json"
 # namespace
 namespace = "rep.root"
 # from_clause
@@ -106,9 +110,10 @@ query = as_table(query, "filtered.json")
 print(query + ";")
 
 query = start_sql(from_clause)
+query = concat_sql(query, filter_epoch(2))
 query = concat_sql(query, no_arrays())
-query = concat_sql(query, writer_traces())
-query = concat_sql(query, order_by("writer_stacktrace"))
+query = concat_sql(query, locations())
+query = concat_sql(query, order_by("location"))
 query = end_sql(query)
 #query = as_table(query, "field_locs.json")
 print(query + ";")
