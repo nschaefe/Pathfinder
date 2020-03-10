@@ -12,6 +12,7 @@ public class ReportGenerator {
 
     private static final JsonFactory factory = new JsonFactory();
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss-MM.dd.yyyy");
+    private static final int STACKTRACE_MAX_DEPTH = 55;
 
     public static String generateDetectionReportJSON(long readerThreadID, StackTraceElement[] readerTrace,
                                                      AbstractFieldLocation loc, FieldWriter w, FieldAccessMeta meta) {
@@ -26,8 +27,8 @@ public class ReportGenerator {
             g.writeNumberField("reader_thread_id", readerThreadID);
             g.writeNumberField("writer_thread_id", w.getId());
             g.writeNumberField("writer_count", meta.getWriteCount());
-            g.writeStringField("reader_stacktrace", Util.toString(readerTrace));
-            g.writeStringField("writer_stacktrace", Util.toString(w.getStackTrace()));
+            g.writeStringField("reader_stacktrace", Util.toString(readerTrace, STACKTRACE_MAX_DEPTH));
+            g.writeStringField("writer_stacktrace", Util.toString(w.getStackTrace(), STACKTRACE_MAX_DEPTH));
             g.writeEndObject();
             g.close();
             return out.toString();
