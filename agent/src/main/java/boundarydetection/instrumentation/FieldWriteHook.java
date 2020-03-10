@@ -20,7 +20,7 @@ public class FieldWriteHook extends FieldAccessHook {
     @Override
     public int transform(CtClass tclazz, int pos, CodeIterator iterator,
                          ConstPool cp) throws BadBytecode {
-       if(methodInfo.isStaticInitializer()) return pos;
+        if (methodInfo.isStaticInitializer()) return pos;
         // jump over all instructions before super or this.
         // static field accesses can happen before super,
         // so not doing this can lead to a method call injection before super or this,
@@ -43,7 +43,6 @@ public class FieldWriteHook extends FieldAccessHook {
 
         if (isFieldWrite) {
             int index = iterator.u16bitAt(pos + 1);
-            String fieldname = cp.getFieldrefName(index);
             String typedesc = cp.getFieldrefType(index);
             if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
 
@@ -67,7 +66,9 @@ public class FieldWriteHook extends FieldAccessHook {
                     ca.setMaxStack(ca.getMaxStack() + 2);
                 }
 
-                int str_index = cp.addStringInfo(className + '.' + fieldname);
+                String classname = cp.getFieldrefClassName(index);
+                String fieldname = cp.getFieldrefName(index);
+                int str_index = cp.addStringInfo(classname + '.' + fieldname);
                 pos = addLdc(str_index, iterator, pos);
                 CodeAttribute ca = iterator.get();
                 ca.setMaxStack(ca.getMaxStack() + 1);

@@ -1,8 +1,6 @@
 package client;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -15,6 +13,7 @@ public class Client extends ClientBase {
     private Integer i;
     private LinkedList<Integer> li;
 
+    private static Integer si;
 
     public Client() {
         super(42);
@@ -32,6 +31,8 @@ public class Client extends ClientBase {
         m[0] = i;
         this.i = i;
         li.add(i);
+        si = i;
+        Test.y = i;
     }
 
     public synchronized void setNull() {
@@ -46,7 +47,7 @@ public class Client extends ClientBase {
 
 
     public synchronized String getMessageArr() {
-        return "" + li.get(0) + messages[0] + " " + this.i;
+        return "" + Test.y + si + li.toArray().length + li.get(0) + messages[0] + " " + this.i;
     }
 
     public synchronized String getMessage() {
@@ -58,7 +59,7 @@ public class Client extends ClientBase {
             Test tt = new Test();
             Client c = new Client();
             Thread t = new Thread(() -> {
-                for (int i = 0; i < 1; i++) {
+                for (int i = 0; i < 10; i++) {
                     c.addMessageArr(42);
                     // double write should not be a new write
                 }
@@ -75,7 +76,7 @@ public class Client extends ClientBase {
             });
             t2.start();
             t2.join();
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
