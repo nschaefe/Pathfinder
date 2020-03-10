@@ -37,6 +37,12 @@ public class AccessTracker {
     //TODO support for fields with other types than object e.g. for array as field (access of the array object)
     //TODO bytecode instrumentation, related problems and solution document
 
+    //TODO performance: allow more interleaving, task related things can run under a different lock, comes with refactoring
+    //TODO refactor inits
+    //TODO move task logic to other class
+
+    private static final int MAP_INIT_SIZE = 10000;
+
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
     private static volatile ThreadLocal<Boolean> task;
     private static volatile ThreadLocal<Boolean> pausedTask;
@@ -45,20 +51,23 @@ public class AccessTracker {
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static volatile InheritableThreadLocal<Boolean> insideTracker;
-    private static volatile boolean inited = false;
+    private static boolean inited = false;
     private static volatile boolean enabled = false;
+    private static Object initLock = new Object();
 
     private static void init() {
-        if (!inited) {
-            // DO NOT PUT inited AT THE END (NECESSARY FOR RECURSION BREAKING)
-            inited = true;
+        synchronized (initLock) {
+            if (!inited) {
+                // DO NOT PUT inited AT THE END (NECESSARY FOR RECURSION BREAKING)
+                inited = true;
 
-            int random = (new Random()).nextInt(Integer.MAX_VALUE);
-            Logger.configureLogger("./tracker_report_" + random + ".json");
+                int random = (new Random()).nextInt(Integer.MAX_VALUE);
+                Logger.configureLogger("./tracker_report_" + random + ".json");
 
-            //TODO magic number
-            accesses = new HashMap<>(10000);
-            insideTracker = new InheritableThreadLocal<>();
+                //TODO magic number
+                accesses = new HashMap<>(MAP_INIT_SIZE);
+                insideTracker = new InheritableThreadLocal<>();
+            }
         }
     }
 
@@ -128,17 +137,19 @@ public class AccessTracker {
         }
     }
 
-      public static void pauseTask() {
-          // This approach uses a stack like counter to support subsequent pause and resume calls (e.g. pause, pause, resume, resume)
-          // we only remember the task state of the really first call of pause and the bring the task back on the corresponding resume call
-          // subsequent pauseTask and resumeTask calls will be just ignored.
-          // We do not use a stack to remember all task states as they stack up and pop them on resume,
-          // because of less dependencies and no recursion over java.util.Stack to AccessTracker.
-          // I also experienced classloader deadlocks. The approach is also faster and is sufficient for the use cases we want to support.
-        if (task == null) task = new ThreadLocal<>();
-        if (pausedTask == null) {
-            pausedTask = new ThreadLocal<>();
-            pausedTaskCounter = new ThreadLocal<>();
+    public static void pauseTask() {
+        // This approach uses a stack like counter to support subsequent pause and resume calls (e.g. pause, pause, resume, resume)
+        // we only remember the task state of the really first call of pause and the bring the task back on the corresponding resume call
+        // subsequent pauseTask and resumeTask calls will be just ignored.
+        // We do not use a stack to remember all task states as they stack up and pop them on resume,
+        // because of less dependencies and no recursion over java.util.Stack to AccessTracker.
+        // I also experienced classloader deadlocks. The approach is also faster and is sufficient for the use cases we want to support.
+        synchronized (AccessTracker.class) {
+            if (task == null) task = new ThreadLocal<>();
+            if (pausedTask == null) {
+                pausedTask = new ThreadLocal<>();
+                pausedTaskCounter = new ThreadLocal<>();
+            }
         }
         if (pausedTaskCounter.get() == null) pausedTaskCounter.set(0);
 
@@ -166,24 +177,34 @@ public class AccessTracker {
 //        System.out.println(")");
     }
 
-    public static void startTask() {
+    private static synchronized void initTaskLocals(){
         if (task == null) task = new ThreadLocal<>();
+    }
+
+    public static void startTask() {
+        initTaskLocals();
         task.set(true);
     }
 
     public static void stopTask() {
-        if (task == null) task = new ThreadLocal<>();
+        initTaskLocals();
         task.set(false);
     }
 
     public static boolean hasTask() {
-        if (task == null) task = new ThreadLocal<>();
+        initTaskLocals();
         boolean b = task.get() != null && task.get();
         return b;
     }
 
-    public static void startTracking() {
+    public static synchronized void startTracking() {
         enabled = true;
+    }
+
+    public static synchronized void resetTracking() {
+       synchronized (initLock) {
+           accesses = new HashMap<>(MAP_INIT_SIZE);
+       }
     }
 
 
