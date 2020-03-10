@@ -77,13 +77,19 @@ public class Util {
         return host;
     }
 
-    public static String toString(StackTraceElement[] trace) {
+    public static String toString(StackTraceElement[] trace, int max) {
         StringBuilder s = new StringBuilder();
+        int i = 0;
         for (StackTraceElement el : trace) {
+            if (i >= max) break;
             s.append(el);
             s.append(System.lineSeparator());
         }
         return s.toString();
+    }
+
+    public static String toString(StackTraceElement[] trace) {
+        return toString(trace, Integer.MAX_VALUE);
     }
 
 }
