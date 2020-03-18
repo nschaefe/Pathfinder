@@ -55,6 +55,17 @@ public abstract class FieldAccessHook extends Transformer {
         return false;
     }
 
+    protected String getFieldRefDeclaringClassName(CtClass cl, ConstPool cp, int index) {
+        CtField f = null;
+        try {
+            f = cl.getClassPool().get(cp.getFieldrefClassName(index)).getField(cp.getFieldrefName(index), cp.getFieldrefType(index));
+            return f.getDeclaringClass().getName();
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+        }
+        return "BUG: NO CLASSNAME";
+    }
+
     protected int addLdc(int i, CodeIterator iterator, int pos) throws BadBytecode {
         if (i > 0xFF) {
             pos = iterator.insertGap(3);

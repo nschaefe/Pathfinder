@@ -1,6 +1,8 @@
 package boundarydetection.instrumentation;
 
 import javassist.CtClass;
+import javassist.CtField;
+import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.convert.Transformer;
 
@@ -66,7 +68,8 @@ public class FieldWriteHook extends FieldAccessHook {
                     ca.setMaxStack(ca.getMaxStack() + 2);
                 }
 
-                String classname = cp.getFieldrefClassName(index);
+
+                String classname = getFieldRefDeclaringClassName(tclazz, cp, index);
                 String fieldname = cp.getFieldrefName(index);
                 int str_index = cp.addStringInfo(classname + '.' + fieldname);
                 pos = addLdc(str_index, iterator, pos);

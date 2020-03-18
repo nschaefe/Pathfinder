@@ -71,7 +71,7 @@ public class FieldReadHook extends FieldAccessHook {
                 else iterator.writeByte(Opcode.DUP, pos);
                 pos += 1;
 
-                String classname = cp.getFieldrefClassName(index);
+                String classname = getFieldRefDeclaringClassName(tclazz, cp, index);
                 String fieldname = cp.getFieldrefName(index);
                 int str_index = cp.addStringInfo(classname + '.' + fieldname);
                 pos = addLdc(str_index, iterator, pos);
