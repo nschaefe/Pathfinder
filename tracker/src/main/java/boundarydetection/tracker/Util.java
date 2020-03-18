@@ -82,6 +82,7 @@ public class Util {
         int i = 0;
         for (StackTraceElement el : trace) {
             if (i >= max) break;
+            i++;
             s.append(el);
             s.append(System.lineSeparator());
         }
