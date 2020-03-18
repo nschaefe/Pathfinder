@@ -1,19 +1,24 @@
 package client;
+
 import boundarydetection.tracker.AccessTracker;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class Client extends ClientBase {
 
-    private Integer[] messages;
+    private Integer[] messages, m2;
     private ArrayDeque<Integer> q;
     private ArrayList<Integer> a;
     private ArrayBlockingQueue<Integer> b;
     private Integer i;
     private LinkedList<Integer> li;
+    private PriorityQueue<Integer> rr;
+    private LinkedBlockingQueue<Integer> bq;
 
     private static Integer si;
 
@@ -25,35 +30,37 @@ public class Client extends ClientBase {
         b = new ArrayBlockingQueue<Integer>(5);
         i = new Integer(11);
         li = new LinkedList<>();
+        rr = new PriorityQueue<>();
+        bq = new LinkedBlockingQueue();
     }
 
+    public synchronized void write(int i) {
+        Integer[] test = new Integer[1];
+        test[0] = i;
+        m2 = test;
 
-    public synchronized void addMessageArr(int i) {
         Integer[] m = messages;
         m[0] = i;
+
         this.i = i;
+
         li.add(i);
+
         si = i;
+
         Test.y = i;
+
+        rr.add(i);
+
+        bq.offer(i);
+    }
+
+    public synchronized String read() {
+        return "" + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
     }
 
     public synchronized void setNull() {
         messages[0] = null; // after set null no new read should be reported
-    }
-
-    public synchronized void addMessage(int i) {
-        q.add(i);
-        a.add(i);
-        b.add(i);
-    }
-
-
-    public synchronized String getMessageArr() {
-        return "" + Test.y + si + li.toArray().length + li.get(0) + messages[0] + " " + this.i;
-    }
-
-    public synchronized String getMessage() {
-        return "" + a.get(0) + q.poll() + b.poll() + messages[0] + q.poll();
     }
 
     public static void main(String[] args) {
@@ -64,8 +71,9 @@ public class Client extends ClientBase {
             Thread t = new Thread(() -> {
                 AccessTracker.startTask();
                 for (int i = 0; i < 10; i++) {
+                    // in iterations >1 less cases are detected, because on read side some reads refer to 0th item, but the added one is at the end.
                     AccessTracker.resetTracking();
-                    c.addMessageArr(42);
+                    c.write(42);
                     // double write should not be a new write
                 }
                 AccessTracker.stopTask();
@@ -77,7 +85,7 @@ public class Client extends ClientBase {
             Thread t2 = new Thread(() -> {
                 for (int i = 0; i < 1; i++) {
                     // reading from the same position written by the same writer from the same path should not detected twice
-                    System.out.println("" + c.getMessageArr());
+                    System.out.println("" + c.read());
                 }
             });
             t2.start();

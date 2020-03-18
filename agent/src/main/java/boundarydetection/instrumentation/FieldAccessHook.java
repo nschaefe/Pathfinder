@@ -55,6 +55,10 @@ public abstract class FieldAccessHook extends Transformer {
         return false;
     }
 
+    /**
+     * Returns the class in which the field with the given index is declared.
+     * Refering to the declaring class is important if fields are accessed in sub classes or overloaded
+     */
     protected String getFieldRefDeclaringClassName(CtClass cl, ConstPool cp, int index) {
         CtField f = null;
         try {
