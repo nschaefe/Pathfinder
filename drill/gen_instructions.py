@@ -1,17 +1,17 @@
 def filter1(not_contain, table):
-    # TODO javassit
     regex = []
 
     not_contain_regex = "("
     for c in not_contain:
         c = c.replace(".", "\.")
-        not_contain_regex += c
+        not_contain_regex += ".*" + c + ".*"
         not_contain_regex += '|'
 
     not_contain_regex = not_contain_regex[:-1]
     not_contain_regex += ")"
 
-    return "SELECT * FROM " + table + " WHERE NOT(regexp_matches(writer_stacktrace, '" + not_contain_regex + "') or regexp_matches(reader_stacktrace, '" + not_contain_regex + "'))"
+    # we remove newlines first, because regexp_matches seems to not work correctyl for strings with newlines (at least could not get it done)
+    return "SELECT * FROM " + table + " WHERE NOT( regexp_matches(regexp_replace(writer_stacktrace,'(\\n)',''), '" + not_contain_regex + "') or regexp_matches( regexp_replace(reader_stacktrace,'(\\n)',''), '" + not_contain_regex + "') )"
 
 
 def filter(not_contain):
@@ -28,9 +28,14 @@ def distinct():
     return distinct1(alias)
 
 
-def no_arrays():
+def fields():
     global alias
     return "SELECT * FROM " + alias + " WHERE parent IS NOT NULL"
+
+
+def arrays():
+    global alias
+    return "SELECT * FROM " + alias + " WHERE parent IS NULL"
 
 
 def locations1(table):
@@ -49,21 +54,22 @@ def writer_traces():
 
 def order_by(col):
     global alias
-    return "SELECT * FROM " + alias + " ORDER BY "+col
+    return "SELECT * FROM " + alias + " ORDER BY " + col
+
 
 def filter_epoch(val):
     global alias
-    return "SELECT * FROM " + alias + " WHERE epoch="+str(val)
+    return "SELECT * FROM " + alias + " WHERE epoch=" + str(val)
 
 
 def with_sql(from_clause, alias):
-    return "WITH " + alias + " AS (SELECT * FROM " + from_clause + ")"
+    return "WITH\n" + alias + " AS (SELECT * FROM " + from_clause + ")"
 
 
 def concat_sql(a, b):
     global alias
     alias = alias + "1"
-    return a + ", " + alias + " AS (" + b + ")"
+    return a + ",\n" + alias + " AS (" + b + ")"
 
 
 def start_sql(from_clause, alias_l="t1"):
@@ -81,39 +87,40 @@ def as_table(query, table_name):
     return "alter session set `store.format`='json'; \n" + "CREATE TABLE rep.out.`" + table_name + "` AS (" + query + ")"
 
 
-#java.util.logging.Logger
-#.ajc$tjp_0
-#org.apache.hadoop.hbase.trace
-
-# framework idea: automatically pipeline arbitrary sql queries. DO NOT EMBED sql queries for easier reading. Therefore we use WITH and sequentially
+# framework idea: automatically pipeline arbitrary sql queries. DO NOT EMBED (subqueries) sql queries for easier reading. Therefore we use WITH and sequentially
 # list the queries in execution order. The query itself remain simple because they have no subqueries and minimal from clauses.
 
 # table
 table = "./tracker_report_230685824.json"
+# table = "./test.json"
 # namespace
 namespace = "rep.root"
 # from_clause
 from_clause = namespace + ".`" + table + "`"
 
-# TODO
-#not_contain_location = ["org.apache.hbase.thirdparty.io.netty"]
-
+# --- basic filtering ---
 query = start_sql(from_clause)
-query = concat_sql(query, distinct())
-
-not_contain = ["java.util.zip.ZipFile", "edu.brown.cs.systems"]
+not_contain = ["edu.brown.cs.systems"]
 query = concat_sql(query, filter(not_contain))
-
-query = end_sql(query)
-query = as_table(query, "filtered.json")
-
-print(query + ";")
-
-query = start_sql(from_clause)
 query = concat_sql(query, filter_epoch(2))
-query = concat_sql(query, no_arrays())
-query = concat_sql(query, locations())
-query = concat_sql(query, order_by("location"))
-query = end_sql(query)
-#query = as_table(query, "field_locs.json")
-print(query + ";")
+
+
+def workflow_locations(query):
+    query = concat_sql(query, locations())
+    query = concat_sql(query, order_by("location"))
+    query = end_sql(query)
+    # query = as_table(query, "locations.json")
+    return query
+
+
+def workflow_writer(query):
+    query = concat_sql(query, writer_traces())
+    query = concat_sql(query, order_by("writer_stacktrace"))
+    query = end_sql(query)
+    # query = as_table(query, "writers.json")
+    return query
+
+
+print(workflow_locations(query) + ";\n")
+
+# print(as_table("SELECT DISTINCT writer_stacktrace, reader_stacktrace FROM "+from_clause+" WHERE location='org.apache.hadoop.hbase.ipc.Call.md'","read_writers.json"))
