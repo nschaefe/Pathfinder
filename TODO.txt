@@ -5,7 +5,7 @@ it could be useful to have a no-false-positives and a no-false-negative mode
                       do not consider writes of newly created objects in constructors (init cases)
 
 support field access if the object is an array. that gives a false positive everytime the array
- is streched, but this could lead to false negatives, so we should have an option to
+ is streched, but this could lead to false negatives (rare) -> later: we should have an option to
  switch it on
 
 reading and writing an object to another array index or another array (copied), does

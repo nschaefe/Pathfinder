@@ -5,10 +5,10 @@ a starting point for debugging.
 -Task pause and resume:
 To shut down tracking in irrelevant parts of the application a task can be paused and resumed later on.
 Currently this is done when classes are loaded and instrumented. Accesses to any fields and arrays while the classloading
-process is not tracked. This is achived by pausing the current task and bring it back after the classloading call.
+process is not tracked. This is achieved by pausing the current task and bring it back after the classloading call.
 To realize this feature, the rt.jar is instrumented. The class java.lang.ClassLoader is instrumented. This is done in RTInstrumentation.
 This feature provides performance improvements and less tracking outputs that are irrelevant.
-This feature can be switched off by disabling the instrumentation part, or the code behind pause and resume.
+This feature can be switched off by disabling the corresponding part in RTInstrumentation, or the code behind pause and resume.
 
 -Dynamic vs static instrumentation:
 Parts of the instrumentation is possible to do statically. Currently there is support to instrument the rt.jar statically
@@ -27,11 +27,6 @@ The logger can be configured.
 Using "writingthread" and "buffered" improves performance but introduces more memory consumption
 Even without "buffered", the writing thread buffers things if it is not able to process outputs fast enough. This can lead
 to a significant blow up in memory.
-
--Filtering
-Before a write is registered the stacktrace is checked if it contains certain entries that indicate irrelevance. Can be found in
-FieldAccessMeta
-If something is not tracked as expected, too strong filtering can be a reason.
 
 -Hook Size
 Which accesses are tracked has a crucial impact on performance. Not tracking byte array accesses for example leads to a
