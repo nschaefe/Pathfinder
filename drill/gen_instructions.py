@@ -1,4 +1,5 @@
-def filter1(not_contain, table):
+def filter(not_contain):
+    global alias
     regex = []
 
     not_contain_regex = "("
@@ -11,21 +12,13 @@ def filter1(not_contain, table):
     not_contain_regex += ")"
 
     # we remove newlines first, because regexp_matches seems to not work correctyl for strings with newlines (at least could not get it done)
-    return "SELECT * FROM " + table + " WHERE NOT( regexp_matches(regexp_replace(writer_stacktrace,'(\\n)',''), '" + not_contain_regex + "') or regexp_matches( regexp_replace(reader_stacktrace,'(\\n)',''), '" + not_contain_regex + "') )"
+    return "SELECT * FROM " + alias + " WHERE NOT( regexp_matches(regexp_replace(writer_stacktrace,'(\\n)',''), '" + not_contain_regex + "') or regexp_matches( regexp_replace(reader_stacktrace,'(\\n)',''), '" + not_contain_regex + "') )"
 
-
-def filter(not_contain):
-    global alias
-    return filter1(not_contain, alias)
-
-
-def distinct1(table):
-    return "SELECT DISTINCT location, reader_stacktrace, writer_stacktrace FROM " + table
 
 
 def distinct():
     global alias
-    return distinct1(alias)
+    return "SELECT DISTINCT location, reader_stacktrace, writer_stacktrace FROM " + alias
 
 
 def fields():
@@ -38,13 +31,9 @@ def arrays():
     return "SELECT * FROM " + alias + " WHERE parent IS NULL"
 
 
-def locations1(table):
-    return "SELECT DISTINCT location FROM " + table
-
-
 def locations():
     global alias
-    return locations1(alias)
+    return "SELECT DISTINCT location FROM " + alias
 
 
 def writer_traces():
