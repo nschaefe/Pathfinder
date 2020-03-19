@@ -13,7 +13,7 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
 
     public ArrayFieldLocation(Class type, Object ref, int index) {
         //REMARK currently we do not support locations, because we do not need it for now,
-        // we are rather interested in locations when we look at arrays as fields not in index access contexts
+        // we are rather interested in locations when we look at arrays as fields not the index access
         this("no location " + System.identityHashCode(ref), type, ref, index);
     }
 
