@@ -167,6 +167,8 @@ public class AccessTracker {
 
     // ACCESS HOOKS---------------------------------------------
     public static void readObjectArrayField(Object field, String location) {
+        //TODO garbage collection of outdated fields
+
         // this access point is only used to infer to which global field an array belongs
         // if an array field is read, the location is stored and later if the array reference is used,
         // the location can be looked up

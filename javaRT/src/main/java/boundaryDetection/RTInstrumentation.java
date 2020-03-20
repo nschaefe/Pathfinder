@@ -46,6 +46,7 @@ public class RTInstrumentation {
                 // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
                 System.err.println("ERROR but continue");
                 e.printStackTrace();
+                cl.detach();
                 cl = cp.get(clName.replace("/", "."));
             } finally {
                 cl.writeFile(resultPath);
