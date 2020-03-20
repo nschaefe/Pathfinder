@@ -4,12 +4,27 @@ import com.fasterxml.jackson.core.JsonGenerator;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
 import java.util.Objects;
 
 public class ArrayFieldLocation extends AbstractFieldLocation {
 
     private int index;
     private WeakReference ref;
+
+    private static HashMap<Object, String> arrayLocations = null;
+
+    public synchronized static void registerLocation(Object field, String location) {
+        if (arrayLocations == null) arrayLocations = new HashMap<>(1000); //TODO
+        arrayLocations.put(field, location);
+    }
+
+    private synchronized static String getLocation(Object array) {
+        String s = arrayLocations.get(array);
+        if (s == null) return "local array";
+        else return s;
+    }
+
 
     public ArrayFieldLocation(Class type, Object ref, int index) {
         //REMARK currently we do not support locations, because we do not need it for now,
@@ -56,7 +71,8 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
     //TODO hold ref for logging (weak can make it null)
     @Override
     public void toJSON(JsonGenerator g) throws IOException {
-        super.toJSON(g);
+        g.writeStringField("location", getLocation(getRef()));
+        g.writeStringField("field_object_type", getType().toString());
         g.writeNumberField("reference", System.identityHashCode(getRef()));
         g.writeNumberField("index", index);
     }

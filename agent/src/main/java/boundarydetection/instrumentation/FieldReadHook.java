@@ -37,7 +37,7 @@ public class FieldReadHook extends FieldAccessHook {
     public int transform(CtClass tclazz, int pos, CodeIterator iterator,
                          ConstPool cp) throws BadBytecode {
         //(methodInfo.getAccessFlags() & AccessFlag.ABSTRACT) != 0
-       if(methodInfo.isStaticInitializer()) return pos;
+        if (methodInfo.isStaticInitializer()) return pos;
         // jump over all instructions before super or this.
         // static field accesses can happen before super,
         // so not doing this can lead to a method call injection before super or this,
@@ -59,17 +59,31 @@ public class FieldReadHook extends FieldAccessHook {
         boolean isFieldAccess = isFieldRead || isFieldWrite;
         boolean isStatic = c == GETSTATIC || c == PUTSTATIC;
 
+        //REMARK: It would be nicer to call a tracking method with the parent and the field object itself.
+        // I could not realize this because of the following reason: I tried to duplicate the parent of a field before
+        // get field is executed. For some reason the duplicate is not on the stack anymore after the execution of getfield
+        // so a static call after the getfield that consumes the parent, the field and the location string, actually consumed
+        // the duplicated field and the field that should remain on the stack for following instructions.
+
         if (isFieldRead) {
             int index = iterator.u16bitAt(pos + 1);
 
             String typedesc = cp.getFieldrefType(index);
-            if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
+            if (typedesc != null && (Util.isSingleObjectSignature(typedesc) || Util.isObjectArraySignature(typedesc))) {
 
-                iterator.move(pos);
-                pos = iterator.insertGap(1);
-                if (isStatic) iterator.writeByte(ACONST_NULL, pos);
-                else iterator.writeByte(Opcode.DUP, pos);
-                pos += 1;
+                String mdName = methodName;
+                if (Util.isSingleObjectSignature(typedesc)) {
+                    iterator.move(pos);
+                    pos = iterator.insertGap(1);
+                    if (isStatic) iterator.writeByte(ACONST_NULL, pos);
+                    else iterator.writeByte(Opcode.DUP, pos);
+                    pos += 1;
+                } else if (Util.isObjectArraySignature(typedesc)) {
+                    mdName += "ArrayField";
+                    pos = iterator.insertGap(1);
+                    iterator.writeByte(Opcode.DUP, pos);
+                    pos += 1;
+                }
 
                 String classname = getFieldRefDeclaringClassName(tclazz, cp, index);
                 String fieldname = cp.getFieldrefName(index);
@@ -79,18 +93,18 @@ public class FieldReadHook extends FieldAccessHook {
                 pos = iterator.insertGap(3);
                 String type = "(Ljava/lang/Object;Ljava/lang/String;)V";
                 int mi = cp.addClassInfo(methodClassname);
-                int methodref = cp.addMethodrefInfo(mi, methodName, type);
+                int methodref = cp.addMethodrefInfo(mi, mdName, type);
                 iterator.writeByte(INVOKESTATIC, pos);
                 iterator.write16bit(methodref, pos + 1);
-                pos+=3;
+                pos += 3;
 
                 CodeAttribute ca = iterator.get();
                 ca.setMaxStack(ca.getMaxStack() + 2);
-
-                pos=iterator.next();
-                return pos;
+                if (Util.isSingleObjectSignature(typedesc)) pos = iterator.next();
             }
+            return pos;
         }
         return pos;
     }
+
 }

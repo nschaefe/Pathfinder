@@ -165,8 +165,23 @@ public class AccessTracker {
         }
     }
 
-
     // ACCESS HOOKS---------------------------------------------
+    public static void readObjectArrayField(Object field, String location) {
+        // this access point is only used to infer to which global field an array belongs
+        // if an array field is read, the location is stored and later if the array reference is used,
+        // the location can be looked up
+        init();
+        // To break the recursion; NULL check is neccessary
+        if (insideTracker == null || insideTracker.get() != null) return;
+        try {
+            insideTracker.set(true);
+            ArrayFieldLocation.registerLocation(field, location);
+        } finally {
+            insideTracker.remove();
+        }
+    }
+
+
     public static void readObject(Object parent, String location) {
         FieldLocation f = new FieldLocation(location, Object.class, parent);
         readAccess(f);
