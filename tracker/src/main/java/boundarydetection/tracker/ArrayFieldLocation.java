@@ -12,16 +12,16 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
     private int index;
     private WeakReference ref;
 
-    private static HashMap<Object, String> arrayLocations = null;
+    private static HashMap<String, String> arrayLocations = null;
 
-    public synchronized static void registerLocation(Object field, String location) {
+    public synchronized static void registerLocation(Object array, String location) {
         if (arrayLocations == null) arrayLocations = new HashMap<>(1000); //TODO
-        arrayLocations.put(field, location);
+        arrayLocations.put("" + array.getClass() + System.identityHashCode(array), location);
     }
 
     private synchronized static String getLocation(Object array) {
-        String s = arrayLocations.get(array);
-        if (s == null) return "local array";
+        String s = arrayLocations.get("" + array.getClass() + System.identityHashCode(array));
+        if (s == null) return "unknown";
         else return s;
     }
 

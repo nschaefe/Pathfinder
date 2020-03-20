@@ -20,6 +20,7 @@ public class AccessTracker {
     private static boolean inited = false;
     private static volatile boolean enabled = false;
     private static Object initLock = new Object();
+    private static Object taskIDLock = new Object();
 
     private static void init() {
         synchronized (initLock) {
@@ -134,24 +135,30 @@ public class AccessTracker {
         }
     }
 
-    private static synchronized void initTaskLocals() {
+    private static void initTaskLocals() {
         if (task == null) task = new ThreadLocal<>();
     }
 
     public static void startTask() {
-        initTaskLocals();
-        task.set(true);
+        synchronized (taskIDLock) {
+            initTaskLocals();
+            task.set(true);
+        }
     }
 
     public static void stopTask() {
-        initTaskLocals();
-        task.set(false);
+        synchronized (taskIDLock) {
+            initTaskLocals();
+            task.set(false);
+        }
     }
 
     public static boolean hasTask() {
-        initTaskLocals();
-        boolean b = task.get() != null && task.get();
-        return b;
+        synchronized (taskIDLock) {
+            initTaskLocals();
+            boolean b = task.get() != null && task.get();
+            return b;
+        }
     }
 
     public static synchronized void startTracking() {
@@ -167,7 +174,8 @@ public class AccessTracker {
 
     // ACCESS HOOKS---------------------------------------------
     public static void readObjectArrayField(Object field, String location) {
-        //TODO garbage collection of outdated fields
+        if (field == null) return; // a field read can give a null value
+        if (!enabled) return;
 
         // this access point is only used to infer to which global field an array belongs
         // if an array field is read, the location is stored and later if the array reference is used,
@@ -177,6 +185,10 @@ public class AccessTracker {
         if (insideTracker == null || insideTracker.get() != null) return;
         try {
             insideTracker.set(true);
+            if (!hasTask()) return;
+            // this is an approximate solution. It is possible that the writer that has the task does not read the global
+            // field but manipulates a local array and stores it later, in this case we do not detect the location
+            // but this is a lot faster and experiments showed it works in the most cases
             ArrayFieldLocation.registerLocation(field, location);
         } finally {
             insideTracker.remove();
