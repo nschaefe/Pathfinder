@@ -41,7 +41,7 @@ public class RTInstrumentation {
                 cl = cp.get(clName.replace("/", "."));
                 //TODO filtering
                 if (clName.startsWith("java/util") || clName.startsWith("java/io")) a.applyTransformations(cl);
-                if (clName.startsWith("java/lang/ClassLoader")) a.instClassLoader(cl);
+                if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
             } catch (Exception e) {
                 // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
                 System.err.println("ERROR but continue");
