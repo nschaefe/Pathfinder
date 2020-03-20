@@ -26,16 +26,16 @@ public abstract class AbstractFieldLocation {
     public int hashCode() {
         // we do not consider type here, since there can never be different types for the same location
         //does not improve the hash
-        return getLocation().hashCode();
+        return location.hashCode();
     }
 
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof AbstractFieldLocation)) return false;
-        ArrayFieldLocation other = (ArrayFieldLocation) o;
+        AbstractFieldLocation other = (AbstractFieldLocation) o;
 
-        return other.getLocation().equals(getLocation()) &&
-                other.getType().equals(getType());
+        return other.location.equals(location) &&
+                other.type.equals(type);
     }
 
 

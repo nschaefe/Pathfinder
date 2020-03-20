@@ -10,6 +10,10 @@ import java.util.Date;
 public class Util {
 
 
+    public static int getApproxMemoryAddress(Object o) {
+        return System.identityHashCode(o);
+    }
+
     public static String getCurrentTime() {
         Date date = new Date();
         SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");

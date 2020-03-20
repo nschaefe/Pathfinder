@@ -3,55 +3,57 @@ package boundarydetection.tracker;
 import com.fasterxml.jackson.core.JsonGenerator;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.HashMap;
-import java.util.Objects;
 
-public class ArrayFieldLocation extends AbstractFieldLocation {
+
+public final class ArrayFieldLocation extends AbstractFieldLocation {
 
     private int index;
-    private WeakReference ref;
+    private int objectRef;
 
-    private static HashMap<String, String> arrayLocations = null;
+    private static HashMap<Integer, String> arrayLocations = null;
 
     public synchronized static void registerLocation(Object array, String location) {
         if (arrayLocations == null) arrayLocations = new HashMap<>(1000); //TODO
-        arrayLocations.put("" + array.getClass() + System.identityHashCode(array), location);
+        arrayLocations.put(Util.getApproxMemoryAddress(array), location);
     }
 
-    private synchronized static String getLocation(Object array) {
-        String s = arrayLocations.get("" + array.getClass() + System.identityHashCode(array));
+    private synchronized static String getLocationByRef(int ref) {
+        String s = arrayLocations.get(ref);
         if (s == null) return "unknown";
         else return s;
     }
 
+//    private synchronized static String getLocation(Object array) {
+//       return  getLocationByRef(Util.getApproxMemoryAddress(array));
+//    }
 
-    public ArrayFieldLocation(Class type, Object ref, int index) {
-        //REMARK currently we do not support locations, because we do not need it for now,
-        // we are rather interested in locations when we look at arrays as fields not the index access
-        this("no location " + System.identityHashCode(ref), type, ref, index);
+
+    public ArrayFieldLocation(Class type, Object objectRef, int index) {
+        //REMARK to infer the array location is not trivial. An array can be local or passed a long way before usage.
+        // we infer the array location dynamically. When the location is known later getLocation() will return it.
+        this("unknown", type, objectRef, index);
     }
 
-    public ArrayFieldLocation(String location, Class type, Object ref, int index) {
+    public ArrayFieldLocation(String location, Class type, Object objectRef, int index) {
         super(location, type);
-        this.ref = new WeakReference<>(ref);
+        this.objectRef = Util.getApproxMemoryAddress(objectRef);
         this.index = index;
     }
 
-    public Object getRef() {
-        return ref.get();
+    public int getArrayObjectReference() {
+        return objectRef;
+    }
+
+    @Override
+    public String getLocation() {
+        return getLocationByRef(getArrayObjectReference());
     }
 
     @Override
     public int hashCode() {
-        // getRef() returns null if object was deleted.
-        // After this happened we consider the FieldLocation as archived and if it can be found in a data structure that uses
-        // hash & equals paradigm is UNDEFINED. So finding something via hash after it was archived is not supported.
-        // We use getRef in hash because it significantly improves the hash quality (and so performance). It is a perfect hash function if used.
-        // For more information see voice record.
         int hash = 17;
-        hash = hash * 31 + super.hashCode();
-        hash = hash * 31 + System.identityHashCode(getRef());
+        hash = hash * 31 + getArrayObjectReference();
         hash = hash * 31 + index;
         return hash;
     }
@@ -61,19 +63,15 @@ public class ArrayFieldLocation extends AbstractFieldLocation {
         if (!(o instanceof ArrayFieldLocation)) return false;
         ArrayFieldLocation other = (ArrayFieldLocation) o;
 
-        return Objects.equals(other.getLocation(), getLocation()) &&
-                other.getType().equals(getType()) &&
-                other.getRef() == getRef() &&
+        return other.getArrayObjectReference() == getArrayObjectReference() &&
                 other.index == index;
-
     }
 
-    //TODO hold ref for logging (weak can make it null)
     @Override
     public void toJSON(JsonGenerator g) throws IOException {
-        g.writeStringField("location", getLocation(getRef()));
+        g.writeStringField("location", getLocation());
         g.writeStringField("field_object_type", getType().toString());
-        g.writeNumberField("reference", System.identityHashCode(getRef()));
+        g.writeNumberField("reference", getArrayObjectReference());
         g.writeNumberField("index", index);
     }
 
