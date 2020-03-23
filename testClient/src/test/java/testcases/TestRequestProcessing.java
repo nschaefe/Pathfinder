@@ -19,7 +19,6 @@ public class TestRequestProcessing {
     @BeforeAll
     public void init() {
         pool = Executors.newFixedThreadPool(4);
-        AccessTracker.startTracking();
     }
 
     @BeforeEach
@@ -29,6 +28,7 @@ public class TestRequestProcessing {
 
     @Test
     public void syncProcessing() throws ExecutionException, InterruptedException {
+        // Single request submission does not use pool internal queues, direct hand over
         pool.submit(new Request()).get();
     }
 

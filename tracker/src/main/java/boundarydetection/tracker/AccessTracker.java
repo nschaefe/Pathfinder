@@ -8,19 +8,15 @@ public class AccessTracker {
 
     private static final int MAP_INIT_SIZE = 10000;
 
-    private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
-    private static volatile ThreadLocal<Boolean> task;
-    private static volatile ThreadLocal<Boolean> pausedTask;
-    private static volatile ThreadLocal<Integer> pausedTaskCounter;
-    private static int epoch = 0;
-
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static volatile InheritableThreadLocal<Boolean> insideTracker;
     private static boolean inited = false;
-    private static volatile boolean enabled = false;
     private static Object initLock = new Object();
-    private static Object taskIDLock = new Object();
+
+    private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
+    private static int epoch = 0;
+    private static volatile boolean enabled = false;
 
     private static void init() {
         synchronized (initLock) {
@@ -31,7 +27,6 @@ public class AccessTracker {
                 int random = (new Random()).nextInt(Integer.MAX_VALUE);
                 Logger.configureLogger("./tracker_report_" + random + ".json");
 
-                //TODO magic number
                 accesses = new HashMap<>(MAP_INIT_SIZE);
                 insideTracker = new InheritableThreadLocal<>();
             }
@@ -45,12 +40,13 @@ public class AccessTracker {
     public static void writeAccess(AbstractFieldLocation f, boolean valueIsNull) {
         if (!enabled) return;
         init();
+
         // To break the recursion; NULL check is neccessary (insideTracker is null when access is done from within InheritableThreadLocal)
         if (insideTracker == null || insideTracker.get() != null) return;
+        insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                insideTracker.set(true);
-                if (!hasTask()) return;
+                if (!Tasks.hasTask()) return;
                 FieldAccessMeta meta = accesses.get(f);
                 if (meta == null) {
                     meta = new FieldAccessMeta();
@@ -72,11 +68,12 @@ public class AccessTracker {
     public static void readAccess(AbstractFieldLocation field) {
         if (!enabled) return;
         init();
+
         // To break the recursion; NULL check is neccessary
         if (insideTracker == null || insideTracker.get() != null) return;
+        insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                insideTracker.set(true);
                 FieldAccessMeta meta = accesses.get(field);
                 if (meta == null) return;
 
@@ -101,67 +98,31 @@ public class AccessTracker {
         }
     }
 
-    public static void pauseTask() {
-        // This approach uses a stack like counter to support subsequent pause and resume calls (e.g. pause, pause, resume, resume)
-        // we only remember the task state of the really first call of pause and the bring the task back on the corresponding resume call
-        // subsequent pauseTask and resumeTask calls will be just ignored.
-        // We do not use a stack to remember all task states as they stack up and pop them on resume,
-        // because of less dependencies and no recursion over java.util.Stack to AccessTracker.
-        // I also experienced classloader deadlocks. The approach is also faster and is sufficient for the use cases we want to support.
-        synchronized (AccessTracker.class) {
-            if (task == null) task = new ThreadLocal<>();
-            if (pausedTask == null) {
-                pausedTask = new ThreadLocal<>();
-                pausedTaskCounter = new ThreadLocal<>();
-            }
-        }
-        if (pausedTaskCounter.get() == null) pausedTaskCounter.set(0);
+    private static void registerArrayLocation(Object field, String location) {
+        // this access point is only used to infer to which global field an array belongs
+        // if an array field is read, the location is stored and later if the array reference is used,
+        // the location can be looked up
 
-        int c = pausedTaskCounter.get();
-        if (c == 0) {
-            pausedTask.set(task.get());
-            task.remove();
-        }
-        pausedTaskCounter.set(c + 1);
+        if (field == null) return; // a field read can give a null value
+        if (!enabled) return;
+        init();
 
-    }
-
-    public static void resumeTask() {
-        int c = pausedTaskCounter.get();
-        c--;
-        pausedTaskCounter.set(c);
-        if (c == 0) {
-            task.set(pausedTask.get());
+        // To break the recursion; NULL check is neccessary
+        if (insideTracker == null || insideTracker.get() != null) return;
+        insideTracker.set(true);
+        try {
+            if (!Tasks.hasTask()) return;
+            // this is an approximate solution. It is possible that the writer that has the task does not read the global
+            // field and only the reader does. In that case the array location cannot be inferred.
+            // (e.g. writer manipulates a local array and stores it later)
+            // but this is a lot faster and experiments showed it works in the most cases.
+            ArrayFieldLocation.registerLocation(field, location);
+        } finally {
+            insideTracker.remove();
         }
     }
 
-    private static void initTaskLocals() {
-        if (task == null) task = new ThreadLocal<>();
-    }
-
-    public static void startTask() {
-        synchronized (taskIDLock) {
-            initTaskLocals();
-            task.set(true);
-        }
-    }
-
-    public static void stopTask() {
-        synchronized (taskIDLock) {
-            initTaskLocals();
-            task.set(false);
-        }
-    }
-
-    public static boolean hasTask() {
-        synchronized (taskIDLock) {
-            initTaskLocals();
-            boolean b = task.get() != null && task.get();
-            return b;
-        }
-    }
-
-    public static synchronized void startTracking() {
+    static synchronized void startTracking() {
         enabled = true;
     }
 
@@ -172,29 +133,11 @@ public class AccessTracker {
         }
     }
 
+
     // ACCESS HOOKS---------------------------------------------
     public static void readObjectArrayField(Object field, String location) {
-        if (field == null) return; // a field read can give a null value
-        if (!enabled) return;
-
-        // this access point is only used to infer to which global field an array belongs
-        // if an array field is read, the location is stored and later if the array reference is used,
-        // the location can be looked up
-        init();
-        // To break the recursion; NULL check is neccessary
-        if (insideTracker == null || insideTracker.get() != null) return;
-        try {
-            insideTracker.set(true);
-            if (!hasTask()) return;
-            // this is an approximate solution. It is possible that the writer that has the task does not read the global
-            // field but manipulates a local array and stores it later, in this case we do not detect the location
-            // but this is a lot faster and experiments showed it works in the most cases
-            ArrayFieldLocation.registerLocation(field, location);
-        } finally {
-            insideTracker.remove();
-        }
+        registerArrayLocation(field, location);
     }
-
 
     public static void readObject(Object parent, String location) {
         FieldLocation f = new FieldLocation(location, Object.class, parent);
@@ -310,5 +253,24 @@ public class AccessTracker {
         return ((short[]) arr)[index];
     }
 
+    // FACADE METHODS-------------------------------------
+    public static void startTask() {
+        Tasks.startTask();
+    }
 
+    public static void stopTask() {
+        Tasks.stopTask();
+    }
+
+    public static boolean hasTask() {
+        return Tasks.hasTask();
+    }
+
+    public static void pauseTask() {
+        Tasks.pauseTask();
+    }
+
+    public static void resumeTask() {
+        Tasks.resumeTask();
+    }
 }

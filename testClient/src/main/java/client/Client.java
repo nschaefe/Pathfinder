@@ -65,7 +65,6 @@ public class Client extends ClientBase {
 
     public static void main(String[] args) {
         try {
-            AccessTracker.startTracking();
             Test tt = new Test();
             Client c = new Client();
             Thread t = new Thread(() -> {
