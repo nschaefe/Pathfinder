@@ -21,12 +21,19 @@ There is a property to switch on/off the plugin.
 One should not instrument statically instrumented classes again at runtime.
 So the javaagent should exclude corresponding classes.
 
--Logging
+-Instrumentation Blacklisting
+In Agent.java certain classes can be excluded from being instrumented (EXCLUDES)
+
+-Report Logging
 TinyLog is used to print out tracking results.
 The logger can be configured.
 Using "writingthread" and "buffered" improves performance but introduces more memory consumption
 Even without "buffered", the writing thread buffers things if it is not able to process outputs fast enough. This can lead
 to a significant blow up in memory.
+
+-Logged Stacktraces
+In ReportGenerator the stacktrace length beginning from the first element (most recent in call hirachy) can be set (STACKTRACE_MAX_DEPTH)
+To filter out the stacktrace elements that belong to the tracking framework the CLASS_PREFIX can be defined to exclude elements that start with this prefix
 
 -Hook Size
 Which accesses are tracked has a crucial impact on performance. Not tracking byte array accesses for example leads to a

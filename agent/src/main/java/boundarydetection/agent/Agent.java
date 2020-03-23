@@ -60,7 +60,11 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             "org.apache.htrace", //built in tracing
             // "org.apache.hadoop.hbase", // WHEN STATICLY INTRUMENTED
 
+            //  APPLICATION PACKAGES BLACKLIST (JUnit)
+            "org.junit",
+
             //DEBUG
+
             "java.net",
             "java.security",
             "java.io",
@@ -86,12 +90,16 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
 //            "java/util/AbstractCollection"};
 
 
+    private ClassPool cp;
+    private static boolean logging_enabled = true;
+
     public static void premain(final String agentArgument, final Instrumentation instrumentation) {
+        if (agentArgument != null) configure(agentArgument);
         instrumentation.addTransformer(new Agent(), true);
         // call for classes where agent is dependent on or that are used while bootstrapping
         for (Class c : instrumentation.getAllLoadedClasses()) {
             if (shouldTransform(c.getName())) {
-                //System.out.println("RETRA: " + c.getName());
+                //if(logging_enabled) System.out.println("RETRA: " + c.getName());
                 try {
                     instrumentation.retransformClasses(c);
                 } catch (UnmodifiableClassException e) {
@@ -100,6 +108,11 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
                 }
             }
         }
+    }
+
+    public static void configure(String argumentString) {
+        //TODO
+        logging_enabled = false;
     }
 
     /**
@@ -137,17 +150,12 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
 
     }
 
-    private  ClassPool cp;
+
     private void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
         if (ctCl.isInterface()) return;
 
-        if (cp == null) {
-            cp = ClassPool.getDefault();
-            cp.insertClassPath(new LoaderClassPath(this.getClass().getClassLoader()));
-            //cp.insertClassPath("/home/user/Dokumente/BoundaryDetection/tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar");
-        }
-
-        System.out.println("INST: " + ctCl.getName());
+        ClassPool cp = getClassPool();
+        if (logging_enabled) System.out.println("INST: " + ctCl.getName());
         CtClass tracker = null;
         tracker = cp.get("boundarydetection.tracker.AccessTracker");
         CodeInstrumenter conv = new CodeInstrumenter();
@@ -158,7 +166,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
     }
 
     public void instClassLoader(CtClass ctCl) throws NotFoundException, CannotCompileException {
-        System.out.println("INST: " + ctCl.getName());
+        if (logging_enabled) System.out.println("INST: " + ctCl.getName());
         CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
         //CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
         instloading(m);
@@ -169,6 +177,13 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         m.insertAfter("boundarydetection.tracker.AccessTracker.resumeTask();", true);
     }
 
+    public ClassPool getClassPool() throws NotFoundException {
+        if (cp == null) {
+            cp = ClassPool.getDefault();
+            cp.insertClassPath(new LoaderClassPath(this.getClass().getClassLoader()));
+        }
+        return cp;
+    }
 
     public static boolean shouldTransform(String clName) {
         return (true || isIncluded(clName)) && !isExcluded(clName);

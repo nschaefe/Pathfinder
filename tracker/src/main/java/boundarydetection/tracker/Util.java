@@ -81,12 +81,24 @@ public class Util {
         return host;
     }
 
-    public static String toString(StackTraceElement[] trace, int max) {
+    private static int getIndexAfter(StackTraceElement[] trace, int start, String classPrefix) {
+        for (int i = start; i < trace.length; i++) {
+            if (!trace[i].getClassName().startsWith(classPrefix)) return i;
+        }
+        return trace.length;
+    }
+
+    public static String toString(StackTraceElement[] trace, String classPrefix, int end) {
+        int start = getIndexAfter(trace, 1, classPrefix);
+        return toString(trace, start, end);
+    }
+
+    public static String toString(StackTraceElement[] trace, int start, int end) {
+        if (start < 0) throw new IllegalArgumentException("start must be >= 0");
+
         StringBuilder s = new StringBuilder();
-        int i = 0;
-        for (StackTraceElement el : trace) {
-            if (i >= max) break;
-            i++;
+        for (int i = start; i < trace.length && i < end; i++) {
+            StackTraceElement el = trace[i];
             s.append(el);
             s.append(System.lineSeparator());
         }
@@ -94,7 +106,10 @@ public class Util {
     }
 
     public static String toString(StackTraceElement[] trace) {
-        return toString(trace, Integer.MAX_VALUE);
+        return toString(trace, 0, Integer.MAX_VALUE);
+    }
+    public static String toString(StackTraceElement[] trace,int end) {
+        return toString(trace, 0, end);
     }
 
 }

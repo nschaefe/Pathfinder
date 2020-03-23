@@ -90,23 +90,11 @@
                                     ${project.build.directory}/testClient-0.1-SNAPSHOT-jar-with-dependencies.jar:${env.XTRACE_CONF}:${env.XTRACE_DIST}
                                 </argument>
                                 <argument>client.Client</argument>
-S                            </arguments>
+                            </arguments>
                         </configuration>
                     </execution>
                 </executions>
 
-                <dependencies>
-                    <dependency>
-                        <groupId>boundaryDetection</groupId>
-                        <artifactId>tracker</artifactId>
-                        <version>0.1-SNAPSHOT</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>boundaryDetection</groupId>
-                        <artifactId>agent</artifactId>
-                        <version>0.1-SNAPSHOT</version>
-                    </dependency>
-                </dependencies>
             </plugin>
 
             <plugin>
@@ -132,23 +120,44 @@ S                            </arguments>
                         </goals>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>boundaryDetection</groupId>
-                        <artifactId>agent</artifactId>
-                        <version>0.1-SNAPSHOT</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>boundaryDetection</groupId>
-                        <artifactId>tracker</artifactId>
-                        <version>0.1-SNAPSHOT</version>
-                    </dependency>
-                </dependencies>
             </plugin>
+
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.2</version>
+                <configuration>
+                    <argLine>
+                        -javaagent:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar=no_logging
+                        -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
+                    </argLine>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
-
     <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>5.4.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.4.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>boundaryDetection</groupId>
+            <artifactId>javaRT</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>boundaryDetection</groupId>
+            <artifactId>agent</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>boundaryDetection</groupId>
             <artifactId>tracker</artifactId>

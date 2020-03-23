@@ -18,23 +18,32 @@ public class RTInstrumentation {
 
     public static void main(String[] args) {
         try {
-            transformRT();
+            if (args.length < 2) throw new IllegalArgumentException("Not enough arguments");
+            transformRT(args[0], args[1]);
         } catch (Exception e) {
             System.err.println("ABORTED");
             e.printStackTrace();
         }
     }
 
-    private static void transformRT() throws NotFoundException, IOException, CannotCompileException {
-        ClassPool cp = new ClassPool();
-        //"JAVA_HOME/jre/lib/rt.jar";
-        String rtpath = "/opt/jdk8/jre/lib/rt.jar";
-        String resultPath = "./jar_out";
-        cp.insertClassPath(rtpath);
-        //TODO not nice
-        cp.insertClassPath("../tracker/target/tracker-0.1-SNAPSHOT.jar");
-        // DO NOT INCLUDE ANYTHING MORE THAT COULD BE USED INSTEAD OF WHAT IS IN THE RT
+    private static void transformRT(String trackerPath, String baseDir) throws NotFoundException, IOException, CannotCompileException {
         Agent a = new Agent();
+        ClassPool cp = a.getClassPool();
+
+        String javaHome = System.getenv("JAVA_HOME");
+        String rtHome;
+        if (javaHome == null || javaHome.isEmpty()) {
+            System.out.println("JAVA_HOME not set");
+            rtHome = baseDir;
+        }
+        else rtHome = javaHome + "/jre/lib";
+        String rtpath = rtHome + "/rt.jar";
+        System.out.println("Reading rt from " + rtpath);
+
+        String resultPath = baseDir + "/jar_out";
+        cp.insertClassPath(rtpath); // DO NOT INCLUDE ANYTHING MORE THAT CONTAINS JAVA RT CLASSES
+        cp.insertClassPath(trackerPath);
+
         for (String clName : readJarFiles(Paths.get(rtpath))) {
             CtClass cl = null;
             try {
@@ -53,7 +62,7 @@ public class RTInstrumentation {
             }
 
         }
-        writeJar(resultPath, "./rt_inst.jar", readJarManifest(Paths.get(rtpath)));
+        writeJar(resultPath, baseDir + "/rt_inst.jar", readJarManifest(Paths.get(rtpath)));
     }
 
     //TODO better: return a jarMetadata container with all required data
