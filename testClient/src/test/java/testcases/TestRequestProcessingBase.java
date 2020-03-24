@@ -30,7 +30,7 @@ public abstract class TestRequestProcessingBase {
     }
 
     @Test
-    public void syncProcessingMulti() throws ExecutionException, InterruptedException {
+    public void processinMulti() throws ExecutionException, InterruptedException {
         Collection<Future> flist = new ArrayList<Future>();
         for (int i = 0; i < 5; i++) {
             flist.add(pool.submit((Callable) new Request()));
