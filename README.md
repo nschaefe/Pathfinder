@@ -21,3 +21,10 @@ Provides two ways of testing:
 Provides 
 * A SQL query generator framework, to generate SQL queries for filtering and analysing the outputs of **tracker**. These SQL queries are inteded to be used for Apache-Drill. The supported syntax is used.
 * A storage plugin for Apache drill for input and output.
+
+## Build
+* install the custom javassist version under ./lib 
+* mvn clean install
+
+This builds everything, instruments the rt.jar and runs the tests.
+
