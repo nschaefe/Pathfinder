@@ -1,0 +1,7 @@
+mvn install:install-file \
+   -Dfile=./javassist-3.28.0-FIX.jar \
+   -DgroupId=org.javassist \
+   -DartifactId=javassist \
+   -Dversion=3.28.0-FIX \
+   -Dpackaging=jar \
+   -DgeneratePom=true

@@ -53,7 +53,7 @@ public class RTInstrumentation {
                 if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
             } catch (Exception e) {
                 // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
-                System.err.println("ERROR but continue");
+                System.err.println("ERROR in " +cl.getName()+", continue");
                 e.printStackTrace();
                 cl.detach();
                 cl = cp.get(clName.replace("/", "."));
