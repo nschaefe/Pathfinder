@@ -4,13 +4,10 @@ import javassist.*;
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.CodeIterator;
 import javassist.bytecode.ConstPool;
-import javassist.bytecode.MethodInfo;
 import javassist.convert.Transformer;
 
-public abstract class FieldAccessHook extends Transformer {
+public abstract class FieldAccessHook extends TransformerBase {
 
-    protected MethodInfo methodInfo; //TODO not initialized until init
-    protected String className;
     protected String methodClassname;
     protected String methodName;
 
@@ -19,15 +16,6 @@ public abstract class FieldAccessHook extends Transformer {
         this.methodClassname = methodClassname;
         this.methodName = methodName;
     }
-
-    @Override
-    public void initialize(ConstPool cp, CtClass clazz, MethodInfo minfo) throws CannotCompileException {
-        methodInfo = minfo;
-        //methodInfo.doPreverify=true;
-        this.className = clazz.getName();
-        initialize(cp, minfo.getCodeAttribute());
-    }
-
 
     protected static String isField(ClassPool pool, ConstPool cp, CtClass fclass,
                                     String fname, boolean is_private, int index) {

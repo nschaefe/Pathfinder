@@ -12,30 +12,10 @@ public class FieldWriteHook extends FieldAccessHook {
         super(next, methodClassname, methodName);
     }
 
-    private boolean skippedConstCall = false;
-
-    @Override
-    public void clean() {
-        skippedConstCall = false;
-    }
-
     @Override
     public int transform(CtClass tclazz, int pos, CodeIterator iterator,
                          ConstPool cp) throws BadBytecode {
         if (methodInfo.isStaticInitializer()) return pos;
-        // jump over all instructions before super or this.
-        // static field accesses can happen before super,
-        // so not doing this can lead to a method call injection before super or this,
-        // what leads to passing uninitializedThis to method call, what is not allowed
-        if (methodInfo.isConstructor() && !skippedConstCall) {
-            int onCallIndex = iterator.skipConstructor();
-            if (onCallIndex != -1) {
-                //jumping over super or this call, pos is after
-                iterator.move(onCallIndex);
-                pos = iterator.next();
-            }
-            skippedConstCall = true;
-        }
 
         int c = iterator.byteAt(pos);
         boolean isFieldRead = c == GETFIELD || c == GETSTATIC;

@@ -18,7 +18,6 @@ package boundarydetection.instrumentation;
 
 
 import javassist.*;
-import javassist.convert.TransformWriteField;
 
 /**
  * Simple translator of method bodies
@@ -119,11 +118,14 @@ public class CodeInstrumenter extends CodeConverter {
      * @param calledMethod the name of the static method.
      */
     public void replaceFieldWrite(
-                                  CtClass calledClass, String calledMethod) {
+            CtClass calledClass, String calledMethod) {
         transformers = new FieldWriteHook(transformers,
                 calledClass.getName(),
                 calledMethod);
     }
 
+    public void reformatConstructor() {
+        transformers = new ConstructorReformater(transformers);
+    }
 
 }

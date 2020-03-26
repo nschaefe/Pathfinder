@@ -22,15 +22,8 @@ import javassist.convert.Transformer;
 
 public class FieldReadHook extends FieldAccessHook {
 
-    private boolean skippedConstCall = false;
-
-    public FieldReadHook(Transformer next, String methodClassname, String methodName) {
+      public FieldReadHook(Transformer next, String methodClassname, String methodName) {
         super(next, methodClassname, methodName);
-    }
-
-    @Override
-    public void clean() {
-        skippedConstCall = false;
     }
 
     @Override
@@ -38,20 +31,6 @@ public class FieldReadHook extends FieldAccessHook {
                          ConstPool cp) throws BadBytecode {
         //(methodInfo.getAccessFlags() & AccessFlag.ABSTRACT) != 0
         if (methodInfo.isStaticInitializer()) return pos;
-        // jump over all instructions before super or this.
-        // static field accesses can happen before super,
-        // so not doing this can lead to a method call injection before super or this,
-        // what leads to passing uninitializedThis to method call, what is not allowed
-        if (methodInfo.isConstructor() && !skippedConstCall) {
-            int onCallIndex = iterator.skipConstructor();
-            if (onCallIndex != -1) {
-                //jumping over super or this call, pos is after
-                iterator.move(onCallIndex);
-                pos = iterator.next();
-            }
-            skippedConstCall = true;
-        }
-
 
         int c = iterator.byteAt(pos);
         boolean isFieldRead = c == GETFIELD || c == GETSTATIC;

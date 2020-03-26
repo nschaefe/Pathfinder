@@ -27,7 +27,7 @@ public class TestThreadForking extends TestBase {
     }
 
     @Test
-    public void forkJoinMulti() throws InterruptedException {
+    public void forkJoinMultiLocalMessage() throws InterruptedException {
         List<Thread> workers = new ArrayList<Thread>();
         String input = "mess";
         for (int c = 0; c < 5; c++) {
