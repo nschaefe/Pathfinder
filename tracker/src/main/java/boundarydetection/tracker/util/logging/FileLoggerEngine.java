@@ -1,28 +1,14 @@
-package boundarydetection.tracker;
+package boundarydetection.tracker.util.logging;
 
 import org.tinylog.Level;
 import org.tinylog.configuration.Configuration;
 import org.tinylog.core.TinylogLoggingProvider;
 
-public class Logger {
+public class FileLoggerEngine extends LoggerEngine {
 
-    private static Logger logger;
-
-    public static Logger getLogger() {
-        if (logger == null) {
-            logger = new Logger();
-        }
-        return logger;
-    }
-
-    public static void configureLogger(String path) {
-        Logger.path = path;
-    }
-
-    private static String path;
     private TinylogLoggingProvider tinylog;
 
-    private Logger() {
+    public FileLoggerEngine(String path) {
         // REMARK: DO NOT use tinylog through the normal interface (Logger.debug etc). Because of late binding, the lib is "manually" loaded
         // at runtime. Since the tracker and tinylog is accessed via datastructures that are used while class loading,
         // this leads to a cyclic class loading error.
@@ -36,14 +22,17 @@ public class Logger {
         tinylog = new TinylogLoggingProvider();
     }
 
+    @Override
     public void log(String mess) {
         log(mess, null);
     }
 
+    @Override
     public void log(String mess, String tag) {
         tinylog.log(2, tag, Level.DEBUG, null, mess, null);
     }
 
+    @Override
     public void shutdown() throws InterruptedException {
         tinylog.shutdown();
     }

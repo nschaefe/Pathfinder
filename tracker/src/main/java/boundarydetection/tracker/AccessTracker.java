@@ -1,5 +1,9 @@
 package boundarydetection.tracker;
 
+import boundarydetection.tracker.util.logging.*;
+
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -25,12 +29,16 @@ public class AccessTracker {
                 inited = true;
 
                 int random = (new Random()).nextInt(Integer.MAX_VALUE);
-                Logger.configureLogger("./tracker_report_" + random + ".json");
+                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new FileLoggerEngine("./tracker_report_" + random + ".json")));
 
                 accesses = new HashMap<>(MAP_INIT_SIZE);
                 insideTracker = new InheritableThreadLocal<>();
             }
         }
+    }
+
+    public static synchronized void setDebugOutputStream(OutputStream s){
+        Logger.setLogger(new StreamLoggerEngine(s));
     }
 
     public static void writeAccess(AbstractFieldLocation f) {
@@ -59,7 +67,7 @@ public class AccessTracker {
                 }
             }
         } catch (Exception e) {
-            Logger.getLogger().log(e.getMessage());
+            Logger.log(e.getMessage());
         } finally {
             insideTracker.remove();
         }
@@ -84,7 +92,7 @@ public class AccessTracker {
                 StringBuilder s = new StringBuilder();
                 FieldWriter writer = l.get(0);
 
-                Logger.getLogger().log(
+                Logger.log(
                         ReportGenerator.generateDetectionReportJSON(epoch,
                                 Thread.currentThread().getId(),
                                 Thread.currentThread().getStackTrace(),
@@ -92,7 +100,7 @@ public class AccessTracker {
                                 writer, meta));
             }
         } catch (Exception e) {
-            Logger.getLogger().log(e.getMessage());
+           Logger.log(e.getMessage());
         } finally {
             insideTracker.remove();
         }

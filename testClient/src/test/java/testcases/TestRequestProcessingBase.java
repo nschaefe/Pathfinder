@@ -1,36 +1,27 @@
 package testcases;
 
-import boundarydetection.tracker.AccessTracker;
 import org.junit.jupiter.api.*;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.*;
 
-//TODO Tracker output redirect and checking here
-// Reports currently appear in testClient dir
-
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public abstract class TestRequestProcessingBase {
+public abstract class TestRequestProcessingBase extends TestBase {
 
     ExecutorService pool;
 
     @BeforeAll
     public void init() {
-        // return new ThreadPoolExecutor(4,4, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue());
+        super.init();
         pool = getExecutorService();
     }
 
     abstract ExecutorService getExecutorService();
 
-    @BeforeEach
-    public void prepare() {
-        AccessTracker.startTask();
-    }
-
     @Test
-    public void processinMulti() throws ExecutionException, InterruptedException {
+    public void processingMulti() throws ExecutionException, InterruptedException {
         Collection<Future> flist = new ArrayList<Future>();
         for (int i = 0; i < 5; i++) {
             flist.add(pool.submit((Callable) new Request()));
@@ -41,7 +32,7 @@ public abstract class TestRequestProcessingBase {
     }
 
     @Test
-    public void syncProcessing() throws ExecutionException, InterruptedException {
+    public void syncProcessing() throws ExecutionException, InterruptedException, IOException, ClassNotFoundException {
         // Single request submission does not use pool internal queues, direct hand over
         // The access to the result of the future through get() is not detected, because the writer of the result has
         // not a taskid.
@@ -51,11 +42,6 @@ public abstract class TestRequestProcessingBase {
     @Test
     public void asyncProcessing() throws ExecutionException, InterruptedException {
         pool.submit((Callable) new Request());
-    }
-
-    @AfterEach
-    public void close() {
-        AccessTracker.stopTask();
     }
 
     @AfterAll

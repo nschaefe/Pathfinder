@@ -1,5 +1,6 @@
 package boundarydetection.tracker;
 
+import boundarydetection.tracker.util.Util;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 

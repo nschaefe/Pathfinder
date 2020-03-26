@@ -1,4 +1,4 @@
-package boundarydetection.tracker;
+package boundarydetection.tracker.util;
 
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
