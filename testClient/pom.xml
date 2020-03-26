@@ -163,7 +163,7 @@
             <artifactId>tracker</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
-        <dependency>
+<!--        <dependency>
             <groupId>edu.brown.cs.systems</groupId>
             <artifactId>tracingplane-common</artifactId>
             <version>${tracingplane.version}</version>
@@ -177,7 +177,7 @@
             <groupId>edu.brown.cs.systems</groupId>
             <artifactId>xtrace-client</artifactId>
             <version>${tracingplane.version}</version>
-        </dependency>
+        </dependency> -->
     </dependencies>
 
 
