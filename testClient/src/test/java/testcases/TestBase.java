@@ -32,7 +32,8 @@ public class TestBase {
 
 
     @AfterEach
-    public void close() throws IOException {
+    public void close() throws IOException, InterruptedException {
+        Thread.sleep(150); // wait a while for pending writes and reads
         AccessTracker.stopTask();
         stream.close();
     }

@@ -21,11 +21,29 @@ public class ConstructorReformater extends TransformerBase {
         skippedConstCall = false;
     }
 
-    private boolean isObjectSuper(String clName, String mname, String type) {
-        return clName.equals("java.lang.Object") && mname.equals("<init>") && type.equals("()V");
+    private boolean isConstructorCallNoPara(String clName, String mname, String type) {
+        return  mname.equals("<init>") && type.equals("()V");
     }
 
-    private boolean moveObjectSuperCall(CodeIterator it, int index, ConstPool cp) throws BadBytecode {
+    /*
+     * Moves constructor calls that have no parameters to the top of the method
+     *
+     * In java constructor calls must be the first statement in a constructor
+     * However the java compiler sometimes moves the constructor call to the end of the method and does field assignment
+     * beforhand, so reorders. (e.g. super(42); this.i=i; -> putfield i; invokespecial superclass.init)
+     * This reorder happens for example for an adhoc runnable implementation.
+     *
+     * We cannot pass "this" to a call until the base constructor has bee called (-> uninitialized this)
+     * So Track.fieldWrite(this,..) at the point of the write would not be possible.
+     * So we try to undo this reordering such that we can pass "this".
+     *
+     * But it is allowed to do almost everything in the parameter section of the call. (e.g. super(callable.call())
+     * It is allowed to call methods that return a value that is passed to the constructor, if conditionals, parameters.
+     * This makes it non-trivial to undo the reorder.
+     * So we only reorder calls that have no parameters. At the time the developer wrote the code he must anyway place the call
+     * as the first statement. So there cannot be unintended side effects.
+     */
+    private boolean moveConstructorCall(CodeIterator it, int index, ConstPool cp) throws BadBytecode {
         //code.addAload(0);
         //code.addInvokespecial("java/lang/Object", MethodInfo.nameInit, "()V");
         if (it.byteAt(index - 1) == Opcode.ALOAD_0 &&
@@ -34,7 +52,7 @@ public class ConstructorReformater extends TransformerBase {
             int methodInfoIndex = it.byteAt(index + 1);
             methodInfoIndex = methodInfoIndex << 8;
             methodInfoIndex = methodInfoIndex | it.byteAt(index + 2);
-            if (isObjectSuper(cp.getMethodrefClassName(methodInfoIndex),
+            if (isConstructorCallNoPara(cp.getMethodrefClassName(methodInfoIndex),
                     cp.getMethodrefName(methodInfoIndex),
                     cp.getMethodrefType(methodInfoIndex))) {
 
@@ -79,7 +97,7 @@ public class ConstructorReformater extends TransformerBase {
                 // we move super calls to java.lang.Object to the beginning of the constructor
                 // to support more constructors. We can do this for that case because this constructor call
                 // has no side effects. Doing this in general is not possible this way and not trivial.
-                if (this.moveObjectSuperCall(iterator, onCallIndex, cp)) {
+                if (this.moveConstructorCall(iterator, onCallIndex, cp)) {
                     iterator.begin();
                     pos = 0;
                 } else {
