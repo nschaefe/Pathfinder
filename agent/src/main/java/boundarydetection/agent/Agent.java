@@ -3,6 +3,8 @@ package boundarydetection.agent;
 import boundarydetection.instrumentation.CodeInstrumenter;
 import javassist.*;
 import javassist.build.JavassistBuildException;
+import javassist.expr.ExprEditor;
+import javassist.expr.MethodCall;
 
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
@@ -90,6 +92,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
 //            "java/util/AbstractCollection"};
 
 
+    private static final String HOOK_CLASS = "boundarydetection.tracker.AccessTracker";
     private ClassPool cp;
     private static boolean logging_enabled = true;
 
@@ -151,15 +154,31 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
     }
 
 
+    private void replaceArrayCopy(CtClass ctCl) throws CannotCompileException {
+        // invokestatic  #65                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
+        ctCl.instrument(new ExprEditor() {
+
+            public void edit(MethodCall m) throws CannotCompileException {
+                if (m.getClassName().equals("java.lang.System") &&
+                        m.getSignature().equals("(Ljava/lang/Object;ILjava/lang/Object;II)V") &&
+                        m.getMethodName().equals("arraycopy")) {
+                    m.replace(HOOK_CLASS + ".arrayCopy($$);");
+                }
+            }
+        });
+    }
+
     private void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
         if (ctCl.isInterface()) return;
 
         ClassPool cp = getClassPool();
         if (logging_enabled) System.out.println("INST: " + ctCl.getName());
         CtClass tracker = null;
-        tracker = cp.get("boundarydetection.tracker.AccessTracker");
-        CodeInstrumenter conv = new CodeInstrumenter();
+        tracker = cp.get(HOOK_CLASS);
 
+        replaceArrayCopy(ctCl);
+
+        CodeInstrumenter conv = new CodeInstrumenter();
         // adds transformers at the head (so reverse order)
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
         conv.replaceFieldRead(tracker, "readObject");

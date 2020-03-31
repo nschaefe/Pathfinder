@@ -2,7 +2,6 @@ package boundarydetection.tracker;
 
 import boundarydetection.tracker.util.logging.*;
 
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +36,7 @@ public class AccessTracker {
         }
     }
 
-    public static synchronized void setDebugOutputStream(OutputStream s){
+    public static synchronized void setDebugOutputStream(OutputStream s) {
         Logger.setLogger(new StreamLoggerEngine(s));
     }
 
@@ -67,7 +66,8 @@ public class AccessTracker {
                 }
             }
         } catch (Exception e) {
-            Logger.log(e.getMessage());
+            e.printStackTrace();
+            Logger.log(e.toString());
         } finally {
             insideTracker.remove();
         }
@@ -100,7 +100,8 @@ public class AccessTracker {
                                 writer, meta));
             }
         } catch (Exception e) {
-           Logger.log(e.getMessage());
+            e.printStackTrace();
+            Logger.log(e.toString());
         } finally {
             insideTracker.remove();
         }
@@ -142,11 +143,30 @@ public class AccessTracker {
     }
 
 
-    // ACCESS HOOKS---------------------------------------------
+    // --------------------------------ACCESS HOOKS-------------------------------------
+
+    // SPECIAL---------------------------
+    public static void arrayCopy(Object src, int srcPos,
+                                 Object dest, int destPos,
+                                 int length) {
+        System.arraycopy(src, srcPos, dest, destPos, length);
+
+        //TODO overtake old writers?
+
+        Class sc = Object[].class;
+        int srcEnd = srcPos + length;
+        for (int i = srcPos; i < srcEnd; i++) readAccess(new ArrayFieldLocation(sc, src, i));
+
+        Class dc = Object[].class;
+        int destEnd = destPos + length;
+        for (int i = destPos; i < destEnd; i++) writeAccess(new ArrayFieldLocation(dc, dest, i));
+    }
+
     public static void readObjectArrayField(Object field, String location) {
         registerArrayLocation(field, location);
     }
 
+    //-----------------------------------
     public static void readObject(Object parent, String location) {
         FieldLocation f = new FieldLocation(location, Object.class, parent);
         readAccess(f);

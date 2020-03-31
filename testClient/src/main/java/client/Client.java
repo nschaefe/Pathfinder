@@ -26,7 +26,7 @@ public class Client extends ClientBase {
         super(42);
         messages = new Integer[2];
         q = new ArrayDeque<>();
-        a = new ArrayList<>();
+        a = new ArrayList<>(3);
         b = new ArrayBlockingQueue<Integer>(5);
         i = new Integer(11);
         li = new LinkedList<>();
@@ -53,10 +53,16 @@ public class Client extends ClientBase {
         rr.add(i);
 
         bq.offer(i);
+
+        a.add(i);
+        a.add(i);
+        a.add(i);
+
+
     }
 
     public synchronized String read() {
-        return "" + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
+        return "" +a.get(0)+ m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
     }
 
     public synchronized void setNull() {
