@@ -5,27 +5,19 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class TestHandRolledThreadPool {
+public class TestHandRolledThreadPool2 {
 
     @Test
     public void testUnsafe() throws InterruptedException {
         ThreadPool p = new ThreadPool(3);
         for (int i = 0; i < 10; i++) {
-            AccessTracker.startTask();
-
             p.enqueue(new UnsafeRunnableForTest());
-
-            AccessTracker.stopTask();
         }
         Thread.sleep(500);
         p.shutdown();
@@ -36,11 +28,7 @@ public class TestHandRolledThreadPool {
     public void testLocking() throws InterruptedException {
         ThreadPool p = new ThreadPool(3);
         for (int i = 0; i < 10; i++) {
-            AccessTracker.startTask();
-
             p.enqueue(new LockingRunnableForTest());
-
-            AccessTracker.stopTask();
         }
         Thread.sleep(500);
         p.shutdown();
@@ -51,11 +39,7 @@ public class TestHandRolledThreadPool {
     public void testAtomic() throws InterruptedException {
         ThreadPool p = new ThreadPool(3);
         for (int i = 0; i < 10; i++) {
-            AccessTracker.startTask();
-
             p.enqueue(new AtomicRunnableForTest());
-
-            AccessTracker.stopTask();
         }
         Thread.sleep(500);
         p.shutdown();
@@ -66,11 +50,7 @@ public class TestHandRolledThreadPool {
     public void testSynchronized() throws InterruptedException {
         ThreadPool p = new ThreadPool(3);
         for (int i = 0; i < 10; i++) {
-            AccessTracker.startTask();
-
             p.enqueue(new SynchronizedRunnableForTest());
-
-            AccessTracker.stopTask();
         }
         Thread.sleep(500);
         p.shutdown();
@@ -87,6 +67,8 @@ public class TestHandRolledThreadPool {
 
         @Override
         public void run() {
+            AccessTracker.startTask();
+
             log(previousMessage);
             previousMessage = "Hello from thread " + Thread.currentThread().getId();
             try {
@@ -97,6 +79,8 @@ public class TestHandRolledThreadPool {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            AccessTracker.stopTask();
         }
     }
 
@@ -107,6 +91,8 @@ public class TestHandRolledThreadPool {
 
         @Override
         public void run() {
+            AccessTracker.startTask();
+
             lock.lock();
             try {
                 log(previousMessage);
@@ -127,6 +113,8 @@ public class TestHandRolledThreadPool {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            AccessTracker.stopTask();
         }
     }
 
@@ -136,6 +124,8 @@ public class TestHandRolledThreadPool {
 
         @Override
         public void run() {
+            AccessTracker.startTask();
+
             log(previousMessage.getAndSet("Hello from thread " + Thread.currentThread().getId()));
             try {
                 Thread.sleep(100);
@@ -144,6 +134,8 @@ public class TestHandRolledThreadPool {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            AccessTracker.stopTask();
         }
     }
 
@@ -153,6 +145,8 @@ public class TestHandRolledThreadPool {
 
         @Override
         public void run() {
+            AccessTracker.startTask();
+
             synchronized(SynchronizedRunnableForTest.class) {
                 log(previousMessage);
                 previousMessage = "Hello from thread " + Thread.currentThread().getId();
@@ -167,6 +161,8 @@ public class TestHandRolledThreadPool {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+            AccessTracker.stopTask();
         }
     }
 
