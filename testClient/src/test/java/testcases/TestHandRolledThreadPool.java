@@ -5,70 +5,63 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
-public class TestHandRolledThreadPool {
+public class TestHandRolledThreadPool{
 
     @Test
     public void testUnsafe() throws InterruptedException {
-        ThreadPool p = new ThreadPool(3);
-        for (int i = 0; i < 10; i++) {
-            AccessTracker.startTask();
-
-            p.enqueue(new UnsafeRunnableForTest());
-
-            AccessTracker.stopTask();
-        }
-        Thread.sleep(500);
-        p.shutdown();
-        p.join();
+        enqueueRunnables(() -> new UnsafeRunnableForTest());
     }
 
     @Test
     public void testLocking() throws InterruptedException {
-        ThreadPool p = new ThreadPool(3);
-        for (int i = 0; i < 10; i++) {
-            AccessTracker.startTask();
-
-            p.enqueue(new LockingRunnableForTest());
-
-            AccessTracker.stopTask();
-        }
-        Thread.sleep(500);
-        p.shutdown();
-        p.join();
+        enqueueRunnables(() -> new LockingRunnableForTest());
     }
 
     @Test
     public void testAtomic() throws InterruptedException {
-        ThreadPool p = new ThreadPool(3);
-        for (int i = 0; i < 10; i++) {
-            AccessTracker.startTask();
-
-            p.enqueue(new AtomicRunnableForTest());
-
-            AccessTracker.stopTask();
-        }
-        Thread.sleep(500);
-        p.shutdown();
-        p.join();
+        enqueueRunnables(() -> new AtomicRunnableForTest());
     }
 
     @Test
     public void testSynchronized() throws InterruptedException {
+        enqueueRunnables(() -> new SynchronizedRunnableForTest());
+    }
+
+    //-------------------
+
+    @Test
+    public void testUnsafeTrackInside() throws InterruptedException {
+        enqueueRunnables(() -> wrapRunnableForTracking(new UnsafeRunnableForTest()));
+    }
+
+    @Test
+    public void testLockingTrackInside() throws InterruptedException {
+        enqueueRunnables(() -> wrapRunnableForTracking(new LockingRunnableForTest()));
+    }
+
+    @Test
+    public void testAtomicTrackInside() throws InterruptedException {
+        enqueueRunnables(() -> wrapRunnableForTracking(new AtomicRunnableForTest()));
+    }
+
+    @Test
+    public void testSynchronizedTrackInside() throws InterruptedException {
+        enqueueRunnables(() -> wrapRunnableForTracking(new SynchronizedRunnableForTest()));
+    }
+
+    private void enqueueRunnables(Supplier<Runnable> runnableFactory) throws InterruptedException {
         ThreadPool p = new ThreadPool(3);
         for (int i = 0; i < 10; i++) {
             AccessTracker.startTask();
 
-            p.enqueue(new SynchronizedRunnableForTest());
+            p.enqueue(runnableFactory.get());
 
             AccessTracker.stopTask();
         }
@@ -76,6 +69,18 @@ public class TestHandRolledThreadPool {
         p.shutdown();
         p.join();
     }
+
+    private Runnable wrapRunnableForTracking(Runnable r) {
+        return new Runnable() {
+            @Override
+            public void run() {
+                AccessTracker.startTask();
+                r.run();
+                AccessTracker.stopTask();
+            }
+        };
+    }
+
 
     public static void log(String message) {
 //        System.out.println(message);
@@ -153,14 +158,14 @@ public class TestHandRolledThreadPool {
 
         @Override
         public void run() {
-            synchronized(SynchronizedRunnableForTest.class) {
+            synchronized (SynchronizedRunnableForTest.class) {
                 log(previousMessage);
                 previousMessage = "Hello from thread " + Thread.currentThread().getId();
             }
             try {
                 Thread.sleep(100);
 
-                synchronized(SynchronizedRunnableForTest.class) {
+                synchronized (SynchronizedRunnableForTest.class) {
                     log(previousMessage);
                     previousMessage = "Goodbye from thread " + Thread.currentThread().getId();
                 }
