@@ -17,7 +17,7 @@ public class TestCaching extends TestBase {
 
     @Test
     public void concurrentCache() throws InterruptedException {
-        Util.asyncExecute(5, () -> new workerRunnable());
+        Util.asyncExecuteAndTrack(5, () -> new workerRunnable());
     }
 
     private synchronized Object getObject(int id) {
