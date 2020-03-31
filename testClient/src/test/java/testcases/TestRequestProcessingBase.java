@@ -72,6 +72,7 @@ public abstract class TestRequestProcessingBase extends TestBase {
             } catch (InterruptedException e) {
                 canceled = true;
                 System.out.println("Operation canceled");
+                Thread.currentThread().interrupt();
             }
             return "Result";
         }

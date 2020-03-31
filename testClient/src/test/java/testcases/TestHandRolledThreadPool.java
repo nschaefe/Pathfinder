@@ -12,7 +12,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
-public class TestHandRolledThreadPool{
+public class TestHandRolledThreadPool {
 
     @Test
     public void testUnsafe() throws InterruptedException {
@@ -100,7 +100,7 @@ public class TestHandRolledThreadPool{
                 log(previousMessage);
                 previousMessage = "Goodbye from thread " + Thread.currentThread().getId();
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         }
     }
@@ -130,7 +130,7 @@ public class TestHandRolledThreadPool{
                     lock.unlock();
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         }
     }
@@ -147,7 +147,7 @@ public class TestHandRolledThreadPool{
 
                 log(previousMessage.getAndSet("Goodbye from thread " + Thread.currentThread().getId()));
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         }
     }
@@ -170,7 +170,7 @@ public class TestHandRolledThreadPool{
                     previousMessage = "Goodbye from thread " + Thread.currentThread().getId();
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         }
     }

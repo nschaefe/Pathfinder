@@ -22,8 +22,9 @@ public class TestBase {
     @BeforeEach
     public void prepare(TestInfo testInfo) throws IOException {
         Method method = testInfo.getTestMethod().get();
-        stream = new FileOutputStream("./" + this.getClass().getSimpleName() + ':' + method.getName() + "_tracker_report.json");
-        AccessTracker.setDebugOutputStream(stream);
+        //TODO with fileoutputstream: seems to lead to incomplete reports and sometimes hangs
+        //stream = new FileOutputStream("./" + this.getClass().getSimpleName() + ':' + method.getName() + "_tracker_report.json");
+        // AccessTracker.setDebugOutputStream(stream);
 
         AccessTracker.resetTracking();
         AccessTracker.startTask();
@@ -32,8 +33,7 @@ public class TestBase {
 
     @AfterEach
     public void close() throws IOException, InterruptedException {
-        Thread.sleep(150); // wait a while for pending writes and reads
         AccessTracker.stopTask();
-        stream.close();
+        // stream.close();
     }
 }
