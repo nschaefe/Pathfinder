@@ -8,6 +8,12 @@ public class FieldAccessMeta {
     private int writeCounter;
     private boolean matched;
 
+    private static ThreadLocal<Long> logicalClock;
+
+    static {
+        logicalClock = new ThreadLocal<>();
+    }
+
     FieldAccessMeta() {
         matched = false;
         this.writeCounter = 0;
@@ -22,10 +28,17 @@ public class FieldAccessMeta {
         long id = Thread.currentThread().getId();
 
         Throwable trace = new Throwable();
-        FieldWriter wr = new FieldWriter(id, trace);
+        FieldWriter wr = new FieldWriter(id, trace, incrementClock());
         if (writer.size() == 0) writer.add(wr);
         else writer.set(0, wr);
         writeCounter++;
+    }
+
+    private long incrementClock() {
+        Long clock = logicalClock.get();
+        clock = clock != null ? clock : 0;
+        logicalClock.set(clock + 1);
+        return clock;
     }
 
     public int getWriteCount() {

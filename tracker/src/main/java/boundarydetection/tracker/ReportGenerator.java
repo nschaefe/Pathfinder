@@ -31,6 +31,7 @@ public class ReportGenerator {
             g.writeNumberField("reader_thread_id", readerThreadID);
             g.writeNumberField("writer_thread_id", w.getId());
             g.writeNumberField("writer_count", meta.getWriteCount());
+            g.writeNumberField("writer_th_clock", w.getClock());
             g.writeStringField("reader_stacktrace", Util.toString(readerTrace, CLASS_PREFIX, STACKTRACE_MAX_DEPTH));
             g.writeStringField("writer_stacktrace", Util.toString(w.getStackTrace(), CLASS_PREFIX, STACKTRACE_MAX_DEPTH));
             g.writeEndObject();
@@ -44,6 +45,7 @@ public class ReportGenerator {
     }
 
 
+    @Deprecated
     public String generateDetectionReportSimple(long readerThreadID, StackTraceElement[] readerTrace, AbstractFieldLocation loc, FieldWriter w) {
         StringBuilder s = new StringBuilder();
         s.append("$$CONCURRENT WRITE/READ DETECTED");

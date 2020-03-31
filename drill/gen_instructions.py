@@ -45,6 +45,20 @@ def order_by(col):
     global alias
     return "SELECT * FROM " + alias + " ORDER BY " + col
 
+def order_by_time():
+    global alias
+    return "SELECT * FROM " + alias + " ORDER BY writer_thread_id, writer_th_clock"
+
+def select(*argv):
+    global alias
+
+    cols=""
+    for arg in argv:
+        cols+=arg
+        cols+=', '
+    cols=cols[:-2]
+
+    return "SELECT DISTINCT "+ cols+" FROM " + alias + " ORDER BY writer_thread_id, writer_th_clock"
 
 def filter_epoch(val):
     global alias
@@ -80,7 +94,8 @@ def as_table(query, table_name):
 # list the queries in execution order. The query itself remain simple because they have no subqueries and minimal from clauses.
 
 # table
-table = "./tracker_report_230685824.json"
+table = "./tracker_report_1442932176.json"
+
 # table = "./test.json"
 # namespace
 namespace = "rep.root"
@@ -89,10 +104,17 @@ from_clause = namespace + ".`" + table + "`"
 
 # --- basic filtering ---
 query = start_sql(from_clause)
-not_contain = ["edu.brown.cs.systems"]
+not_contain = ["edu.brown.cs.systems","org.apache.hadoop.hbase.zookeeper"]
 query = concat_sql(query, filter(not_contain))
-query = concat_sql(query, filter_epoch(2))
+#query = concat_sql(query, filter_epoch(3))
 
+
+def workflow_writer_chronological(query):
+    query = concat_sql(query, order_by_time())
+    query = concat_sql(query, select("writer_thread_id", "writer_th_clock","location"))
+    query = end_sql(query)
+    # query = as_table(query, "locations.json")
+    return query
 
 def workflow_locations(query):
     query = concat_sql(query, locations())
@@ -112,4 +134,6 @@ def workflow_writer(query):
 
 print(workflow_locations(query) + ";\n")
 
-# print(as_table("SELECT DISTINCT writer_stacktrace, reader_stacktrace FROM "+from_clause+" WHERE location='org.apache.hadoop.hbase.ipc.Call.md'","read_writers.json"))
+print(workflow_writer_chronological(query) + ";\n")
+
+print(as_table("SELECT DISTINCT writer_stacktrace, reader_stacktrace FROM "+from_clause+" WHERE location='unknown'","read_writers.json")+";\n")

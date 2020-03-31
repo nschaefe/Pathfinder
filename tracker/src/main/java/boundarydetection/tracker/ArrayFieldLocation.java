@@ -20,7 +20,10 @@ public final class ArrayFieldLocation extends AbstractFieldLocation {
     }
 
     private synchronized static String getLocationByRef(int ref) {
-        String s = arrayLocations.get(ref);
+        String s;
+        if (arrayLocations == null) s = null;
+        else s = arrayLocations.get(ref);
+
         if (s == null) return "unknown";
         else return s;
     }
