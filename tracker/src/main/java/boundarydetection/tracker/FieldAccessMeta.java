@@ -8,11 +8,8 @@ public class FieldAccessMeta {
     private int writeCounter;
     private boolean matched;
 
-    private static ThreadLocal<Long> logicalClock;
-
-    static {
-        logicalClock = new ThreadLocal<>();
-    }
+    // TODO makes a global order assumption, which we cannot just assume in this class -> move
+    private static Long logicalClock = 0L;
 
     FieldAccessMeta() {
         matched = false;
@@ -35,9 +32,8 @@ public class FieldAccessMeta {
     }
 
     private long incrementClock() {
-        Long clock = logicalClock.get();
-        clock = clock != null ? clock : 0;
-        logicalClock.set(clock + 1);
+        long clock = logicalClock;
+        logicalClock++;
         return clock;
     }
 

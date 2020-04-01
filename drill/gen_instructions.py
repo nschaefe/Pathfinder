@@ -45,10 +45,6 @@ def order_by(col):
     global alias
     return "SELECT * FROM " + alias + " ORDER BY " + col
 
-def order_by_time():
-    global alias
-    return "SELECT * FROM " + alias + " ORDER BY writer_thread_id, writer_th_clock"
-
 def select(*argv):
     global alias
 
@@ -110,8 +106,8 @@ query = concat_sql(query, filter(not_contain))
 
 
 def workflow_writer_chronological(query):
-    query = concat_sql(query, order_by_time())
-    query = concat_sql(query, select("writer_thread_id", "writer_th_clock","location"))
+    query = concat_sql(query, order_by("writer_th_clock"))
+    query = concat_sql(query, select("writer_th_clock","location"))
     query = end_sql(query)
     # query = as_table(query, "locations.json")
     return query
