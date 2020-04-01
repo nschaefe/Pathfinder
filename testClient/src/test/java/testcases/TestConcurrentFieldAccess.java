@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class TestConcurrentFieldAccess {
+public class TestConcurrentFieldAccess extends TestBase{
 
     @Test
     public void testMultipleConcurrentRequestsUnsafe() throws InterruptedException {

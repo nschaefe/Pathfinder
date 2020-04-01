@@ -1,6 +1,9 @@
 package boundarydetection.tracker;
 
-import boundarydetection.tracker.util.logging.*;
+import boundarydetection.tracker.util.logging.FileLoggerEngine;
+import boundarydetection.tracker.util.logging.LazyLoggerFactory;
+import boundarydetection.tracker.util.logging.Logger;
+import boundarydetection.tracker.util.logging.StreamLoggerEngine;
 
 import java.io.OutputStream;
 import java.util.HashMap;
@@ -37,7 +40,23 @@ public class AccessTracker {
     }
 
     public static synchronized void setDebugOutputStream(OutputStream s) {
+        // TODO
+        // can lead to deadlock if inside set logger a thread is triggered that causes accesses
+        // so it will try to acquire the lock which is held. Here this might be shutdown of the old logger
+        // use deadlock breaking
         Logger.setLogger(new StreamLoggerEngine(s));
+    }
+
+    public static void log(String s) {
+        init();
+        insideTracker.set(true);
+        try {
+            synchronized (AccessTracker.class) {
+                Logger.log(s);
+            }
+        } finally {
+            insideTracker.remove();
+        }
     }
 
     public static void writeAccess(AbstractFieldLocation f) {

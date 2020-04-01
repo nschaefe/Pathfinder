@@ -12,7 +12,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
-public class TestHandRolledThreadPool {
+public class TestHandRolledThreadPool extends TestBase {
 
     @Test
     public void testUnsafe() throws InterruptedException {
