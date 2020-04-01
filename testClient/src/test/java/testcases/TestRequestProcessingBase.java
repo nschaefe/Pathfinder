@@ -14,7 +14,6 @@ public abstract class TestRequestProcessingBase extends TestBase {
 
     @BeforeAll
     public void init() {
-        super.init();
         pool = getExecutorService();
     }
 
