@@ -5,7 +5,6 @@ reports_filtered/
 # Compiled class file
 *.class
 
-
 *.iml
 
 # Log file
@@ -41,3 +40,7 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 !lib/*
 
+#JS
+node_modules/
+.vscode/
+chrome_out/

@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 
 public class ReportGenerator {
 
@@ -32,8 +33,25 @@ public class ReportGenerator {
             g.writeNumberField("writer_thread_id", w.getId());
             g.writeNumberField("writer_count", meta.getWriteCount());
             g.writeNumberField("writer_th_clock", w.getClock());
-            g.writeStringField("reader_stacktrace", Util.toString(readerTrace, CLASS_PREFIX, STACKTRACE_MAX_DEPTH));
-            g.writeStringField("writer_stacktrace", Util.toString(w.getStackTrace(), CLASS_PREFIX, STACKTRACE_MAX_DEPTH));
+            g.writeArrayFieldStart("reader_stacktrace");
+            Arrays.asList(readerTrace).forEach(t -> {
+                try {
+                    g.writeString(t.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            g.writeEndArray();
+
+            g.writeArrayFieldStart("writer_stacktrace");
+            Arrays.asList(w.getStackTrace()).forEach(t -> {
+                try {
+                    g.writeString(t.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            g.writeEndArray();
             g.writeEndObject();
             g.close();
             return out.toString();
