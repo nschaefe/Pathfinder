@@ -42,5 +42,10 @@ buildNumber.properties
 
 #JS
 node_modules/
-.vscode/
 chrome_out/
+
+#VS CODE
+.vscode/
+.project
+.settings
+.classpath

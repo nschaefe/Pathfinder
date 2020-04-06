@@ -81,7 +81,7 @@ public class Util {
         return host;
     }
 
-    private static int getIndexAfter(StackTraceElement[] trace, int start, String classPrefix) {
+    public static int getIndexAfter(StackTraceElement[] trace, int start, String classPrefix) {
         for (int i = start; i < trace.length; i++) {
             if (!trace[i].getClassName().startsWith(classPrefix)) return i;
         }

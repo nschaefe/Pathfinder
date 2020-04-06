@@ -34,7 +34,9 @@ public class ReportGenerator {
             g.writeNumberField("writer_count", meta.getWriteCount());
             g.writeNumberField("writer_th_clock", w.getClock());
             g.writeArrayFieldStart("reader_stacktrace");
-            Arrays.asList(readerTrace).forEach(t -> {
+
+            int start = Util.getIndexAfter(readerTrace, 1, CLASS_PREFIX);
+            Arrays.asList(readerTrace).subList(start, readerTrace.length).forEach(t -> {
                 try {
                     g.writeString(t.toString());
                 } catch (IOException e) {
@@ -43,8 +45,10 @@ public class ReportGenerator {
             });
             g.writeEndArray();
 
+            StackTraceElement[] wtrace = w.getStackTrace();
+            start = Util.getIndexAfter(wtrace, 1, CLASS_PREFIX);
             g.writeArrayFieldStart("writer_stacktrace");
-            Arrays.asList(w.getStackTrace()).forEach(t -> {
+            Arrays.asList(wtrace).subList(start, wtrace.length).forEach(t -> {
                 try {
                     g.writeString(t.toString());
                 } catch (IOException e) {

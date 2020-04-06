@@ -109,7 +109,7 @@ function render() {
         .data(dag.descendants())
         .enter()
         .append('g')
-        .attr('transform', ({ x, y }) => `translate(${y}, ${x})`);
+        .attr('transform', ({ x, y }) => `translate(${y}, ${x})`); //TODO x and y switched?
 
     // Plot node circles
     nodes.append('circle')
