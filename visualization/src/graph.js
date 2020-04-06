@@ -8,12 +8,20 @@ export function render(data) {
   var node_radius = 5
 
   // append the svg object to the body of the page
-  var svg = d3.select("#viz")
+  var div = d3.select("#viz")
+  var svg = div
     .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .attr("transform",
       "translate(" + margin.left + "," + margin.top + ")");
+
+  //tooltip
+  var tooltip = d3.select("#tooltip")
+    .attr("class", "tooltip")
+    .style("visibility", "hidden")
+    .style("position", "absolute")
+    .style("z-index", "10");
 
   //TODO
   svg.append("svg:defs").append("svg:marker")
@@ -56,6 +64,17 @@ export function render(data) {
       if (d.root) return 'red'
       if (d.sink) return '#4265ff'
       else return "#69b3a2"
+    })
+    .on("mouseover", function (d) {
+      tooltip
+        .style("visibility", "visible")
+        .text(d.name)
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 28) + "px");
+    })
+    .on("mouseout", function (d) {
+      tooltip.transition()
+        .style("visibility", "hidden");
     });
 
 
