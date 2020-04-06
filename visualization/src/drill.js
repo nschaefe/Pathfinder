@@ -11,6 +11,10 @@ export function getData(callback) {
     http.setRequestHeader('Content-type', 'application/json')
     http.send(message)
     http.onload = function () {
+        if (http.status != 200) {
+            console.log("Error", http.statusText);
+        }
+        //if (error) throw error;
         // Do whatever with response
         const result = JSON.parse(http.response).rows
         callback(result)
