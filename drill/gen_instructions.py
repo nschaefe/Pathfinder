@@ -15,7 +15,6 @@ def filter(not_contain):
     return "SELECT * FROM " + alias + " WHERE NOT( regexp_matches(regexp_replace(writer_stacktrace,'(\\n)',''), '" + not_contain_regex + "') or regexp_matches( regexp_replace(reader_stacktrace,'(\\n)',''), '" + not_contain_regex + "') )"
 
 
-
 def distinct():
     global alias
     return "SELECT DISTINCT location, reader_stacktrace, writer_stacktrace FROM " + alias
@@ -45,16 +44,18 @@ def order_by(col):
     global alias
     return "SELECT * FROM " + alias + " ORDER BY " + col
 
+
 def select(*argv):
     global alias
 
-    cols=""
+    cols = ""
     for arg in argv:
-        cols+=arg
-        cols+=', '
-    cols=cols[:-2]
+        cols += arg
+        cols += ', '
+    cols = cols[:-2]
 
-    return "SELECT DISTINCT "+ cols+" FROM " + alias + " ORDER BY writer_thread_id, writer_th_clock"
+    return "SELECT DISTINCT " + cols+" FROM " + alias + " ORDER BY writer_thread_id, writer_th_clock"
+
 
 def filter_epoch(val):
     global alias
@@ -79,18 +80,31 @@ def start_sql(from_clause, alias_l="t1"):
 
 def end_sql(sql):
     global alias
-    return sql + " SELECT * FROM " + alias
+    s = sql + " SELECT * FROM " + alias
+    return s
 
 
 def as_table(query, table_name):
     return "alter session set `store.format`='json'; \n" + "CREATE TABLE rep.out.`" + table_name + "` AS (" + query + ")"
 
 
+def store_alias():
+    global alias
+    global alias_backup
+    alias_backup = alias
+
+
+def restore_alias():
+    global alias
+    global alias_backup
+    alias = alias_backup
+
 # framework idea: automatically pipeline arbitrary sql queries. DO NOT EMBED (subqueries) sql queries for easier reading. Therefore we use WITH and sequentially
 # list the queries in execution order. The query itself remain simple because they have no subqueries and minimal from clauses.
 
+
 # table
-table = "./tracker_report_1442932176.json"
+table = "./tracker_report.json"
 
 # table = "./test.json"
 # namespace
@@ -100,17 +114,18 @@ from_clause = namespace + ".`" + table + "`"
 
 # --- basic filtering ---
 query = start_sql(from_clause)
-not_contain = ["edu.brown.cs.systems","org.apache.hadoop.hbase.zookeeper"]
+not_contain = ["edu.brown.cs.systems", "org.apache.hadoop.hbase.zookeeper"]
 query = concat_sql(query, filter(not_contain))
-#query = concat_sql(query, filter_epoch(3))
+query = concat_sql(query, filter_epoch(2))
 
 
 def workflow_writer_chronological(query):
     query = concat_sql(query, order_by("writer_th_clock"))
-    query = concat_sql(query, select("writer_th_clock","location"))
+    query = concat_sql(query, select("writer_th_clock", "location"))
     query = end_sql(query)
     # query = as_table(query, "locations.json")
     return query
+
 
 def workflow_locations(query):
     query = concat_sql(query, locations())
@@ -128,8 +143,15 @@ def workflow_writer(query):
     return query
 
 
+store_alias()
 print(workflow_locations(query) + ";\n")
 
+restore_alias()
 print(workflow_writer_chronological(query) + ";\n")
 
-print(as_table("SELECT DISTINCT writer_stacktrace, reader_stacktrace FROM "+from_clause+" WHERE location='unknown'","read_writers.json")+";\n")
+restore_alias()
+print(as_table("SELECT DISTINCT writer_stacktrace, reader_stacktrace FROM " +
+               from_clause+" WHERE location='unknown'", "read_writers.json")+";\n")
+
+restore_alias()
+print(end_sql(query))

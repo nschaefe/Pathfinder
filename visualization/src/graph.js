@@ -5,7 +5,7 @@ export function render(data) {
   var margin = { top: 10, right: 30, bottom: 30, left: 40 },
     width = screen.width - margin.left - margin.right,
     height = screen.height - margin.top - margin.bottom;
-  var node_radius = 20
+  var node_radius = 5
 
   // append the svg object to the body of the page
   var svg = d3.select("#viz")
@@ -34,7 +34,7 @@ export function render(data) {
     .enter()
     .append("line")
     .style("stroke", "#aaa")
-    .attr("marker-end", "url(#triangle)");
+  //  .attr("marker-end", "url(#triangle)");
 
   // Initialize the nodes
   var node = svg
@@ -48,15 +48,20 @@ export function render(data) {
 
   node.append('circle')
     .attr("r", node_radius)
+    .attr("visibility", (d) => {
+      if (d.enabled) return "visible"
+      else return "collapse"
+    })
     .style("fill", function (d) {
       if (d.root) return 'red'
       if (d.sink) return '#4265ff'
       else return "#69b3a2"
     });
 
+
   // Add text to nodes
   node.append('text')
-    .text(d => d.name)
+    .text(d => "")// d.name)
     .attr('font-weight', 'bold')
     .attr('font-family', 'sans-serif')
     .attr('text-anchor', 'middle')
@@ -69,16 +74,14 @@ export function render(data) {
     .force("link", d3.forceLink()                               // This force provides links between nodes
       .id(function (d) { return d.id; })                     // This provide  the id of a node
       .links(data.links)
-      .distance(node_radius * 3)
+      .distance(node_radius * 3).strength(2)
       .iterations(1)
     )
-    .force("charge", d3.forceManyBody().strength(-300))
+    .force("charge", d3.forceManyBody().strength(-50))
     // This adds repulsion between nodes. Play with the -400 for the repulsion strength
     .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area
-    .force("collide", d3.forceCollide().radius(node_radius * 1.25))
+    .force("collide", d3.forceCollide().radius(node_radius * 1.5))
     .on("tick", ticked);
-
-  simulation.alpha(1).restart();
 
   // This function is run at each iteration of the force algorithm, updating the nodes position.
   function ticked() {

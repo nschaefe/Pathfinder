@@ -43,6 +43,7 @@ buildNumber.properties
 #JS
 node_modules/
 chrome_out/
+visualization/dist/main.js
 
 #VS CODE
 .vscode/
