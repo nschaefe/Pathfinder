@@ -13,15 +13,16 @@ export function render(data) {
     .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
-    .attr("transform",
-      "translate(" + margin.left + "," + margin.top + ")");
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   //tooltip
   var tooltip = d3.select("#tooltip")
     .attr("class", "tooltip")
+    .style("background-color", "#e6e6e6")
     .style("visibility", "hidden")
     .style("position", "absolute")
-    .style("z-index", "10");
+    .style("z-index", "10")
+   
 
   //TODO
   svg.append("svg:defs").append("svg:marker")
@@ -49,10 +50,21 @@ export function render(data) {
     .selectAll("g")
     .data(data.nodes)
     .enter()
-    .append("g").call(d3.drag()
-      .on("start", dragstarted)
-      .on("drag", dragged)
-      .on("end", dragended));
+    .append("g")
+    .on("mouseover", function (d) {
+      tooltip
+        .style("visibility", "visible")
+        .html(d.name) //.html(d.name + "<br>" +"aa")
+        .style("left", (d3.event.pageX) + "px")
+        .style("top", (d3.event.pageY - 28) + "px");
+    })
+    .on("mouseout", function (d) {
+      tooltip.style("visibility", "hidden");
+    })
+    .call(d3.drag()
+      .on("start", dragStart)
+      .on("drag", draging)
+      .on("end", dragEnd));
 
   node.append('circle')
     .attr("r", node_radius)
@@ -65,27 +77,15 @@ export function render(data) {
       if (d.sink) return '#4265ff'
       else return "#69b3a2"
     })
-    .on("mouseover", function (d) {
-      tooltip
-        .style("visibility", "visible")
-        .text(d.name)
-        .style("left", (d3.event.pageX) + "px")
-        .style("top", (d3.event.pageY - 28) + "px");
-    })
-    .on("mouseout", function (d) {
-      tooltip.transition()
-        .style("visibility", "hidden");
-    });
-
 
   // Add text to nodes
-  node.append('text')
-    .text(d => "")// d.name)
-    .attr('font-weight', 'bold')
-    .attr('font-family', 'sans-serif')
-    .attr('text-anchor', 'middle')
-    .attr('alignment-baseline', 'middle')
-    .attr('fill', 'black');
+  // node.append('text')
+  //   .text(d => "")// d.name)
+  //   .attr('font-weight', 'bold')
+  //   .attr('font-family', 'sans-serif')
+  //   .attr('text-anchor', 'middle')
+  //   .attr('alignment-baseline', 'middle')
+  //   .attr('fill', 'black');
 
 
   // Let's list the force we wanna apply on the network
@@ -132,18 +132,18 @@ export function render(data) {
     return Math.max(Math.min(y, height), 0 + node_radius * 2);
   }
 
-  function dragstarted(d) {
+  function dragStart(d) {
     if (!d3.event.active) simulation.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
   }
 
-  function dragged(d) {
+  function draging(d) {
     d.fx = d3.event.x;
     d.fy = d3.event.y;
   }
 
-  function dragended(d) {
+  function dragEnd(d) {
     if (!d3.event.active) simulation.alphaTarget(0);
     d.fx = null;
     d.fy = null;
