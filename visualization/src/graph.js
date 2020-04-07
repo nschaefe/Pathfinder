@@ -1,7 +1,9 @@
+import { getColor } from "./colors.js"
 
-import * as AA from "./colors.js";
-export function render(data) {
+export function render(full_graph) {
+  shrinkStraightPaths(full_graph)
 
+  var graphView = getGraphView(full_graph)
   // set the dimensions and margins of the graph
   var margin = { top: 10, right: 30, bottom: 30, left: 40 },
     width = screen.width - margin.left - margin.right,
@@ -46,10 +48,10 @@ export function render(data) {
     .selectAll("g")
 
   // Let's list the force we wanna apply on the network
-  var simulation = d3.forceSimulation(data.nodes)                 // Force algorithm is applied to data.nodes
+  var simulation = d3.forceSimulation(graphView.nodes)                 // Force algorithm is applied to graphView.nodes
     .force("link", d3.forceLink()                               // This force provides links between nodes
       .id(function (d) { return d.id; })                     // This provide  the id of a node
-      .links(data.links)
+      .links(graphView.links)
       .distance(node_radius * 3).strength(2)
       .iterations(1)
     )
@@ -62,9 +64,9 @@ export function render(data) {
   update()
 
 
-  function update() {
+  function update(alpha = 1) {
 
-    link = link.data(data.links)
+    link = link.data(graphView.links)
     link.exit().remove();
     link = link
       .enter().append("line")
@@ -73,15 +75,17 @@ export function render(data) {
       .attr("marker-end", "url(#triangle)")
       .merge(link);
 
-    node = node.data(data.nodes);
+    node = node.data(graphView.nodes);
     node.exit().remove();
     node = node.enter()
       .append("g")
       .attr("class", "node")
-      .attr("visibility", (d) => {
-        if (d.enabled) return "visible"
-        else return "collapse"
-      })
+      // draging
+      .call(d3.drag()
+        .on("start", dragStart)
+        .on("drag", draging)
+        .on("end", dragEnd))
+      // tooltip
       .on("mouseover", function (d) {
         tooltip
           .style("visibility", "visible")
@@ -92,10 +96,9 @@ export function render(data) {
       .on("mouseout", function (d) {
         tooltip.style("visibility", "hidden");
       })
-      .call(d3.drag()
-        .on("start", dragStart)
-        .on("drag", draging)
-        .on("end", dragEnd))
+      // node expanding
+      .on("dblclick", function (d) { expand(d) })
+
       .append('circle')
       .attr("r", node_radius)
       .style("fill", function (d) {
@@ -105,21 +108,21 @@ export function render(data) {
       })
       .merge(node)
 
-    simulation.restart();
-
+      simulation.nodes(graphView.nodes);
+      simulation.force("link").links(graphView.links)
+      simulation.alpha(alpha).restart(); 
   };
 
   // This function is run at each iteration of the force algorithm, updating the nodes position.
   function ticked() {
 
     // prevent exceeding borders
-    data.nodes.forEach(el => {
+    graphView.nodes.forEach(el => {
       el.x = boundX(el.x)
       el.y = boundY(el.y)
     });
 
     node.attr('transform', (d) => `translate(${d.x}, ${d.y})`);
-
 
     link
       .attr("x1", function (d) { return d.source.x; })
@@ -142,6 +145,12 @@ export function render(data) {
     yVec *= 1 - ((node_diameter) / norm)
 
     return { x: x1 + xVec, y: y1 + yVec }
+  }
+
+  function expand(node) {
+    node.parents.forEach((d) => d.enabled = true)
+    graphView = getGraphView(full_graph)
+    update(0.1)
   }
 
   function boundX(x) {
@@ -168,5 +177,87 @@ export function render(data) {
     d.fx = null;
     d.fy = null;
   }
+
+  ///----------GRAPHVIEW (ENABLE/DISABLE)
+
+  function getGraphView(nodes) {
+    var enabled_nodes = nodes.filter(d => { return d.enabled })
+    return {
+      nodes: enabled_nodes,
+      links: getLinksView(enabled_nodes)
+    }
+  }
+
+  function shrinkStraightPaths(nodes) {
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i]
+      if (!n.enabled) continue;
+
+      var next = getNextEnabledOnLine(n)
+      if (next != null) {
+        var next_next = getNextEnabledOnLine(next)
+        if (next_next != null) {
+          next.enabled = false
+          i--;
+        }
+      }
+    }
+
+  }
+
+  function hasSingleChild(n) {
+    return n.children.size == 1
+  }
+  function hasAtMostOneParent(n) {
+    return n.parents.size <= 1
+  }
+
+  function getSingleEntry(set) {
+    return set.values().next().value;
+  }
+
+  function getEnabledOnLine(n) {
+    while (hasSingleChild(n) && hasAtMostOneParent(n) && n.enabled == false) {
+      n = getSingleEntry(n.children);
+    }
+    if (n.enabled) return n;
+    return null;
+  }
+
+  function getNextEnabledOnLine(n) {
+    if (hasSingleChild(n) && hasAtMostOneParent(n)) n = getSingleEntry(n.children);
+    else return null;
+    return getEnabledOnLine(n)
+  }
+
+
+  function getEnabledOnLine(n) {
+    while (hasSingleChild(n) && hasAtMostOneParent(n) && n.enabled == false) {
+      n = getSingleEntry(n.children);
+    }
+    if (n.enabled) return n;
+    return null;
+  }
+
+  function getLinksView(n) {
+    var linkSet = new Set();
+    n.forEach(n => {
+      if (n.enabled) {
+        n.children.forEach(child => {
+          var enabled_tgt = getEnabledOnLine(child)
+          if (enabled_tgt != null) linkSet.add(getLink(n, enabled_tgt))
+        });
+      }
+    });
+    return Array.from(linkSet)
+  }
+
+  function getLink(source, target) {
+    var link = new Object();
+    link.source = source.id;
+    link.target = target.id;
+    return link
+  }
+
 
 }
