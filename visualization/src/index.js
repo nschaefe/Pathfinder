@@ -1,6 +1,7 @@
 import { getData } from "./drill.js";
 import { render } from "./graph.js";
 
+
 getData(f)
 function f(data) {
     var node_map = new Map();
@@ -16,127 +17,100 @@ function f(data) {
         var sink = parseTrace(w_trace, node_map, id)
         sink.sink = true
 
-        var r_trace = JSON.parse(detect.reader_stacktrace)
-        r_trace = r_trace.reverse()
-        r_trace.push(detect.location)
-        sink = parseTrace(r_trace, node_map, id)
+        // var r_trace = JSON.parse(detect.reader_stacktrace)
+        // r_trace = r_trace.reverse()
+        // r_trace.push(detect.location)
+        // sink = parseTrace(r_trace, node_map, id)
 
     }
     var nodes = Array.from(node_map.values());
-    nodes = shrinkStraightPaths(nodes)
+    shrinkStraightPaths(nodes)
 
     //console.log(JSON.stringify(nodes))
     //console.log(JSON.stringify(links))
-
-    // for (var i = 0; i < nodes.length; i++) {
-    //     var n = nodes[i]
-    //     var b = Math.random() >= 0.5;
-    //     n.enabled = b
-    // }
-
     var data = new Object();
-    data.nodes = nodes
-    data.links = getLinks(nodes)
+    data.nodes = nodes.filter(d => { return d.enabled })
+    data.links = getLinksView(data.nodes)
     render(data)
 }
 
 
 function shrinkStraightPaths(nodes) {
-    var removedNodes = new Set()
     for (var i = 0; i < nodes.length; i++) {
         var n = nodes[i]
-        if (n.children != null && n.children.size == 1) {
-            var next = getSingleEntry(n.children)
-            if (next.children != null && next.children.size == 1) {
-                n.children = new Set([getSingleEntry(next.children)])
-                removedNodes.add(next)
-                i--
+        if (!n.enabled) continue;
+
+        var next = getNextEnabledOnLine(n)
+        if (next != null) {
+            var next_next = getNextEnabledOnLine(next)
+            if (next_next != null) {
+                next.enabled = false
+                i--;
             }
         }
     }
 
-    var dd = new Set()
-    for (var i = 0; i < nodes.length; i++) {
-        var n = nodes[i]
-        if (n.root) dd.add(n)
-        if (n.children != null)
-            n.children.forEach(child => {
-                dd.add(child)
-            });
-    }
-    return Array.from(dd)
+}
+
+function hasSingleChild(n) {
+    return n.children.size == 1
+}
+function hasAtMostOneParent(n) {
+    return n.parents.size <= 1
 }
 
 function getSingleEntry(set) {
     return set.values().next().value;
 }
 
-function nextEnabledOnLine(n) {
-    while (n.enabled == false && n.children != null && n.children.length == 1) {
-        n = n.children[0]
+function getEnabledOnLine(n) {
+    while (hasSingleChild(n) && hasAtMostOneParent(n) && n.enabled == false) {
+        n = getSingleEntry(n.children);
     }
-    return n
-
+    if (n.enabled) return n;
+    return null;
 }
 
-function getLinks(n) {
+function getNextEnabledOnLine(n) {
+    if (hasSingleChild(n) && hasAtMostOneParent(n)) n = getSingleEntry(n.children);
+    else return null;
+    return getEnabledOnLine(n)
+}
+
+function getLinksView(n) {
     var linkSet = new Set();
     n.forEach(n => {
-        if (n.children != null) {
-            n.children.forEach(tgt => {
-                linkSet.add(getLink(n, tgt))
+        if (n.enabled) {
+            n.children.forEach(child => {
+                var enabled_tgt = getEnabledOnLine(child)
+                if (enabled_tgt != null) linkSet.add(getLink(n, enabled_tgt))
             });
         }
     });
     return Array.from(linkSet)
 }
 
-// function shrinkStraightPaths(nodes) {
-//     for (var i = 0; i < nodes.length; i++) {
-//         var n = nextEnabledOnLine(nodes[i])
-//         if (n.children != null && n.children.length == 1) {
-//             var next = nextEnabledOnLine(n.children[0])
-//             if (next.children != null && next.children.length == 1) {
-//                 next.enabled = false
-//                 i--
-//             }
-//         }
-//     }
-// }
-
-// function nextEnabledOnLine(n) {
-//     while (n.enabled == false && n.children != null && n.children.length == 1) {
-//         n = n.children[0]
-//     }
-//     return n
-
-// }
-
-
 function parseTrace(trace, node_map, id) {
     var source = null
     for (var i = 0; i < trace.length; i++) {
 
         var entry
-        if (i != trace.length - 1) // last is detection, not part of stacktrace
-            entry = getName(trace[i])
-        else
-            entry = trace[i]
+        //last is detection, not part of stacktrace
+        if (i != trace.length - 1) entry = getName(trace[i])
+        else entry = trace[i]
 
         // get node if existant
         var target = node_map.get(entry)
         if (target == null) {
             target = getNode(entry, id.val++)//this.id++ TODO
-            if (source == null)// root
-                target.root = true
+            if (source == null) target.root = true
             node_map.set(entry, target)
         }
 
         //link source to target
         if (source != null) {
-            if (source.children == null)
-                source.children = new Set()
             source.children.add(target)
+            target.parents.add(source)
         }
         source = target
         target = null
@@ -167,6 +141,8 @@ function getNode(name, id) {
     node.id = id
     node.name = name;
     node.enabled = true;
+    node.children = new Set()
+    node.parents = new Set()
     return node
 }
 

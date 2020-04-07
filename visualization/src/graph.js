@@ -1,4 +1,5 @@
 
+import * as AA from "./colors.js";
 export function render(data) {
 
   // set the dimensions and margins of the graph
@@ -6,6 +7,7 @@ export function render(data) {
     width = screen.width - margin.left - margin.right,
     height = screen.height - margin.top - margin.bottom;
   var node_radius = 5
+  var node_diameter = 2 * node_radius
 
   // append the svg object to the body of the page
   var div = d3.select("#viz")
@@ -24,17 +26,16 @@ export function render(data) {
     .style("z-index", "10")
 
 
-  //TODO
   svg.append("svg:defs").append("svg:marker")
     .attr("id", "triangle")
-    .attr("refX", 15)
-    .attr("refY", -1.5)
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
+    .attr("refX", 0.5)
+    .attr("refY", 2.5)
+    .attr("markerWidth", 5)
+    .attr("markerHeight", 5)
     .attr("orient", "auto")
     .append("path")
-    .attr("d", "M 0 -5 10 10")
-    .style("stroke", "black");
+    .attr("d", "M 0 0 L 5 2.5 L 0 5 z")
+    .style("fill", "#4f4f4f");
 
   // Initialize the links
   var link = svg
@@ -60,6 +61,7 @@ export function render(data) {
 
   update()
 
+
   function update() {
 
     link = link.data(data.links)
@@ -67,12 +69,15 @@ export function render(data) {
     link = link
       .enter().append("line")
       .attr("class", "link")
-      .style("stroke", "#aaa").merge(link);
+      .style("stroke", "#4f4f4f")
+      .attr("marker-end", "url(#triangle)")
+      .merge(link);
 
     node = node.data(data.nodes);
     node.exit().remove();
     node = node.enter()
       .append("g")
+      .attr("class", "node")
       .attr("visibility", (d) => {
         if (d.enabled) return "visible"
         else return "collapse"
@@ -95,15 +100,14 @@ export function render(data) {
       .attr("r", node_radius)
       .style("fill", function (d) {
         if (d.root) return 'red'
-        if (d.sink) return '#4265ff'
-        else return "#69b3a2"
+        if (d.sink) return 'black'
+        else return Colors.getColor(d.name)
       })
       .merge(node)
 
     simulation.restart();
 
   };
-
 
   // This function is run at each iteration of the force algorithm, updating the nodes position.
   function ticked() {
@@ -114,23 +118,31 @@ export function render(data) {
       el.y = boundY(el.y)
     });
 
-    node
-      // .attr("cx", function (d) { return d.x + 6; })
-      // .attr("cy", function (d) { return d.y - 6; });
-      .attr('transform', (d) => `translate(${d.x}, ${d.y})`);
+    node.attr('transform', (d) => `translate(${d.x}, ${d.y})`);
+
 
     link
       .attr("x1", function (d) { return d.source.x; })
       .attr("y1", function (d) { return d.source.y; })
-      .attr("x2", function (d) { return d.target.x; })
-      .attr("y2", function (d) { return d.target.y; });
-
+      .attr("x2", function (d) {
+        return truncateLineToNodeEdge(d.source.x, d.source.y, d.target.x, d.target.y).x
+      })
+      .attr("y2", function (d) {
+        return truncateLineToNodeEdge(d.source.x, d.source.y, d.target.x, d.target.y).y
+      });
   }
 
-  // d3.interval(function () {
-  //   data.nodes = data.nodes.slice(1); // Remove c.
-  //   update();
-  // }, 1000, d3.now());
+  function truncateLineToNodeEdge(x1, y1, x2, y2) {
+    var xVec = x2 - x1
+    var yVec = y2 - y1
+
+    var norm = Math.sqrt(xVec * xVec + yVec * yVec)
+
+    xVec *= 1 - ((node_diameter) / norm)
+    yVec *= 1 - ((node_diameter) / norm)
+
+    return { x: x1 + xVec, y: y1 + yVec }
+  }
 
   function boundX(x) {
     return Math.max(Math.min(x, width), 0 + node_radius * 2);
