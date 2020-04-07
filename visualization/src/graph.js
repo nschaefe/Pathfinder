@@ -22,7 +22,7 @@ export function render(data) {
     .style("visibility", "hidden")
     .style("position", "absolute")
     .style("z-index", "10")
-   
+
 
   //TODO
   svg.append("svg:defs").append("svg:marker")
@@ -39,54 +39,10 @@ export function render(data) {
   // Initialize the links
   var link = svg
     .selectAll("line")
-    .data(data.links)
-    .enter()
-    .append("line")
-    .style("stroke", "#aaa")
-  //  .attr("marker-end", "url(#triangle)");
 
   // Initialize the nodes
   var node = svg
     .selectAll("g")
-    .data(data.nodes)
-    .enter()
-    .append("g")
-    .on("mouseover", function (d) {
-      tooltip
-        .style("visibility", "visible")
-        .html(d.name) //.html(d.name + "<br>" +"aa")
-        .style("left", (d3.event.pageX) + "px")
-        .style("top", (d3.event.pageY - 28) + "px");
-    })
-    .on("mouseout", function (d) {
-      tooltip.style("visibility", "hidden");
-    })
-    .call(d3.drag()
-      .on("start", dragStart)
-      .on("drag", draging)
-      .on("end", dragEnd));
-
-  node.append('circle')
-    .attr("r", node_radius)
-    .attr("visibility", (d) => {
-      if (d.enabled) return "visible"
-      else return "collapse"
-    })
-    .style("fill", function (d) {
-      if (d.root) return 'red'
-      if (d.sink) return '#4265ff'
-      else return "#69b3a2"
-    })
-
-  // Add text to nodes
-  // node.append('text')
-  //   .text(d => "")// d.name)
-  //   .attr('font-weight', 'bold')
-  //   .attr('font-family', 'sans-serif')
-  //   .attr('text-anchor', 'middle')
-  //   .attr('alignment-baseline', 'middle')
-  //   .attr('fill', 'black');
-
 
   // Let's list the force we wanna apply on the network
   var simulation = d3.forceSimulation(data.nodes)                 // Force algorithm is applied to data.nodes
@@ -101,6 +57,53 @@ export function render(data) {
     .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area
     .force("collide", d3.forceCollide().radius(node_radius * 1.5))
     .on("tick", ticked);
+
+  update()
+
+  function update() {
+
+    link = link.data(data.links)
+    link.exit().remove();
+    link = link
+      .enter().append("line")
+      .attr("class", "link")
+      .style("stroke", "#aaa").merge(link);
+
+    node = node.data(data.nodes);
+    node.exit().remove();
+    node = node.enter()
+      .append("g")
+      .attr("visibility", (d) => {
+        if (d.enabled) return "visible"
+        else return "collapse"
+      })
+      .on("mouseover", function (d) {
+        tooltip
+          .style("visibility", "visible")
+          .html(d.name) //.html(d.name + "<br>" +"aa")
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 28) + "px");
+      })
+      .on("mouseout", function (d) {
+        tooltip.style("visibility", "hidden");
+      })
+      .call(d3.drag()
+        .on("start", dragStart)
+        .on("drag", draging)
+        .on("end", dragEnd))
+      .append('circle')
+      .attr("r", node_radius)
+      .style("fill", function (d) {
+        if (d.root) return 'red'
+        if (d.sink) return '#4265ff'
+        else return "#69b3a2"
+      })
+      .merge(node)
+
+    simulation.restart();
+
+  };
+
 
   // This function is run at each iteration of the force algorithm, updating the nodes position.
   function ticked() {
@@ -123,6 +126,11 @@ export function render(data) {
       .attr("y2", function (d) { return d.target.y; });
 
   }
+
+  // d3.interval(function () {
+  //   data.nodes = data.nodes.slice(1); // Remove c.
+  //   update();
+  // }, 1000, d3.now());
 
   function boundX(x) {
     return Math.max(Math.min(x, width), 0 + node_radius * 2);
