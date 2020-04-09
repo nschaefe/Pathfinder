@@ -120,6 +120,8 @@ export function render(full_graph) {
         if (d.data.sink) return 'black'
         else return Colors.getColor(d.data.class)
       })
+      .style("stroke", "black")
+      .style("stroke-width", (d) => canExpand(d) ? 2 : 0)
       .attr('transform', ({ x, y }) => `translate(${x}, ${y})`);
 
   };
@@ -130,6 +132,13 @@ export function render(full_graph) {
         n.parents.forEach(p => p.enabled = true);
       }
     });
+  }
+
+  function canExpand(node) {
+    for (var p of node.data.parents.values()) {
+      if (p.enabled == false) return true;
+    }
+    return false;
   }
 
   function getRoots(nodes) {
