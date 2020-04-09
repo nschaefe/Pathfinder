@@ -5,8 +5,6 @@ import { render } from "./graph.js";
 getData(f)
 function f(data) {
     var node_map = new Map();
-
-
     var id = new Object()
     id.val = 0
     for (var i = 0; i < data.length; i++) {
@@ -38,7 +36,6 @@ function cutAfterLast(trace, end) {
     return trace.slice(0, i)
 }
 
-
 function parseTrace(trace, node_map, id) {
     var source = null
 
@@ -49,7 +46,7 @@ function parseTrace(trace, node_map, id) {
 
         var entry
         //last is detection, not part of stacktrace
-        if (i != trace.length - 1) entry = getName(trace[i]) + '_' + (unif_id++)
+        if (i != trace.length - 1) entry = trace[i] + '_' + (unif_id++)
         else entry = trace[i]
 
         // get node if existant
@@ -72,6 +69,13 @@ function parseTrace(trace, node_map, id) {
 
 }
 
+function getClass(st_el) {
+    var end = st_el.indexOf("(")
+    st_el = st_el.substring(0, end)
+    var names = st_el.split('.')
+    return names[names.length - 2]
+}
+
 function getName(name) {
     var a = name.indexOf(":")
     var b = name.indexOf(")")
@@ -92,10 +96,12 @@ function getName(name) {
 function getNode(name, id) {
     var node = new Object();
     node.id = id
+    node.class = getClass(name)
     node.name = name;
     node.enabled = true;
     node.children = new Set()
     node.parents = new Set()
+    node.viewChildren = new Set()
     return node
 }
 

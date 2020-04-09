@@ -13,23 +13,12 @@ Colors.names = ['#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#00B3E6',
 var colorMap = new Map()
 var colorCounter = 0
 
-Colors.getColor = function (name) {
-    //apapap.class.method + :xx or(akakak.class.method:xx)  
-    cut = name.lastIndexOf(":")//TODO
-    name = name.substr(0, cut)
-    var parts = name.split('.');
-    var className = parts[parts.length - 1];
-    return getUniqueColorFor(className);
-
-}
-
-function getUniqueColorFor(id) {
+Colors.getColor = function (id) {
     var color = colorMap.get(id)
     if (color == null) {
         color = Colors.names[colorCounter]
         colorCounter = (colorCounter + 1) % Colors.names.length
         colorMap.set(id, color);
     }
-    return color
-
+    return color;
 }

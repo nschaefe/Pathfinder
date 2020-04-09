@@ -1,13 +1,11 @@
 import { getColor } from "./colors.js"
 
 export function render(full_graph) {
-  shrinkStraightPaths(full_graph)
 
-  var graphView = getGraphView(full_graph)
   // set the dimensions and margins of the graph
   var margin = { top: 10, right: 30, bottom: 30, left: 40 },
     width = screen.width - margin.left - margin.right,
-    height = screen.height - margin.top - margin.bottom;
+    height = screen.height * 2 - margin.top - margin.bottom;
   var node_radius = 5
   var node_diameter = 2 * node_radius
 
@@ -18,6 +16,8 @@ export function render(full_graph) {
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  // const svgNode = `<svg width=${width} height=${height} viewbox="${-nodeRadius} ${-nodeRadius} ${width + 2 * nodeRadius} ${height + 2 * nodeRadius}"></svg>`
+
 
   //tooltip
   var tooltip = d3.select("#tooltip")
@@ -39,117 +39,117 @@ export function render(full_graph) {
     .attr("d", "M 0 0 L 5 2.5 L 0 5 z")
     .style("fill", "#4f4f4f");
 
-  // Initialize the links
-  var link = svg
-    .selectAll("line")
 
-  // Initialize the nodes
+  shrinkStraightPaths(full_graph)
+  enableParentsOfSinks(full_graph)
+
+  var builder = d3.dagHierarchy()
+  builder = builder.children((d) => {
+    return Array.from(d.viewChildren)
+  })
+
+  // var layout = d3.sugiyama()
+  //   .size([width, height])
+  //   .layering(d3.layeringSimplex())
+  //   .decross(d3.decrossTwoLayer())
+  //   .coord(d3.coordMinCurve())
+
+  // var layout = d3.zherebko()
+  // .size([width, height])
+
+  var layout = d3.sugiyama()
+    .size([width, height])
+    .layering(d3.layeringLongestPath()) // d3.layeringCoffmanGraham()
+    .decross(d3.decrossTwoLayer())
+    .coord(d3.coordVert())
+
   var node = svg
     .selectAll("g")
 
-  // Let's list the force we wanna apply on the network
-  var simulation = d3.forceSimulation(graphView.nodes)                 // Force algorithm is applied to graphView.nodes
-    .force("link", d3.forceLink()                               // This force provides links between nodes
-      .id(function (d) { return d.id; })                     // This provide  the id of a node
-      .links(graphView.links)
-      .distance(node_radius * 2).strength(1)
-      //.iterations(1)
-    )
-    .force("charge", d3.forceManyBody().strength(-50))
-    // This adds repulsion between nodes. Play with the -400 for the repulsion strength
-    .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area
-    .force("collide", d3.forceCollide().radius(node_radius * 1.5))
-    .on("tick", ticked);
+  var link = svg.append('g')
+    .selectAll('path')
+
+  // How to draw edges
+  const line = d3.line()
+    .curve(d3.curveMonotoneX)
+    .x(d => d.x)
+    .y(d => d.y);
 
   update()
 
   function update(alpha = 1) {
 
-    link = link.data(graphView.links)
+    updateLinks(full_graph)
+    var dag = builder(...getRoots(full_graph))
+    layout(dag);
+
+    // Plot edges
+    link = link.data(dag.links())
     link.exit().remove();
     link = link
-      .enter().append("line")
-      .attr("class", "link")
-      .style("stroke", "#4f4f4f")
-      .attr("marker-end", "url(#triangle)")
-      .merge(link);
+      .enter()
+      .append('path')
+      .attr('fill', 'none')
+      .attr('stroke-width', 1)
+      .attr('stroke', 'black')
+      .merge(link)
+      .attr('d', (d) => line(d.data.points));
 
-    node = node.data(graphView.nodes);
+    node = node.data(dag.descendants());
     node.exit().remove();
     node = node.enter()
       .append("g")
       .attr("class", "node")
-      // draging
-      .call(d3.drag()
-        .on("start", dragStart)
-        .on("drag", draging)
-        .on("end", dragEnd))
-      // tooltip
-      .on("mouseover", function (d) {
-        tooltip
-          .style("visibility", "visible")
-          .html(d.name) //.html(d.name + "<br>" +"aa")
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
-      })
+      .append('circle')
+      .attr("r", node_radius)
+
+      .merge(node)
       .on("mouseout", function (d) {
         tooltip.style("visibility", "hidden");
       })
-      // node expanding
       .on("dblclick", function (d) { expand(d) })
-
-      .append('circle')
-      .attr("r", node_radius)
-      .style("fill", function (d) {
-        if (d.root) return 'red'
-        if (d.sink) return 'black'
-        else return Colors.getColor(d.name)
+      .on("mouseover", function (d) {
+        tooltip
+          .style("visibility", "visible")
+          .text(d.data.name) //.html(d.name + "<br>" +"aa")
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - 28) + "px");
       })
-      .merge(node)
+      .style("fill", function (d) {
+        if (d.data.root) return 'red'
+        if (d.data.sink) return 'black'
+        else return Colors.getColor(d.data.class)
+      })
+      .attr('transform', ({ x, y }) => `translate(${x}, ${y})`);
 
-      simulation.nodes(graphView.nodes);
-      simulation.force("link").links(graphView.links)
-      simulation.alpha(alpha).restart(); 
   };
 
-  // This function is run at each iteration of the force algorithm, updating the nodes position.
-  function ticked() {
-
-    // prevent exceeding borders
-    graphView.nodes.forEach(el => {
-      el.x = boundX(el.x)
-      el.y = boundY(el.y)
+  function enableParentsOfSinks(graph) {
+    graph.forEach(n => {
+      if (n.sink) {
+        n.parents.forEach(p => p.enabled = true);
+      }
     });
-
-    node.attr('transform', (d) => `translate(${d.x}, ${d.y})`);
-
-    link
-      .attr("x1", function (d) { return d.source.x; })
-      .attr("y1", function (d) { return d.source.y; })
-      .attr("x2", function (d) {
-        return truncateLineToNodeEdge(d.source.x, d.source.y, d.target.x, d.target.y).x
-      })
-      .attr("y2", function (d) {
-        return truncateLineToNodeEdge(d.source.x, d.source.y, d.target.x, d.target.y).y
-      });
   }
 
-  function truncateLineToNodeEdge(x1, y1, x2, y2) {
-    var xVec = x2 - x1
-    var yVec = y2 - y1
-
-    var norm = Math.sqrt(xVec * xVec + yVec * yVec)
-
-    xVec *= 1 - ((node_diameter) / norm)
-    yVec *= 1 - ((node_diameter) / norm)
-
-    return { x: x1 + xVec, y: y1 + yVec }
+  function getRoots(nodes) {
+    //collect root nodes, make sets to arrays
+    var roots = []
+    nodes.forEach((el) => {
+      if (el.root && el.enabled) roots.push(el)
+    })
+    return roots
   }
 
   function expand(node) {
-    node.parents.forEach((d) => d.enabled = true)
-    graphView = getGraphView(full_graph)
-    update(0.1)
+    var changed = false
+    node.data.parents.forEach((d) => {
+      if (!d.enabled) {
+        changed = true;
+        d.enabled = true
+      }
+    })
+    if (changed) update()
   }
 
   function boundX(x) {
@@ -160,32 +160,8 @@ export function render(full_graph) {
     return Math.max(Math.min(y, height), 0 + node_radius * 2);
   }
 
-  function dragStart(d) {
-    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-    d.fx = d.x;
-    d.fy = d.y;
-  }
-
-  function draging(d) {
-    d.fx = d3.event.x;
-    d.fy = d3.event.y;
-  }
-
-  function dragEnd(d) {
-    if (!d3.event.active) simulation.alphaTarget(0);
-    d.fx = null;
-    d.fy = null;
-  }
 
   ///----------GRAPHVIEW (ENABLE/DISABLE)
-
-  function getGraphView(nodes) {
-    var enabled_nodes = nodes.filter(d => { return d.enabled })
-    return {
-      nodes: enabled_nodes,
-      links: getLinksView(enabled_nodes)
-    }
-  }
 
   function shrinkStraightPaths(nodes) {
     for (var i = 0; i < nodes.length; i++) {
@@ -201,7 +177,6 @@ export function render(full_graph) {
         }
       }
     }
-
   }
 
   function hasSingleChild(n) {
@@ -238,24 +213,16 @@ export function render(full_graph) {
     return null;
   }
 
-  function getLinksView(n) {
-    var linkSet = new Set();
-    n.forEach(n => {
+  function updateLinks(graph) {
+    graph.forEach(n => {
       if (n.enabled) {
+        n.viewChildren = new Set()
         n.children.forEach(child => {
           var enabled_tgt = getEnabledOnLine(child)
-          if (enabled_tgt != null) linkSet.add(getLink(n, enabled_tgt))
+          if (enabled_tgt != null) n.viewChildren.add(enabled_tgt)
         });
       }
     });
-    return Array.from(linkSet)
-  }
-
-  function getLink(source, target) {
-    var link = new Object();
-    link.source = source.id;
-    link.target = target.id;
-    return link
   }
 
   function printArray(arr) {
