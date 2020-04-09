@@ -12,6 +12,7 @@ function f(data) {
     for (var i = 0; i < data.length; i++) {
         var detect = data[i]
         var w_trace = JSON.parse(detect.writer_stacktrace)
+        w_trace = cutAfterLast(w_trace, "") //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
         w_trace = w_trace.reverse()
         w_trace.push(detect.location)
         var sink = parseTrace(w_trace, node_map, id)
@@ -24,7 +25,6 @@ function f(data) {
 
     }
     var nodes = Array.from(node_map.values());
-   
 
     //console.log(JSON.stringify(nodes))
     //console.log(JSON.stringify(links))
@@ -32,15 +32,24 @@ function f(data) {
     render(nodes)
 }
 
+function cutAfterLast(trace, end) {
+    var i = trace.lastIndexOf(end)
+    if (i < 0) return trace
+    return trace.slice(0, i)
+}
 
 
 function parseTrace(trace, node_map, id) {
     var source = null
+
+    //is used to avoid recursion loops, count for every element, 
+    //elements are merged if they appear in the same order in different stacktraces
+    var unif_id = 0;
     for (var i = 0; i < trace.length; i++) {
 
         var entry
         //last is detection, not part of stacktrace
-        if (i != trace.length - 1) entry = getName(trace[i])
+        if (i != trace.length - 1) entry = getName(trace[i]) + '_' + (unif_id++)
         else entry = trace[i]
 
         // get node if existant

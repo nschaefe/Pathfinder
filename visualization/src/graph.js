@@ -52,8 +52,8 @@ export function render(full_graph) {
     .force("link", d3.forceLink()                               // This force provides links between nodes
       .id(function (d) { return d.id; })                     // This provide  the id of a node
       .links(graphView.links)
-      .distance(node_radius * 3).strength(2)
-      .iterations(1)
+      .distance(node_radius * 2).strength(1)
+      //.iterations(1)
     )
     .force("charge", d3.forceManyBody().strength(-50))
     // This adds repulsion between nodes. Play with the -400 for the repulsion strength
@@ -62,7 +62,6 @@ export function render(full_graph) {
     .on("tick", ticked);
 
   update()
-
 
   function update(alpha = 1) {
 
@@ -259,5 +258,14 @@ export function render(full_graph) {
     return link
   }
 
+  function printArray(arr) {
+    var ss = "[ "
+    for (var i = 0; i < arr.length; i++) {
+      var el = arr[i]
+      ss += "[\"" + el.source + "\",\"" + el.target + "\"],"
+    }
+    ss += "]"
+    console.log(ss)
+  }
 
 }
