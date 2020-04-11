@@ -10,7 +10,7 @@ function f(data) {
     for (var i = 0; i < data.length; i++) {
         var detect = data[i]
         var w_trace = JSON.parse(detect.writer_stacktrace)
-        w_trace = cutAfterLast(w_trace, "") //SET THIS TO STARTING POINT E.G 
+        w_trace = cutAfterLast(w_trace, "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)") //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
         w_trace = w_trace.reverse()
         w_trace.push(detect.location)
         var sink = parseTrace(w_trace, node_map, id, true)

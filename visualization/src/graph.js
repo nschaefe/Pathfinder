@@ -60,6 +60,7 @@ export function render(full_graph) {
 
   var layout = d3.sugiyama()
     .size([width, height])
+    //.nodeSize([node_diameter,node_diameter])
     .layering(d3.layeringLongestPath()) // d3.layeringCoffmanGraham()
     .decross(d3.decrossTwoLayer())
     .coord(d3.coordVert())
@@ -76,55 +77,93 @@ export function render(full_graph) {
     .x(d => d.x)
     .y(d => d.y);
 
+  var dag;
+
   update()
+
 
   function update(alpha = 1) {
 
-    updateLinks(full_graph)
-    var dag = builder(...getRoots(full_graph))
-    layout(dag);
+    updateData()
+    updateView()
 
-    // Plot edges
-    link = link.data(dag.links())
-    link.exit().remove();
-    link = link
-      .enter()
-      .append('path')
-      .attr('fill', 'none')
-      .attr('stroke-width', 1)
-      .attr('stroke', 'black')
-      .merge(link)
-      .attr('d', (d) => line(d.data.points));
+    function updateData() {
+      updateLinks(full_graph)
+      dag = builder(...getRoots(full_graph))
+      layout(dag);
+    }
 
-    node = node.data(dag.descendants());
-    node.exit().remove();
-    node = node.enter()
-      .append("g")
-      .attr("class", "node")
-      .append('circle')
-      .attr("r", node_radius)
+    function updateView() {
 
-      .merge(node)
-      .on("mouseout", function (d) {
-        tooltip.style("visibility", "hidden");
-      })
-      .on("dblclick", function (d) { expand(d) })
-      .on("mouseover", function (d) {
-        tooltip
-          .style("visibility", "visible")
-          .text(d.data.name) //.html(d.name + "<br>" +"aa")
-          .style("left", (d3.event.pageX) + "px")
-          .style("top", (d3.event.pageY - 28) + "px");
-      })
-      .style("fill", function (d) {
-        if (d.data.root) return 'red'
-        if (d.data.sink) return 'black'
-        else return Colors.getColor(d.data.class)
-      })
-      .style("stroke", "black")
-      .style("stroke-width", (d) => canExpand(d) ? 2 : 0)
-      .attr('transform', ({ x, y }) => `translate(${x}, ${y})`);
+      // Plot edges
+      link = link.data(dag.links())
+        .attr('stroke', (d) => {
+          if (d.target.highlight) return "red";
+          else return 'black';
+        })
+      link.exit().remove();
+      link = link
+        .enter()
+        .append('path')
+        .attr("class", "link")
+        .attr('fill', 'none')
+        .attr('stroke-width', 2)
+        .attr('stroke', (d) => {
+          if (d.target.highlight) return "red";
+          else return 'black';
+        })
+        .merge(link)
+        .attr('d', (d) => line(d.data.points));
 
+      node = node.data(dag.descendants());
+      node.exit().remove();
+      node = node.enter()
+        .append("g")
+        .attr("class", "node")
+        .append('circle')
+        .attr("r", node_radius)
+
+        .merge(node)
+        .on("dblclick", function (d) { expand(d) })
+        .on("click", function (d) {
+          if (d.toggled) {
+            d.highlight = false
+            d.toggled = false
+          }
+          else {
+            d.highlight = true;
+            d.toggled = true
+          }
+          updateView();
+        })
+        .on("mouseover", function (d) {
+          tooltip
+            .style("visibility", "visible")
+            .text(d.data.name) //.html(d.name + "<br>" +"aa")
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+
+          if (!d.toggled) {
+            d.highlight = true
+            updateView();
+          }
+        })
+        .on("mouseout", function (d) {
+          tooltip.style("visibility", "hidden");
+          if (!d.toggled) {
+            d.highlight = false
+            updateView();
+          }
+        })
+        .style("fill", function (d) {
+          if (d.data.root) return 'red'
+          if (d.data.sink) return 'black'
+          else return Colors.getColor(d.data.class)
+        })
+        .style("stroke", "black")
+        .style("stroke-width", (d) => canExpand(d) ? 2 : 0)
+        .attr('transform', ({ x, y }) => `translate(${x}, ${y})`);
+    }
   };
 
   function enableParentsOfSinks(graph) {
