@@ -10,16 +10,16 @@ function f(data) {
     for (var i = 0; i < data.length; i++) {
         var detect = data[i]
         var w_trace = JSON.parse(detect.writer_stacktrace)
-        w_trace = cutAfterLast(w_trace, "") //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
+        w_trace = cutAfterLast(w_trace, "") //SET THIS TO STARTING POINT E.G 
         w_trace = w_trace.reverse()
         w_trace.push(detect.location)
-        var sink = parseTrace(w_trace, node_map, id)
+        var sink = parseTrace(w_trace, node_map, id, true)
         sink.sink = true
 
-        // var r_trace = JSON.parse(detect.reader_stacktrace)
-        // r_trace = r_trace.reverse()
-        // r_trace.push(detect.location)
-        // sink = parseTrace(r_trace, node_map, id)
+        var r_trace = JSON.parse(detect.reader_stacktrace)
+        r_trace = r_trace.reverse()
+        r_trace.push(detect.location)
+        sink = parseTrace(r_trace, node_map, id, false)
 
     }
     var nodes = Array.from(node_map.values());
@@ -36,9 +36,9 @@ function cutAfterLast(trace, end) {
     return trace.slice(0, i)
 }
 
-function parseTrace(trace, node_map, id) {
+function parseTrace(trace, node_map, id, isWriter) {
     var source = null
-
+    var postfix = isWriter ? "" : "R"
     //is used to avoid recursion loops, count for every element, 
     //elements are merged if they appear in the same order in different stacktraces
     var unif_id = 0;
@@ -46,13 +46,13 @@ function parseTrace(trace, node_map, id) {
 
         var entry
         //last is detection, not part of stacktrace
-        if (i != trace.length - 1) entry = trace[i] + '_' + (unif_id++)
+        if (i != trace.length - 1) entry = trace[i] + '_' + (unif_id++) + postfix
         else entry = trace[i]
 
         // get node if existant
         var target = node_map.get(entry)
         if (target == null) {
-            target = getNode(entry, id.val++)//this.id++ TODO
+            target = getNode(entry, id.val++, isWriter)//this.id++ TODO
             if (source == null) target.root = true
             node_map.set(entry, target)
         }
@@ -93,7 +93,7 @@ function getName(name) {
 
 }
 
-function getNode(name, id) {
+function getNode(name, id, isWriter) {
     var node = new Object();
     node.id = id
     node.class = getClass(name)
@@ -102,6 +102,7 @@ function getNode(name, id) {
     node.children = new Set()
     node.parents = new Set()
     node.viewChildren = new Set()
+    node.isWriter = isWriter
     return node
 }
 

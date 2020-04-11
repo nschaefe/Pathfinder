@@ -4,7 +4,7 @@ export function render(full_graph) {
 
   // set the dimensions and margins of the graph
   var margin = { top: 10, right: 30, bottom: 30, left: 40 },
-    width = screen.width - margin.left - margin.right,
+    width = screen.width * 2 - margin.left - margin.right,
     height = screen.height * 2 - margin.top - margin.bottom;
   var node_radius = 5
   var node_diameter = 2 * node_radius
@@ -42,6 +42,7 @@ export function render(full_graph) {
 
   shrinkStraightPaths(full_graph)
   enableParentsOfSinks(full_graph)
+  disableReaderTraces(full_graph)
 
   var builder = d3.dagHierarchy()
   builder = builder.children((d) => {
@@ -134,6 +135,12 @@ export function render(full_graph) {
     });
   }
 
+  function disableReaderTraces(graph) {
+    graph.forEach(n => {
+      if (!n.isWriter) n.enabled = false
+    });
+  }
+
   function canExpand(node) {
     for (var p of node.data.parents.values()) {
       if (p.enabled == false) return true;
@@ -152,13 +159,38 @@ export function render(full_graph) {
 
   function expand(node) {
     var changed = false
-    node.data.parents.forEach((d) => {
-      if (!d.enabled) {
-        changed = true;
+
+    node = node.data
+    if (node.sink) {
+      expandReaderTrace(node);
+      changed = true
+    }
+    else {
+      node.parents.forEach((d) => {
+        if (!d.enabled) {
+          changed = true;
+          d.enabled = true
+        }
+      })
+    }
+    if (changed) update()
+  }
+
+  function expandReaderTrace(sink) {
+    var enabledNodes = []
+    expandReaderTraceH(sink, enabledNodes)
+    shrinkStraightPaths(enabledNodes)
+    sink.parents.forEach(p => p.enabled = true);
+  }
+
+  function expandReaderTraceH(node, enabledNodes) {
+    node.parents.forEach((d) => {
+      if (!d.isWriter) {
         d.enabled = true
+        enabledNodes.push(d)
+        expandReaderTraceH(d, enabledNodes)
       }
     })
-    if (changed) update()
   }
 
   function boundX(x) {
