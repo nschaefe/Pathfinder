@@ -157,12 +157,18 @@ export function render(full_graph) {
     return roots
   }
 
+  function disableAll(graph) {
+    graph.forEach((el) => {
+      el.enabled = false
+    })
+  }
+
   function expand(node) {
     var changed = false
 
     node = node.data
     if (node.sink) {
-      expandReaderTrace(node);
+      expandForSink(node);
       changed = true
     }
     else {
@@ -176,20 +182,20 @@ export function render(full_graph) {
     if (changed) update()
   }
 
-  function expandReaderTrace(sink) {
+  function expandForSink(sink) {
     var enabledNodes = []
-    expandReaderTraceH(sink, enabledNodes)
+    disableAll(full_graph)
+    sink.enabled = true
+    expandParentsRecursive(sink, enabledNodes)
     shrinkStraightPaths(enabledNodes)
     sink.parents.forEach(p => p.enabled = true);
   }
 
-  function expandReaderTraceH(node, enabledNodes) {
+  function expandParentsRecursive(node, enabledNodes) {
     node.parents.forEach((d) => {
-      if (!d.isWriter) {
-        d.enabled = true
-        enabledNodes.push(d)
-        expandReaderTraceH(d, enabledNodes)
-      }
+      d.enabled = true
+      enabledNodes.push(d)
+      expandParentsRecursive(d, enabledNodes)
     })
   }
 
