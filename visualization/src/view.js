@@ -114,7 +114,7 @@ export function render(full_graph) {
           else return 'black';
         })
         .merge(link)
-        .attr('d', (d) => line(d.data.points));
+        .attr('d', (d) => line(getNode(d).points));
 
       node = node.data(dag.descendants());
       node.exit().remove();
@@ -125,7 +125,7 @@ export function render(full_graph) {
         .attr("r", node_radius)
 
         .merge(node)
-        .on("dblclick", function (d) { expand(d) })
+        .on("dblclick", function (d) { expand(getNode(d)) })
         .on("click", function (d) {
           if (d.toggled) {
             d.highlight = false
@@ -140,9 +140,9 @@ export function render(full_graph) {
         .on("mouseover", function (d) {
           tooltip
             .style("visibility", "visible")
-            .text(d.data.name) //.html(d.name + "<br>" +"aa")
+            .text(getNode(d).name) //.html(d.name + "<br>" +"aa")
             .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - textSize - node_radius*2) + "px");
+            .style("top", (d3.event.pageY - textSize - node_radius * 2) + "px");
 
           if (!d.toggled) {
             d.highlight = true
@@ -157,15 +157,19 @@ export function render(full_graph) {
           }
         })
         .style("fill", function (d) {
-          if (d.data.root) return 'red'
-          if (d.data.sink) return 'black'
-          else return Colors.getColor(d.data.class)
+          if (getNode(d).root) return 'red'
+          if (getNode(d).sink) return 'black'
+          else return Colors.getColor(getNode(d).class)
         })
         .style("stroke", "black")
-        .style("stroke-width", (d) => canExpand(d) ? 2 : 0)
+        .style("stroke-width", (d) => canExpand(getNode(d)) ? 2 : 0)
         .attr('transform', ({ x, y }) => `translate(${x}, ${y})`);
     }
   };
+
+  function getNode(nodeWrapper) {
+    return nodeWrapper.data
+  }
 
   function enableParentsOfSinks(graph) {
     graph.forEach(n => {
@@ -182,7 +186,7 @@ export function render(full_graph) {
   }
 
   function canExpand(node) {
-    for (var p of node.data.parents.values()) {
+    for (var p of node.parents.values()) {
       if (p.enabled == false) return true;
     }
     return false;
@@ -206,7 +210,6 @@ export function render(full_graph) {
   function expand(node) {
     var changed = false
 
-    node = node.data
     if (node.sink) {
       expandForSink(node);
       changed = true

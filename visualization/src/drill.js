@@ -20,8 +20,6 @@ export function getData(callback) {
         if (http.status != 200) {
             console.log("Error", http.statusText);
         }
-        //if (error) throw error;
-        // Do whatever with response
         const result = JSON.parse(http.response).rows
         callback(result)
 
