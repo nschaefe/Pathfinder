@@ -1,5 +1,5 @@
 import { getData } from "./drill.js";
-import { render } from "./graph.js";
+import { render } from "./view.js";
 
 
 getData(f)
