@@ -1,4 +1,5 @@
 import { getColor } from "./colors.js"
+import { Graphs } from "./graph.js";
 
 export function render(full_graph) {
 
@@ -17,7 +18,6 @@ export function render(full_graph) {
     .attr("height", height + margin.top + margin.bottom)
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
   // const svgNode = `<svg width=${width} height=${height} viewbox="${-nodeRadius} ${-nodeRadius} ${width + 2 * nodeRadius} ${height + 2 * nodeRadius}"></svg>`
-
 
   //tooltip
   var tooltip = d3.select("#tooltip")
@@ -41,9 +41,9 @@ export function render(full_graph) {
     .style("fill", "#4f4f4f");
 
 
-  shrinkStraightPaths(full_graph)
-  enableParentsOfSinks(full_graph)
-  disableReaderTraces(full_graph)
+  Graphs.shrinkStraightPaths(full_graph)
+  Graphs.enableParentsOfSinks(full_graph)
+  Graphs.disableReaderTraces(full_graph)
 
   var builder = d3.dagHierarchy()
   builder = builder.children((d) => {
@@ -89,8 +89,8 @@ export function render(full_graph) {
     updateView()
 
     function updateData() {
-      updateLinks(full_graph)
-      dag = builder(...getRoots(full_graph))
+      Graphs.updateLinks(full_graph)
+      dag = builder(...Graphs.getRoots(full_graph))
       layout(dag);
     }
 
@@ -108,6 +108,7 @@ export function render(full_graph) {
         .append('path')
         .attr("class", "link")
         .attr('fill', 'none')
+        //.attr('marker-mid', "url(#triangle)")
         .attr('stroke-width', 2)
         .attr('stroke', (d) => {
           if (d.target.highlight) return "red";
@@ -125,16 +126,12 @@ export function render(full_graph) {
         .attr("r", node_radius)
 
         .merge(node)
-        .on("dblclick", function (d) { expand(getNode(d)) })
+        .on("dblclick", function (d) {
+          var changed = Graphs.expand(getNode(d), full_graph)
+          if (changed) update()
+        })
         .on("click", function (d) {
-          if (d.toggled) {
-            d.highlight = false
-            d.toggled = false
-          }
-          else {
-            d.highlight = true;
-            d.toggled = true
-          }
+          toggleHighlighting(d)
           updateView();
         })
         .on("mouseover", function (d) {
@@ -162,84 +159,24 @@ export function render(full_graph) {
           else return Colors.getColor(getNode(d).class)
         })
         .style("stroke", "black")
-        .style("stroke-width", (d) => canExpand(getNode(d)) ? 2 : 0)
+        .style("stroke-width", (d) => Graphs.canExpand(getNode(d)) ? 2 : 0)
         .attr('transform', ({ x, y }) => `translate(${x}, ${y})`);
     }
   };
 
-  function getNode(nodeWrapper) {
-    return nodeWrapper.data
-  }
-
-  function enableParentsOfSinks(graph) {
-    graph.forEach(n => {
-      if (n.sink) {
-        n.parents.forEach(p => p.enabled = true);
-      }
-    });
-  }
-
-  function disableReaderTraces(graph) {
-    graph.forEach(n => {
-      if (!n.isWriter) n.enabled = false
-    });
-  }
-
-  function canExpand(node) {
-    for (var p of node.parents.values()) {
-      if (p.enabled == false) return true;
-    }
-    return false;
-  }
-
-  function getRoots(nodes) {
-    //collect root nodes, make sets to arrays
-    var roots = []
-    nodes.forEach((el) => {
-      if (el.root && el.enabled) roots.push(el)
-    })
-    return roots
-  }
-
-  function disableAll(graph) {
-    graph.forEach((el) => {
-      el.enabled = false
-    })
-  }
-
-  function expand(node) {
-    var changed = false
-
-    if (node.sink) {
-      expandForSink(node);
-      changed = true
+  function toggleHighlighting(node) {
+    if (node.toggled) {
+      node.highlight = false
+      node.toggled = false
     }
     else {
-      node.parents.forEach((d) => {
-        if (!d.enabled) {
-          changed = true;
-          d.enabled = true
-        }
-      })
+      node.highlight = true;
+      node.toggled = true
     }
-    if (changed) update()
   }
 
-  function expandForSink(sink) {
-    var enabledNodes = []
-    disableAll(full_graph)
-    sink.enabled = true
-    expandParentsRecursive(sink, enabledNodes)
-    shrinkStraightPaths(enabledNodes)
-    sink.parents.forEach(p => p.enabled = true);
-  }
-
-  function expandParentsRecursive(node, enabledNodes) {
-    node.parents.forEach((d) => {
-      d.enabled = true
-      enabledNodes.push(d)
-      expandParentsRecursive(d, enabledNodes)
-    })
+  function getNode(nodeWrapper) {
+    return nodeWrapper.data
   }
 
   function boundX(x) {
@@ -249,80 +186,4 @@ export function render(full_graph) {
   function boundY(y) {
     return Math.max(Math.min(y, height), 0 + node_radius * 2);
   }
-
-
-  ///----------GRAPHVIEW (ENABLE/DISABLE)
-
-  function shrinkStraightPaths(nodes) {
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i]
-      if (!n.enabled) continue;
-
-      var next = getNextEnabledOnLine(n)
-      if (next != null) {
-        var next_next = getNextEnabledOnLine(next)
-        if (next_next != null) {
-          next.enabled = false
-          i--;
-        }
-      }
-    }
-  }
-
-  function hasSingleChild(n) {
-    return n.children.size == 1
-  }
-  function hasAtMostOneParent(n) {
-    return n.parents.size <= 1
-  }
-
-  function getSingleEntry(set) {
-    return set.values().next().value;
-  }
-
-  function getEnabledOnLine(n) {
-    while (hasSingleChild(n) && hasAtMostOneParent(n) && n.enabled == false) {
-      n = getSingleEntry(n.children);
-    }
-    if (n.enabled) return n;
-    return null;
-  }
-
-  function getNextEnabledOnLine(n) {
-    if (hasSingleChild(n) && hasAtMostOneParent(n)) n = getSingleEntry(n.children);
-    else return null;
-    return getEnabledOnLine(n)
-  }
-
-
-  function getEnabledOnLine(n) {
-    while (hasSingleChild(n) && hasAtMostOneParent(n) && n.enabled == false) {
-      n = getSingleEntry(n.children);
-    }
-    if (n.enabled) return n;
-    return null;
-  }
-
-  function updateLinks(graph) {
-    graph.forEach(n => {
-      if (n.enabled) {
-        n.viewChildren = new Set()
-        n.children.forEach(child => {
-          var enabled_tgt = getEnabledOnLine(child)
-          if (enabled_tgt != null) n.viewChildren.add(enabled_tgt)
-        });
-      }
-    });
-  }
-
-  function printArray(arr) {
-    var ss = "[ "
-    for (var i = 0; i < arr.length; i++) {
-      var el = arr[i]
-      ss += "[\"" + el.source + "\",\"" + el.target + "\"],"
-    }
-    ss += "]"
-    console.log(ss)
-  }
-
 }
