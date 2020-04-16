@@ -1,5 +1,6 @@
 package boundarydetection.tracker;
 
+import boundarydetection.tracker.tasks.Tasks;
 import boundarydetection.tracker.util.logging.FileLoggerEngine;
 import boundarydetection.tracker.util.logging.LazyLoggerFactory;
 import boundarydetection.tracker.util.logging.Logger;
@@ -48,11 +49,21 @@ public class AccessTracker {
     }
 
     public static void log(String s) {
+        log(s, "MESSAGE");
+    }
+
+    public static void logEvent(String s) {
+        if (!Tasks.getTask().hasEventID()) return;
+        log(s, "EVENT");
+        Tasks.getTask().incrementEventID();
+    }
+
+    public static void log(String s, String tag) {
         init();
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                Logger.log(s);
+                Logger.log(ReportGenerator.generateMessageJSON(s, tag));
             }
         } finally {
             insideTracker.remove();
@@ -73,6 +84,7 @@ public class AccessTracker {
         try {
             synchronized (AccessTracker.class) {
                 if (!Tasks.hasTask()) return;
+                if (Tasks.getTask().getInheritanceCount() > 0) return;
                 FieldAccessMeta meta = accesses.get(f);
                 if (meta == null) {
                     meta = new FieldAccessMeta();
@@ -105,18 +117,25 @@ public class AccessTracker {
                 if (meta == null) return;
 
                 List<FieldWriter> l = meta.otherWriter();
-                if (l.isEmpty()) return;
                 assert (l.size() <= 1);
+                if (l.isEmpty()) return;
 
-                StringBuilder s = new StringBuilder();
                 FieldWriter writer = l.get(0);
 
+                String eventID = field.getUniqueIdentifier() + meta.getWriteCount();
                 Logger.log(
                         ReportGenerator.generateDetectionReportJSON(epoch,
                                 Thread.currentThread().getId(),
                                 Thread.currentThread().getStackTrace(),
                                 field,
-                                writer, meta));
+                                writer, meta, eventID));
+
+                // Auto inheritance of taskid
+                if (writer.getTask().getInheritanceCount() == 0) {
+                    if (!Tasks.hasTask()) Tasks.startTask(writer.getTask());
+                    else if(!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID())); //TODO report collision
+                    Tasks.getTask().addAsParentEventID(eventID);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -150,7 +169,7 @@ public class AccessTracker {
         }
     }
 
-    static synchronized void startTracking() {
+    public static synchronized void startTracking() {
         enabled = true;
     }
 

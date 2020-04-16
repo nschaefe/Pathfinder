@@ -12,6 +12,8 @@ public final class FieldLocation extends AbstractFieldLocation {
 
     public FieldLocation(String location, Type type, Object parent) {
         super(location, type);
+        // theoretically there can be a collision on the parent reference but this requires the existence of many million
+        // of objects of the same type, what is unlikely especially for a test setup (where the tool is used)
         this.parent = Util.getApproxMemoryAddress(parent);
     }
 
@@ -33,6 +35,11 @@ public final class FieldLocation extends AbstractFieldLocation {
         FieldLocation other = (FieldLocation) o;
         return other.getLocation().equals(getLocation()) &&
                 other.getParentRef() == getParentRef();
+    }
+
+    @Override
+    public String getUniqueIdentifier() {
+        return getLocation()+'_'+getParentRef();
     }
 
     @Override

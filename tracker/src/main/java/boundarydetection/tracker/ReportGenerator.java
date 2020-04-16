@@ -1,5 +1,7 @@
 package boundarydetection.tracker;
 
+import boundarydetection.tracker.tasks.Task;
+import boundarydetection.tracker.tasks.Tasks;
 import boundarydetection.tracker.util.Util;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -18,7 +20,7 @@ public class ReportGenerator {
 
 
     public static String generateDetectionReportJSON(int epoch, long readerThreadID, StackTraceElement[] readerTrace,
-                                                     AbstractFieldLocation loc, FieldWriter w, FieldAccessMeta meta) {
+                                                     AbstractFieldLocation loc, FieldWriter w, FieldAccessMeta meta, String id) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // ByteArrayOutputStream.close has no effect, no closing neccessary
         try {
@@ -26,14 +28,48 @@ public class ReportGenerator {
             g.writeStartObject();
             g.writeNumberField("epoch", epoch);
             g.writeStringField("time", getTime());
-            g.writeStringField("type", "CONCURRENT WRITE/READ DETECTION");
+            g.writeStringField("tag", "CONCURRENT WRITE/READ DETECTION");
             loc.toJSON(g);
             g.writeNumberField("reader_thread_id", readerThreadID);
-            g.writeNumberField("writer_thread_id", w.getId());
+            g.writeNumberField("writer_thread_id", w.getThreadID());
+            g.writeStringField("writer_taskID", w.getTask().getTaskID());
             g.writeNumberField("writer_count", meta.getWriteCount());
             g.writeNumberField("writer_th_clock", w.getClock());
+            g.writeStringField("eventID", id);
             g.writeStringField("reader_stacktrace", Util.toString(readerTrace, CLASS_PREFIX, STACKTRACE_MAX_DEPTH));
             g.writeStringField("writer_stacktrace", Util.toString(w.getStackTrace(), CLASS_PREFIX, STACKTRACE_MAX_DEPTH));
+
+            g.writeEndObject();
+            g.close();
+            return out.toString();
+        } catch (IOException e) {
+            System.err.println("BUG");
+            e.printStackTrace();
+            return "$$BUG";
+        }
+    }
+
+    public static String generateMessageJSON(String message, String tag) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        // ByteArrayOutputStream.close has no effect, no closing neccessary
+        try {
+            JsonGenerator g = factory.createGenerator(out);
+            g.writeStartObject();
+            g.writeStringField("time", getTime());
+            g.writeStringField("tag", tag);
+            g.writeStringField("text", message);
+
+            if (Tasks.hasTask()) {
+                Task t = Tasks.getTask();
+                g.writeStringField("taskID", t.getTaskID());
+                g.writeNumberField("inheritanceCount", t.getInheritanceCount());
+                g.writeArrayFieldStart("parentEventID");
+                for (String e : t.getParentEventIDs()) {
+                    g.writeString(e);
+                }
+                g.writeEndArray();
+                g.writeStringField("eventID",t.getEventID());
+            }
             g.writeEndObject();
             g.close();
             return out.toString();
@@ -60,7 +96,7 @@ public class ReportGenerator {
         s.append("----------------");
         s.append(System.lineSeparator());
         s.append("Writer");
-        s.append("(" + w.getId() + ")");
+        s.append("(" + w.getThreadID() + ")");
         s.append(" trace:");
         s.append(System.lineSeparator());
         s.append(Util.toString(w.getStackTrace()));
