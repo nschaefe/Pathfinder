@@ -25,6 +25,7 @@ public class AccessTracker {
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
     private static int epoch = 0;
     private static volatile boolean enabled = false;
+    private static volatile boolean eventLoggingEnabled = true;
 
     private static void init() {
         synchronized (initLock) {
@@ -49,27 +50,38 @@ public class AccessTracker {
         Logger.setLogger(new StreamLoggerEngine(s));
     }
 
-    public static void log(String s) {
-        log(s, "MESSAGE");
-    }
-
     public static void logEvent(String s) {
-        if (!Tasks.getTask().hasEventID() || Tasks.getTask().getEventCounter() > MAX_EVENT_COUNT) return;
-        log(s, "EVENT");
-        Tasks.getTask().incrementEventID();
-    }
-
-    public static void log(String s, String tag) {
+        if (!enabled || !eventLoggingEnabled) return;
         init();
+
+        if (insideTracker == null || insideTracker.get() != null) return;
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                Logger.log(ReportGenerator.generateMessageJSON(s, tag));
+                if (!Tasks.hasTask() || !Tasks.getTask().hasEventID() || Tasks.getTask().getEventCounter() > MAX_EVENT_COUNT)
+                    return;
+                Logger.log(ReportGenerator.generateMessageJSON(s, "EVENT"));
+                Tasks.getTask().incrementEventID();
             }
         } finally {
             insideTracker.remove();
         }
     }
+
+    public static void log(String s) {
+        init();
+
+        if (insideTracker == null || insideTracker.get() != null) return;
+        insideTracker.set(true);
+        try {
+            synchronized (AccessTracker.class) {
+                Logger.log(ReportGenerator.generateMessageJSON(s, "MESSAGE"));
+            }
+        } finally {
+            insideTracker.remove();
+        }
+    }
+
 
     public static void writeAccess(AbstractFieldLocation f) {
         writeAccess(f, false);
@@ -183,6 +195,14 @@ public class AccessTracker {
             accesses = new HashMap<>(MAP_INIT_SIZE);
             epoch++;
         }
+    }
+
+    public static void enableEventLogging() {
+        eventLoggingEnabled = true;
+    }
+
+    public static void disableEventLogging() {
+        eventLoggingEnabled = false;
     }
 
 

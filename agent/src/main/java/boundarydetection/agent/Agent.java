@@ -153,21 +153,6 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
 
     }
 
-
-    private void replaceArrayCopy(CtClass ctCl) throws CannotCompileException {
-        // invokestatic  #65                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
-        ctCl.instrument(new ExprEditor() {
-
-            public void edit(MethodCall m) throws CannotCompileException {
-                if (m.getClassName().equals("java.lang.System") &&
-                        m.getSignature().equals("(Ljava/lang/Object;ILjava/lang/Object;II)V") &&
-                        m.getMethodName().equals("arraycopy")) {
-                    m.replace(HOOK_CLASS + ".arrayCopy($$);");
-                }
-            }
-        });
-    }
-
     private void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
         if (ctCl.isInterface()) return;
 
@@ -185,7 +170,41 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         conv.replaceFieldWrite(tracker, "writeObject");
         conv.reformatConstructor();
         ctCl.instrument(conv);
+
+        logMethodBeginAsEvent(ctCl);
     }
+
+    public void logMethodBeginAsEvent(CtClass cl) throws CannotCompileException {
+        if (cl.isInterface()) return;
+        CtBehavior[] m = cl.getDeclaredBehaviors();
+        for (CtBehavior b : m) {
+            if (isNative(b) || isAbstract(b)) continue;
+            b.insertBefore(HOOK_CLASS + ".logEvent(\"" + b.getLongName() + "\");"); //TODO caller not contained
+        }
+    }
+
+    public static boolean isNative(CtBehavior method) {
+        return Modifier.isNative(method.getModifiers());
+    }
+
+    public static boolean isAbstract(CtBehavior method) {
+        return Modifier.isAbstract(method.getModifiers());
+    }
+
+    private void replaceArrayCopy(CtClass ctCl) throws CannotCompileException {
+        // invokestatic  #65                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
+        ctCl.instrument(new ExprEditor() {
+
+            public void edit(MethodCall m) throws CannotCompileException {
+                if (m.getClassName().equals("java.lang.System") &&
+                        m.getSignature().equals("(Ljava/lang/Object;ILjava/lang/Object;II)V") &&
+                        m.getMethodName().equals("arraycopy")) {
+                    m.replace(HOOK_CLASS + ".arrayCopy($$);");
+                }
+            }
+        });
+    }
+
 
     public void instClassLoader(CtClass ctCl) throws NotFoundException, CannotCompileException {
         if (logging_enabled) System.out.println("INST: " + ctCl.getName());

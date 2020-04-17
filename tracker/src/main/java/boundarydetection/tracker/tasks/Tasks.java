@@ -10,6 +10,7 @@ public class Tasks {
 
 
     private synchronized static void init() {
+        //TODO performance
         if (task == null) task = new ThreadLocal<>();
         if (pausedTask == null) {
             pausedTask = new ThreadLocal<>();
