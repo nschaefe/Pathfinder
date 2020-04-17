@@ -14,6 +14,7 @@ import java.util.Random;
 public class AccessTracker {
 
     private static final int MAP_INIT_SIZE = 10000;
+    public static volatile int MAX_EVENT_COUNT = 55;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
@@ -53,7 +54,7 @@ public class AccessTracker {
     }
 
     public static void logEvent(String s) {
-        if (!Tasks.getTask().hasEventID()) return;
+        if (!Tasks.getTask().hasEventID() || Tasks.getTask().getEventCounter() > MAX_EVENT_COUNT) return;
         log(s, "EVENT");
         Tasks.getTask().incrementEventID();
     }
@@ -130,11 +131,15 @@ public class AccessTracker {
                                 field,
                                 writer, meta, eventID));
 
-                // Auto inheritance of taskid
+                // Auto inheritance of task
                 if (writer.getTask().getInheritanceCount() == 0) {
                     if (!Tasks.hasTask()) Tasks.startTask(writer.getTask());
-                    else if(!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID())); //TODO report collision
+                    else if (!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID()))
+                        ; //TODO report collision
+                    assert (Tasks.hasTask());
                     Tasks.getTask().addAsParentEventID(eventID);
+                    if (!Tasks.getTask().hasInheritanceLocation(field)) Tasks.getTask().resetEventCounter();
+                    Tasks.getTask().addInheritanceLocation(field);
                 }
             }
         } catch (Exception e) {

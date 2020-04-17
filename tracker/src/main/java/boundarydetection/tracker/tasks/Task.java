@@ -1,7 +1,10 @@
 package boundarydetection.tracker.tasks;
 
+import boundarydetection.tracker.AbstractFieldLocation;
+
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.UUID;
 
 /**
@@ -17,6 +20,11 @@ public class Task {
 
     private Collection<String> parentEventIDs;
 
+    private int eventCounter;
+
+    private Collection<AbstractFieldLocation> taskInheritanceLocation;
+
+
     public Task(Task t) {
         this(t, t.inheritanceCount);
     }
@@ -25,9 +33,14 @@ public class Task {
         //copy construc.
         this.taskID = t.taskID;
         this.inheritanceCount = inheritanceCount;
-        eventIdPrefix = t.eventIdPrefix;
-        eventIDSeqNum = t.eventIDSeqNum;
-        parentEventIDs = new ArrayList<>(t.parentEventIDs);
+        this.eventIdPrefix = t.eventIdPrefix;
+        this.eventIDSeqNum = t.eventIDSeqNum;
+        this.parentEventIDs = new ArrayList<>(t.parentEventIDs);
+        this.eventCounter = t.eventCounter;
+        // shallow copy is enough here, bc field locations are immutable and global by nature.
+        // There can be exist several instances of a location. But they describe the same thing.
+        // If we operate via equals, just knowing one instance is safe.
+        this.taskInheritanceLocation = new HashSet<>(t.taskInheritanceLocation);
     }
 
     public Task(String taskID, int inheritanceCount) {
@@ -36,6 +49,8 @@ public class Task {
         this.parentEventIDs = new ArrayList<>();
         this.eventIdPrefix = null;
         this.eventIDSeqNum = 0;
+        this.eventCounter = 0;
+        this.taskInheritanceLocation = new HashSet<>();
     }
 
     public int getInheritanceCount() {
@@ -44,6 +59,14 @@ public class Task {
 
     public String getTaskID() {
         return taskID;
+    }
+
+    public void addInheritanceLocation(AbstractFieldLocation f) {
+        taskInheritanceLocation.add(f);
+    }
+
+    public boolean hasInheritanceLocation(AbstractFieldLocation f) {
+        return taskInheritanceLocation.contains(f);
     }
 
     //--------------
@@ -56,6 +79,14 @@ public class Task {
         }
     }
 
+    public int getEventCounter() {
+        return eventCounter+1;
+    }
+
+    public void resetEventCounter() {
+        eventCounter = 0;
+    }
+
     public boolean hasEventID() {
         return eventIdPrefix != null;
     }
@@ -64,6 +95,7 @@ public class Task {
         parentEventIDs.clear();
         parentEventIDs.add(getEventID());
         eventIDSeqNum++;
+        eventCounter++;
     }
 
     public String getEventID() {
