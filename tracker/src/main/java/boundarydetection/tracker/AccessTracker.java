@@ -25,7 +25,10 @@ public class AccessTracker {
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
     private static int epoch = 0;
     private static volatile boolean enabled = false;
-    private static volatile boolean eventLoggingEnabled = true;
+
+    private static volatile boolean eventLoggingEnabled = false;
+    private static volatile boolean arrayCopyRedirectEnabled = false;
+
 
     private static void init() {
         synchronized (initLock) {
@@ -96,24 +99,32 @@ public class AccessTracker {
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                if (!Tasks.hasTask()) return;
-                if (Tasks.getTask().getInheritanceCount() > 0) return;
-                FieldAccessMeta meta = accesses.get(f);
-                if (meta == null) {
-                    meta = new FieldAccessMeta();
-                    accesses.put(f, meta);
-                }
-                if (valueIsNull) meta.clearWriters();
-                else {
-                    meta.registerWriter();
-                    //Logger.getLogger().log(f.getLocation() + "\n" + Util.toString(Thread.currentThread().getStackTrace()) + "\n");
-                }
+                writeAccessInner(f, valueIsNull);
             }
         } catch (Exception e) {
             e.printStackTrace();
             Logger.log(e.toString());
         } finally {
             insideTracker.remove();
+        }
+    }
+
+    public static void writeAccessInner(AbstractFieldLocation f) {
+        writeAccessInner(f, false);
+    }
+
+    private static void writeAccessInner(AbstractFieldLocation field, boolean valueIsNull) {
+        if (!Tasks.hasTask()) return;
+        if (Tasks.getTask().getInheritanceCount() > 0) return;
+        FieldAccessMeta meta = accesses.get(field);
+        if (meta == null) {
+            meta = new FieldAccessMeta();
+            accesses.put(field, meta);
+        }
+        if (valueIsNull) meta.clearWriters();
+        else {
+            meta.registerWriter();
+            //Logger.getLogger().log(f.getLocation() + "\n" + Util.toString(Thread.currentThread().getStackTrace()) + "\n");
         }
     }
 
@@ -126,39 +137,43 @@ public class AccessTracker {
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                FieldAccessMeta meta = accesses.get(field);
-                if (meta == null) return;
-
-                List<FieldWriter> l = meta.otherWriter();
-                assert (l.size() <= 1);
-                if (l.isEmpty()) return;
-
-                FieldWriter writer = l.get(0);
-
-                String eventID = field.getUniqueIdentifier() + meta.getWriteCount();
-                Logger.log(
-                        ReportGenerator.generateDetectionReportJSON(epoch,
-                                Thread.currentThread().getId(),
-                                Thread.currentThread().getStackTrace(),
-                                field,
-                                writer, meta, eventID));
-
-                // Auto inheritance of task
-                if (writer.getTask().getInheritanceCount() == 0) {
-                    if (!Tasks.hasTask()) Tasks.startTask(writer.getTask());
-                    else if (!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID()))
-                        ; //TODO report collision
-                    assert (Tasks.hasTask());
-                    Tasks.getTask().addAsParentEventID(eventID);
-                    if (!Tasks.getTask().hasInheritanceLocation(field)) Tasks.getTask().resetEventCounter();
-                    Tasks.getTask().addInheritanceLocation(field);
-                }
+                readAccessInner(field);
             }
         } catch (Exception e) {
             e.printStackTrace();
             Logger.log(e.toString());
         } finally {
             insideTracker.remove();
+        }
+    }
+
+    private static void readAccessInner(AbstractFieldLocation field) {
+        FieldAccessMeta meta = accesses.get(field);
+        if (meta == null) return;
+
+        List<FieldWriter> l = meta.otherWriter();
+        assert (l.size() <= 1);
+        if (l.isEmpty()) return;
+
+        FieldWriter writer = l.get(0);
+
+        String eventID = field.getUniqueIdentifier() + meta.getWriteCount();
+        Logger.log(
+                ReportGenerator.generateDetectionReportJSON(epoch,
+                        Thread.currentThread().getId(),
+                        Thread.currentThread().getStackTrace(),
+                        field,
+                        writer, meta, eventID));
+
+        // Auto inheritance of task
+        if (writer.getTask().getInheritanceCount() == 0) {
+            if (!Tasks.hasTask()) Tasks.startTask(writer.getTask());
+            else if (!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID()))
+                ; //TODO report collision
+            assert (Tasks.hasTask());
+            Tasks.getTask().addAsParentEventID(eventID);
+            if (!Tasks.getTask().hasInheritanceLocation(field)) Tasks.getTask().resetEventCounter();
+            Tasks.getTask().addInheritanceLocation(field);
         }
     }
 
@@ -212,17 +227,40 @@ public class AccessTracker {
     public static void arrayCopy(Object src, int srcPos,
                                  Object dest, int destPos,
                                  int length) {
+        // TODO this strategy is incomplete and not really effective, we only track array copies under a running task
+        // and do not inherit the old writer.
+        // array copy is omnipresent but is rather unlikely and nondeterministic under a running task.
+        // the results contain only about two entries out of >2000
         System.arraycopy(src, srcPos, dest, destPos, length);
+        if (!arrayCopyRedirectEnabled) return;
+        if (!(src instanceof Object[])) return;
 
+        if (!enabled) return;
+        init();
+
+        // To break the recursion; NULL check is neccessary
+        if (insideTracker == null || insideTracker.get() != null) return;
+        insideTracker.set(true);
+        try {
+            synchronized (AccessTracker.class) {
+                if (!Tasks.hasTask()) return;
+
+                Class sc = Object[].class;
+                int srcEnd = srcPos + length;
+                for (int i = srcPos; i < srcEnd; i++) readAccessInner(new ArrayFieldLocation(sc, src, i));
+
+                Class dc = Object[].class;
+                int destEnd = destPos + length;
+                for (int i = destPos; i < destEnd; i++) writeAccessInner(new ArrayFieldLocation(dc, dest, i));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Logger.log(e.toString());
+        } finally {
+            insideTracker.remove();
+        }
         //TODO overtake old writers?
 
-        Class sc = Object[].class;
-        int srcEnd = srcPos + length;
-        for (int i = srcPos; i < srcEnd; i++) readAccess(new ArrayFieldLocation(sc, src, i));
-
-        Class dc = Object[].class;
-        int destEnd = destPos + length;
-        for (int i = destPos; i < destEnd; i++) writeAccess(new ArrayFieldLocation(dc, dest, i));
     }
 
     public static void readObjectArrayField(Object field, String location) {

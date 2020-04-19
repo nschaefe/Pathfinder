@@ -9,12 +9,18 @@ public class Tasks {
     private static volatile ThreadLocal<Integer> pausedTaskCounter;
 
 
-    private synchronized static void init() {
-        //TODO performance
-        if (task == null) task = new ThreadLocal<>();
-        if (pausedTask == null) {
-            pausedTask = new ThreadLocal<>();
-            pausedTaskCounter = new ThreadLocal<>();
+    private static volatile boolean b = false;
+    private static void init() {
+        if (b) return;
+        synchronized (Tasks.class) {
+            if (!b) {
+                if (task == null) task = new ThreadLocal<>();
+                if (pausedTask == null) {
+                    pausedTask = new ThreadLocal<>();
+                    pausedTaskCounter = new ThreadLocal<>();
+                }
+                b = true;
+            }
         }
     }
 

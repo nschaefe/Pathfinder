@@ -15,8 +15,10 @@ public class TestArrayStretching extends TestBase {
         list = new ArrayList(5);
     }
 
-    @Test
+
     public void arrayListCapacityExceed() throws InterruptedException {
+        //TODO array copy redirect is disabled, test is currentyl not supported
+
         Thread t1 = new Thread(new Runnable() {
             @Override
             public void run() {
