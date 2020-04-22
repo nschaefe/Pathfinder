@@ -3,18 +3,24 @@ export var Graphs = new Graph()
 function Graph() {
 }
 
-Graphs.parseDAG = function (data, startEntry = "") {
+Graphs.parseDAG = function (dets, events, startEntry = "") {
     var node_map = new Map();
     var id = new Object()
+    var depthLimit = 25
     id.val = 0
-    for (var i = 0; i < data.length; i++) {
-        var detect = data[i]
+    for (var i = 0; i < dets.length; i++) {
+        var detect = dets[i]
         var w_trace = JSON.parse(detect.writer_stacktrace)
         w_trace = cutAfterLast(w_trace, startEntry) //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
         w_trace = w_trace.reverse()
-        w_trace.push(detect.location)
+        var s = detect.location + "_" + (detect.parent != null ? "" : detect.reference)
+        w_trace.push(s)
         var sink = parseTrace(w_trace, node_map, id, true)
         sink.sink = true
+
+        //treat detection node
+        sink.eventID = detect.eventID
+        parseEvents(sink, events, node_map, id, depthLimit)
 
         var r_trace = JSON.parse(detect.reader_stacktrace)
         r_trace = r_trace.reverse()
@@ -63,6 +69,70 @@ Graphs.parseDAG = function (data, startEntry = "") {
         return source
 
     }
+
+    var event_map;
+    function parseEvents(root, data, node_map, id, depthLimit) {
+
+        function hashEvents(events) {
+            for (var event of events) {
+                event_map.set(event.eventID, event)
+            }
+        }
+
+        function createChildLinks(events) {
+            for (var event of events) {
+                var parents = JSON.parse(event.parentEventID)
+                for (var parentID of parents) {
+                    var ev_node = event_map.get(parentID)
+                    if (ev_node == null) continue;
+                    if (ev_node.ev_children == null) ev_node.ev_children = new Set()
+                    ev_node.ev_children.add(event)
+                }
+            }
+        }
+
+        function getChildren(ev_node, events) {
+            if (ev_node.ev_children != null) return ev_node.ev_children
+
+            var children = new Array()
+            for (var event of events) {
+                var pp = JSON.parse(event.parentEventID)
+                if (pp.includes(ev_node.eventID)) children.push(event)
+            }
+            return children
+        }
+
+
+        function parseFromSrc(src_node, src_event, data, unif_id = 0) {
+            if (unif_id > depthLimit) return
+            var evID = src_event.eventID
+            var parEvID = src_event.parentEventID
+            var children = getChildren(src_event, data)
+
+            for (var child of children) {
+                var entry = child.text + '_' + 'RE' + '_' + unif_id
+
+                var target = node_map.get(entry)
+                if (target == null) {
+                    target = getNode(entry, id.val++, false)
+                    node_map.set(entry, target)
+                }
+
+                src_node.children.add(target)
+                target.parents.add(src_node)
+
+                parseFromSrc(target, child, data, unif_id + 1)
+            }
+        }
+
+
+        if (event_map == null) {
+            event_map = new Map();
+            hashEvents(data)
+            createChildLinks(data)
+        }
+        parseFromSrc(root, root, data)
+    }
 }
 
 
@@ -94,6 +164,25 @@ Graphs.getRoots = function (nodes) {
         if (el.root && el.enabled) roots.push(el)
     })
     return roots
+}
+
+Graphs.hasCycle = function (nodes) {
+    var roots = Graphs.getRoots(nodes)
+    for (var i = 0; i < roots.length; i++) {
+        var n = roots[i]
+        visitRecursive(n)
+    }
+    return false
+
+    function visitRecursive(n) {
+        for (var child of n.children) {
+            if (child.visited == null) child.visited = new Set()
+            if (child.visited.has(n)) return true;
+            else child.visited.add(n)
+            visitRecursive(child)
+        }
+    }
+
 }
 
 Graphs.shrinkStraightPaths = function (nodes) {
@@ -154,6 +243,7 @@ function expandForSink(sink, graph) {
     disableAll(graph)
     sink.enabled = true
     expandParentsRecursive(sink, enabledNodes)
+    expandChildrenRecursive(sink, enabledNodes)
     Graphs.shrinkStraightPaths(enabledNodes)
     sink.parents.forEach(p => p.enabled = true);
 }
@@ -163,6 +253,14 @@ function expandParentsRecursive(node, enabledNodes) {
         d.enabled = true
         enabledNodes.push(d)
         expandParentsRecursive(d, enabledNodes)
+    })
+}
+
+function expandChildrenRecursive(node, enabledNodes) {
+    node.children.forEach((d) => {
+        d.enabled = true
+        enabledNodes.push(d)
+        expandChildrenRecursive(d, enabledNodes)
     })
 }
 

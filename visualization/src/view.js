@@ -64,7 +64,7 @@ export function render(full_graph) {
     //.nodeSize([node_diameter,node_diameter])
     .layering(d3.layeringLongestPath()) // d3.layeringCoffmanGraham()
     .decross(d3.decrossTwoLayer())
-    .coord(d3.coordVert())
+    .coord(d3.coordVert())//.coordCenter()
 
   var node = svg
     .selectAll("g")
@@ -81,7 +81,6 @@ export function render(full_graph) {
   var dag;
 
   update()
-
 
   function update(alpha = 1) {
 
@@ -109,7 +108,7 @@ export function render(full_graph) {
         .attr("class", "link")
         .attr('fill', 'none')
         //.attr('marker-mid', "url(#triangle)")
-        .attr('stroke-width', 2)
+        .attr('stroke-width', 1)
         .attr('stroke', (d) => {
           if (d.target.highlight) return "red";
           else return 'black';

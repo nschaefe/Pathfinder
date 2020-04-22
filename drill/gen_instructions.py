@@ -61,6 +61,9 @@ def filter_epoch(val):
     global alias
     return "SELECT * FROM " + alias + " WHERE epoch=" + str(val)
 
+def events():
+    global alias
+    return "SELECT * FROM " + alias + " WHERE tag = 'EVENT' "
 
 def with_sql(from_clause, alias):
     return "WITH\n" + alias + " AS (SELECT * FROM " + from_clause + ")"
@@ -104,7 +107,7 @@ def restore_alias():
 
 
 # table
-table = "./tracker_report.json"
+table = "./tracker_report_857234194.json"
 
 # table = "./test.json"
 # namespace
@@ -142,6 +145,11 @@ def workflow_writer(query):
     # query = as_table(query, "writers.json")
     return query
 
+def workflow_events(query):
+    query = concat_sql(query, events())
+    query = end_sql(query)
+    # query = as_table(query, "writers.json")
+    return query
 
 store_alias()
 print(workflow_locations(query) + ";\n")
@@ -152,6 +160,9 @@ print(workflow_writer_chronological(query) + ";\n")
 restore_alias()
 print(as_table("SELECT DISTINCT writer_stacktrace, reader_stacktrace FROM " +
                from_clause+" WHERE location='unknown'", "read_writers.json")+";\n")
+
+restore_alias()
+print(workflow_events(start_sql(from_clause)) + ";\n")
 
 restore_alias()
 print(end_sql(query))
