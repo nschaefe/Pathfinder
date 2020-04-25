@@ -24,7 +24,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
 
         var r_trace = JSON.parse(detect.reader_stacktrace)
         r_trace = r_trace.reverse()
-        r_trace.push(detect.location)
+        r_trace.push(s)
         sink = parseTrace(r_trace, node_map, id, false)
 
     }
@@ -94,7 +94,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         function getChildren(ev_node, events) {
             if (ev_node.ev_children != null) return ev_node.ev_children
 
-            var children = new Array()
+            var children = []
             for (var event of events) {
                 var pp = JSON.parse(event.parentEventID)
                 if (pp.includes(ev_node.eventID)) children.push(event)
@@ -102,39 +102,46 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
             return children
         }
 
+        function parseFromSrc(src_node, src_event, data, unifyID = 0, depthCounter = 0) {
+            // idea: We follow paths as they are identical from the start to remove redundancy
+            // if we process a new event we indroduce a new node
+            // if we lookup a node that that does not belong to the same path, so does not have the last node as parent,
+            // we branch and do not follow this node to avoid crosstalking of paths what results in too high node degrees what looks cluttered and "breaks" the layouting.
+            // (layouting would be zick-zack like). For more information on merge degrees (tried 4 different variants) see documents/records.
 
-        function parseFromSrc(src_node, src_event, data, unif_id = 0) {
-            if (unif_id > depthLimit) return
-            var evID = src_event.eventID
-            var parEvID = src_event.parentEventID
+            if (depthCounter > depthLimit) return
             var children = getChildren(src_event, data)
 
             for (var child of children) {
-                var entry = child.text + '_' + 'RE' + '_' + unif_id
+                var entry = child.text + '_' + 'RE' + '_' + (unifyID)
 
-                var target = node_map.get(entry)
+                var target = node_map.get(entry) // complete fresh path
                 if (target == null) {
-                    target = getNode(entry, id.val++, false)
+                    target = getNode(entry, id.val++, false, src_node)
+                    node_map.set(entry, target)
+                }
+                else if (!src_node.children.has(target)) { // cross talking
+                    unifyID = unifyID + Math.random() // opens subspace for the new branch by changing the numbers behind the comma
+                    var entry = child.text + '_' + 'RE' + '_' + (unifyID)
+                    target = getNode(entry, id.val++, false, src_node)
                     node_map.set(entry, target)
                 }
 
-                src_node.children.add(target)
-                target.parents.add(src_node)
-
-                parseFromSrc(target, child, data, unif_id + 1)
+                parseFromSrc(target, child, data, unifyID + 1, depthCounter + 1)
             }
         }
-
 
         if (event_map == null) {
             event_map = new Map();
             hashEvents(data)
             createChildLinks(data)
         }
-        parseFromSrc(root, root, data)
-    }
-}
+        // by shifting the digits of the id behind the comma: 112 -> 0.112 we create a unique namespace for nodes under this root
+        parseFromSrc(root, root, data, root.id / (numDigits(root.id) ** 10))
 
+    }
+
+}
 
 Graphs.enableParentsOfSinks = function (graph) {
     graph.forEach(n => {
@@ -161,29 +168,57 @@ Graphs.getRoots = function (nodes) {
     //collect root nodes, make sets to arrays
     var roots = []
     nodes.forEach((el) => {
-        if (el.root && el.enabled) roots.push(el)
+        if (el.enabled && el.parents.size == 0) roots.push(el)
     })
     return roots
 }
 
+//TODO node accessors/ work on view
 Graphs.hasCycle = function (nodes) {
     var roots = Graphs.getRoots(nodes)
     for (var i = 0; i < roots.length; i++) {
         var n = roots[i]
-        visitRecursive(n)
+        if (hasCycleInner(n)) return true
     }
     return false
 
-    function visitRecursive(n) {
+    function hasCycleInner(n) {
+        if (n.visited != null) return true
+        n.visited = true;
+
         for (var child of n.children) {
-            if (child.visited == null) child.visited = new Set()
-            if (child.visited.has(n)) return true;
-            else child.visited.add(n)
-            visitRecursive(child)
+            if (hasCycleInner(child)) return true
         }
+        n.visited = null
+        return false
+    }
+}
+
+Graphs.cutCycle = function (nodes) {
+    var roots = Graphs.getRoots(nodes)
+    for (var i = 0; i < roots.length; i++) {
+        var n = roots[i]
+        cutCycleInner(n)
     }
 
+    function cutCycleInner(n) {
+        if (n.visited != null) return true
+        n.visited = true;
+
+        for (var child of n.children) {
+            var cycleEdge = cutCycleInner(child)
+            if (cycleEdge) cutChild(n, child)
+        }
+        n.visited = null
+        return false
+    }
+
+    function cutChild(n, c) {
+        n.cuttedChildren.add(c)
+        n.children.delete(c)
+    }
 }
+
 
 Graphs.shrinkStraightPaths = function (nodes) {
     for (var i = 0; i < nodes.length; i++) {
@@ -244,7 +279,8 @@ function expandForSink(sink, graph) {
     sink.enabled = true
     expandParentsRecursive(sink, enabledNodes)
     expandChildrenRecursive(sink, enabledNodes)
-    Graphs.shrinkStraightPaths(enabledNodes)
+    //Graphs.shrinkStraightPaths(enabledNodes)
+    //enabledNodes.forEach(n => n.textEnabled = true);
     sink.parents.forEach(p => p.enabled = true);
 }
 
@@ -290,7 +326,7 @@ function getNextEnabledOnLine(n) {
 }
 
 
-function getNode(name, id, isWriter) {
+function getNode(name, id, isWriter, parent = null) {
     var node = new Object();
     node.id = id
     node.class = getClass(name)
@@ -299,7 +335,12 @@ function getNode(name, id, isWriter) {
     node.children = new Set()
     node.parents = new Set()
     node.viewChildren = new Set()
+    node.cuttedChildren = new Set()
     node.isWriter = isWriter
+    if (parent != null) {
+        node.parents.add(parent)
+        parent.children.add(node)
+    }
     return node
 }
 
@@ -331,4 +372,8 @@ function getName(name) {
     name += lineNumber
     return name
 
+}
+
+function numDigits(x) {
+    return Math.max(Math.floor(Math.log10(Math.abs(x))), 0) + 1;
 }
