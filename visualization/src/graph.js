@@ -351,10 +351,16 @@ function getLink(source, target) {
     return link
 }
 function getClass(st_el) {
+    // this is a simple heurisitc for now, since names or what is logged will probably change
     var end = st_el.indexOf("(")
-    st_el = st_el.substring(0, end)
+    if (end != -1) st_el = st_el.substring(0, end) // -1 means is a field, does not have brackets
     var names = st_el.split('.')
-    return names[names.length - 2]
+
+    var first = names[names.length - 1].charAt(0);
+    if (first === first.toLowerCase() || end == -1) { // we rely on the convention that classes have big case latter at the start
+        names = names.splice(0, names.length - 1)
+    }
+    return names.join('.')
 }
 
 function getName(name) {
