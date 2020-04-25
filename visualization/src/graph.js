@@ -6,7 +6,7 @@ function Graph() {
 Graphs.parseDAG = function (dets, events, startEntry = "") {
     var node_map = new Map();
     var id = new Object()
-    var depthLimit = 25
+    var depthLimit = 50
     id.val = 0
     for (var i = 0; i < dets.length; i++) {
         var detect = dets[i]
@@ -28,8 +28,13 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         sink = parseTrace(r_trace, node_map, id, false)
 
     }
-    return Array.from(node_map.values());
 
+    var nodes = Array.from(node_map.values());
+
+    // to remove redundancy (e.g. different writes can trigger the same execution on the reader side,
+    // what results in the same event stream several times
+    Graphs.getRoots(nodes).forEach(n => Graphs.mergeEqualPathsRecursive(n))
+    return nodes
 
     function cutAfterLast(trace, end) {
         var i = trace.lastIndexOf(end)
@@ -71,7 +76,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     }
 
     var event_map;
-    function parseEvents(root, data, node_map, id, depthLimit) {
+    function parseEvents(root, eventData, node_map, id, depthLimit) {
 
         function hashEvents(events) {
             for (var event of events) {
@@ -102,44 +107,34 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
             return children
         }
 
-        function parseFromSrc(src_node, src_event, data, unifyID = 0, depthCounter = 0) {
-            // idea: We follow paths as they are identical from the start to remove redundancy
-            // if we process a new event we indroduce a new node
-            // if we lookup a node that that does not belong to the same path, so does not have the last node as parent,
-            // we branch and do not follow this node to avoid crosstalking of paths what results in too high node degrees what looks cluttered and "breaks" the layouting.
-            // (layouting would be zick-zack like). For more information on merge degrees (tried 4 different variants) see documents/records.
-
+        function parseFromSrc(src_node, src_event, data, depthCounter = 0) {
             if (depthCounter > depthLimit) return
             var children = getChildren(src_event, data)
 
             for (var child of children) {
-                var entry = child.text + '_' + 'RE' + '_' + (unifyID)
+                var entry = child.text + '_' + 'RE' + '_' + id.val
 
-                var target = node_map.get(entry) // complete fresh path
+                var target = node_map.get(entry)
                 if (target == null) {
-                    target = getNode(entry, id.val++, false, src_node)
-                    node_map.set(entry, target)
-                }
-                else if (!src_node.children.has(target)) { // cross talking
-                    unifyID = unifyID + Math.random() // opens subspace for the new branch by changing the numbers behind the comma
-                    var entry = child.text + '_' + 'RE' + '_' + (unifyID)
-                    target = getNode(entry, id.val++, false, src_node)
+                    target = getNode(child.text, id.val++, false)
                     node_map.set(entry, target)
                 }
 
-                parseFromSrc(target, child, data, unifyID + 1, depthCounter + 1)
+                src_node.children.add(target)
+                target.parents.add(src_node)
+
+                parseFromSrc(target, child, data, depthCounter + 1)
             }
         }
 
         if (event_map == null) {
             event_map = new Map();
-            hashEvents(data)
-            createChildLinks(data)
+            hashEvents(eventData)
+            createChildLinks(eventData)
         }
-        // by shifting the digits of the id behind the comma: 112 -> 0.112 we create a unique namespace for nodes under this root
-        parseFromSrc(root, root, data, root.id / (numDigits(root.id) ** 10))
-
+        parseFromSrc(root, root, eventData)
     }
+
 
 }
 
@@ -149,6 +144,42 @@ Graphs.enableParentsOfSinks = function (graph) {
             n.parents.forEach(p => p.enabled = true);
         }
     });
+}
+
+Graphs.mergeEqualPathsRecursive = function (node, nodeCompare = (a, b) => a.name.localeCompare(b.name)) {
+    if (node.children.size == 0) return;
+    var children = Array.from(node.children)
+    for (var i = 0; i < children.length; i++) {
+        Graphs.mergeEqualPathsRecursive(children[i])
+    }
+
+    for (var i = 0; i < children.length - 1; i++) { // last one has not partner
+        var child = children[i]
+        if (child == null) continue;
+        for (var d = i + 1; d < children.length; d++) {
+            var child_p = children[d]
+            if (child_p == null) continue;
+            if (equals(child, child_p)) children[d] = null
+        }
+    }
+    node.children = new Set(children.filter(e => e != null))
+
+    function equals(n1, n2) {
+        if (nodeCompare(n1, n2) != 0) return false
+        if (n1.children.size != n2.children.size) return false
+        if (n1.children.size == 0) return true
+
+        var n1_children = Array.from(n1.children)
+        n1_children.sort(nodeCompare)
+
+        var n2_children = Array.from(n2.children)
+        n2_children.sort(nodeCompare)
+
+        for (var i = 0; i < n1_children.length; i++) {
+            if (!equals(n1_children[i], n2_children[i])) return false
+        }
+        return true
+    }
 }
 
 Graphs.disableReaderTraces = function (graph) {
@@ -164,16 +195,20 @@ Graphs.canExpand = function (node) {
     return false;
 }
 
+//TODO make clear working on view or on all
+Graphs.getEnabledRoots = function (nodes) {
+    return Graphs.getRoots(nodes).filter(d => d.enabled)
+}
+
 Graphs.getRoots = function (nodes) {
     //collect root nodes, make sets to arrays
     var roots = []
     nodes.forEach((el) => {
-        if (el.enabled && el.parents.size == 0) roots.push(el)
+        if (el.parents.size == 0) roots.push(el)
     })
     return roots
 }
 
-//TODO node accessors/ work on view
 Graphs.hasCycle = function (nodes) {
     var roots = Graphs.getRoots(nodes)
     for (var i = 0; i < roots.length; i++) {
@@ -325,7 +360,6 @@ function getNextEnabledOnLine(n) {
     return getEnabledOnLine(n)
 }
 
-
 function getNode(name, id, isWriter, parent = null) {
     var node = new Object();
     node.id = id
@@ -344,12 +378,6 @@ function getNode(name, id, isWriter, parent = null) {
     return node
 }
 
-function getLink(source, target) {
-    var link = new Object();
-    link.source = source.id;
-    link.target = target.id;
-    return link
-}
 function getClass(st_el) {
     // this is a simple heurisitc for now, since names or what is logged will probably change
     var end = st_el.indexOf("(")
@@ -363,23 +391,3 @@ function getClass(st_el) {
     return names.join('.')
 }
 
-function getName(name) {
-    var a = name.indexOf(":")
-    var b = name.indexOf(")")
-    var lineNumber = name.substring(a, b)
-
-    var end = name.indexOf("(")
-    name = name.substring(0, end)
-
-    var names = name.split('.')
-    names = names.slice(names.length - 2, names.length);
-    name = names.join('.')
-
-    name += lineNumber
-    return name
-
-}
-
-function numDigits(x) {
-    return Math.max(Math.floor(Math.log10(Math.abs(x))), 0) + 1;
-}

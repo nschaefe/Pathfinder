@@ -93,7 +93,7 @@ export function render(full_graph) {
 
     function updateData() {
       Graphs.updateLinks(full_graph)
-      dag = builder(...Graphs.getRoots(full_graph))
+      dag = builder(...Graphs.getEnabledRoots(full_graph))
       console.log("layouting started... Can take some time")
       layout(dag);
       console.log("layouting finished")
