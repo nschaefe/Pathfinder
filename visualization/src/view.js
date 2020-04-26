@@ -7,7 +7,7 @@ export function render(full_graph) {
   var margin = { top: 10, right: 30, bottom: 30, left: 40 },
     width = screen.width * 2 - margin.left - margin.right,
     height = screen.height * 2 - margin.top - margin.bottom;
-  var node_radius = 5
+  var nodeRadius = 5 // TODO polygons are not dynamic based on radius
   var textSize = 0.01 * height
 
   // append the svg object to the body of the page
@@ -135,7 +135,8 @@ export function render(full_graph) {
       var groupEl = root.append("g")
         .attr("class", "node");
 
-      groupEl.append('circle')
+      groupEl.append('polygon')
+        .style("stroke", "black")
       groupEl.append('text')
       return groupEl
     }
@@ -147,7 +148,7 @@ export function render(full_graph) {
             .style("visibility", "visible")
             .text(getNode(d).name) //.html(d.name + "<br>" +"aa")
             .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - textSize - node_radius * 3) + "px");
+            .style("top", (d3.event.pageY - textSize - nodeRadius * 3) + "px");
 
           if (!d.toggled) {
             d.highlight = true
@@ -171,19 +172,14 @@ export function render(full_graph) {
         });
 
 
-      nodeEl.select('circle')
-        .attr("r", node_radius)
-        .style("fill", function (d) {
-          if (getNode(d).root) return 'red'
-          if (getNode(d).sink) return 'black'
-          else return Colors.getColor(getNode(d).class)
-        })
-        .style("stroke", "black")
-        .style("stroke-width", (d) => Graphs.canExpand(getNode(d)) ? 2 : 0);
+      nodeEl.select('polygon')
+        .attr('points', d => getNode(d).sink ? "-5,-5 5,-5 5,5 -5,5" : "0,-5 3,-4 4,-3 5,0 4,3 3,4 0,5 -3,4 -4,3 -5,0 -4,-3 -3,-4")
+        .style("fill", d => Colors.getColor(getNode(d).class))
+        .style("stroke-width", (d) => Graphs.canExpand(getNode(d)) ? 1.5 : 0);
 
       nodeEl.select('text')
-        .attr("dx", node_radius * 2 + 5 + "px")
-        .attr("dy", node_radius + "px")
+        .attr("dx", nodeRadius * 2 + 5 + "px")
+        .attr("dy", nodeRadius + "px")
         .attr("visibility", (d) => getNode(d).textEnabled ? "visible" : "hidden")
         .text((d) => getNode(d).name);
 
@@ -234,7 +230,7 @@ export function render(full_graph) {
     var vecX = p2.x - p1.x
     var vecY = p2.y - p1.y
     var norm = Math.sqrt(vecX ** 2 + vecY ** 2)
-    var scale = 1 - (node_radius * 2 / norm)
+    var scale = 1 - (nodeRadius * 2 / norm)
 
     var linkP2 = points[points.length - 1]
     linkP2.x = p1.x + vecX * scale
@@ -254,10 +250,10 @@ export function render(full_graph) {
   }
 
   function boundX(x) {
-    return Math.max(Math.min(x, width), 0 + node_radius * 2);
+    return Math.max(Math.min(x, width), 0 + nodeRadius * 2);
   }
 
   function boundY(y) {
-    return Math.max(Math.min(y, height), 0 + node_radius * 2);
+    return Math.max(Math.min(y, height), 0 + nodeRadius * 2);
   }
 }

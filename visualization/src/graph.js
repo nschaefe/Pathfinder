@@ -26,11 +26,15 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         r_trace = r_trace.reverse()
         r_trace.push(s)
         sink = parseTrace(r_trace, node_map, id, false)
-
     }
 
     var nodes = Array.from(node_map.values());
 
+    // Depending on the node merging strategy when parsing, cycles can occur
+    // to get a DAG we cut the cycles, if no cycles this is a no-op 
+    // We want a dag, beacuse dag layout libraries produce a better result than the graph force layout
+    Graphs.cutCycle(nodes)
+   
     // to remove redundancy (e.g. different writes can trigger the same execution on the reader side,
     // what results in the same event stream several times
     Graphs.getRoots(nodes).forEach(n => Graphs.mergeEqualPathsRecursive(n))
@@ -44,7 +48,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
 
     function parseTrace(trace, node_map, id, isWriter) {
         var source = null
-        var postfix = isWriter ? "" : "R"
+        var postfix = isWriter ? "W" : "R"
         //is used to avoid recursion loops, count for every element, 
         //elements are merged if they appear in the same order in different stacktraces
         var unif_id = 0;
@@ -52,7 +56,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
 
             var entry
             //last is detection, not part of stacktrace
-            if (i != trace.length - 1) entry = trace[i] + '_' + (unif_id++) + postfix
+            if (i != trace.length - 1) entry = trace[i] + '_' +  postfix
             else entry = trace[i]
 
             // get node if existant
