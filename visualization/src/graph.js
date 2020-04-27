@@ -1,7 +1,7 @@
-export var Graphs = new Graph()
+import { Utils } from "./util.js";
 
-function Graph() {
-}
+export var Graphs = new Graph()
+function Graph() { }
 
 Graphs.parseDAG = function (dets, events, startEntry = "") {
     var node_map = new Map();
@@ -13,7 +13,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         var w_trace = JSON.parse(detect.writer_stacktrace)
         w_trace = cutAfterLast(w_trace, startEntry) //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
         w_trace = w_trace.reverse()
-        var s = detect.location + "_" + (detect.parent != null ? "" : detect.reference)
+        var s = detect.location + (detect.parent != null ? "" : "_" + detect.reference)
         w_trace.push(s)
         var sink = parseTrace(w_trace, node_map, id, true)
         sink.sink = true
@@ -34,7 +34,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     // to get a DAG we cut the cycles, if no cycles this is a no-op 
     // We want a dag, beacuse dag layout libraries produce a better result than the graph force layout
     Graphs.cutCycle(nodes)
-   
+
     // to remove redundancy (e.g. different writes can trigger the same execution on the reader side,
     // what results in the same event stream several times
     Graphs.getRoots(nodes).forEach(n => Graphs.mergeEqualPathsRecursive(n))
@@ -56,7 +56,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
 
             var entry
             //last is detection, not part of stacktrace
-            if (i != trace.length - 1) entry = trace[i] + '_' +  postfix
+            if (i != trace.length - 1) entry = trace[i] + '_' + postfix //+ (unif_id++) + '_'
             else entry = trace[i]
 
             // get node if existant
@@ -255,6 +255,7 @@ Graphs.cutCycle = function (nodes) {
     function cutChild(n, c) {
         n.cuttedChildren.add(c)
         n.children.delete(c)
+        c.parents.delete(n)
     }
 }
 
@@ -367,7 +368,7 @@ function getNextEnabledOnLine(n) {
 function getNode(name, id, isWriter, parent = null) {
     var node = new Object();
     node.id = id
-    node.class = getClass(name)
+    node.class = Utils.getClassName(name)
     node.name = name;
     node.enabled = true;
     node.children = new Set()
@@ -381,17 +382,3 @@ function getNode(name, id, isWriter, parent = null) {
     }
     return node
 }
-
-function getClass(st_el) {
-    // this is a simple heurisitc for now, since names or what is logged will probably change
-    var end = st_el.indexOf("(")
-    if (end != -1) st_el = st_el.substring(0, end) // -1 means is a field, does not have brackets
-    var names = st_el.split('.')
-
-    var first = names[names.length - 1].charAt(0);
-    if (first === first.toLowerCase() || end == -1) { // we rely on the convention that classes have big case latter at the start
-        names = names.splice(0, names.length - 1)
-    }
-    return names.join('.')
-}
-

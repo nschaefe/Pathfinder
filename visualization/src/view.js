@@ -1,12 +1,11 @@
 import { getColor } from "./colors.js"
 import { Graphs } from "./graph.js";
+import { Utils } from "./util.js";
 
 export function render(full_graph) {
 
-  // set the dimensions and margins of the graph
-  var margin = { top: 10, right: 30, bottom: 30, left: 40 },
-    width = screen.width * 2 - margin.left - margin.right,
-    height = screen.height * 2 - margin.top - margin.bottom;
+  var width = screen.width * 2
+  var height = screen.height * 2
   var nodeRadius = 5 // TODO polygons are not dynamic based on radius
   var textSize = 0.01 * height
 
@@ -14,10 +13,9 @@ export function render(full_graph) {
   var div = d3.select("#viz")
   var svg = div
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-  // const svgNode = `<svg width=${width} height=${height} viewbox="${-nodeRadius} ${-nodeRadius} ${width + 2 * nodeRadius} ${height + 2 * nodeRadius}"></svg>`
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", `${-nodeRadius} ${-nodeRadius} ${width + 2 * nodeRadius} ${height + 2 * nodeRadius}`);
 
   //tooltip
   var tooltip = d3.select("#tooltip")
@@ -41,8 +39,6 @@ export function render(full_graph) {
     .style("fill", "#4f4f4f");
 
 
-  //var b = Graphs.hasCycle(full_graph)
-  //Graphs.cutCycle(full_graph)
   Graphs.shrinkStraightPaths(full_graph)
   Graphs.enableParentsOfSinks(full_graph)
   Graphs.disableReaderTraces(full_graph)
@@ -57,7 +53,7 @@ export function render(full_graph) {
     .size([width, height])
     .layering(d3.layeringLongestPath())
     .decross(d3.decrossTwoLayer())
-    .coord(d3.coordGreedy())
+    .coord(d3.coordMinCurve())
 
   // for reader view
   // var layout = d3.sugiyama()
@@ -69,11 +65,13 @@ export function render(full_graph) {
   // var layout = d3.zherebko()
   //   .size([width, height])
 
-  var node = svg
-    .selectAll("g")
-
   var link = svg.append('g')
+    .attr('class', 'links')
     .selectAll('path')
+
+  var node = svg.append('g')
+    .attr('class', 'nodes')
+    .selectAll("g")
 
   // How to draw edges
   const line = d3.line()
@@ -146,7 +144,7 @@ export function render(full_graph) {
         .on("mouseover", function (d) {
           tooltip
             .style("visibility", "visible")
-            .text(getNode(d).name) //.html(d.name + "<br>" +"aa")
+            .text(Utils.shortenClassName(getNode(d).name)) //.html(d.name + "<br>" +"aa")
             .style("left", (d3.event.pageX) + "px")
             .style("top", (d3.event.pageY - textSize - nodeRadius * 3) + "px");
 
@@ -171,7 +169,6 @@ export function render(full_graph) {
           updateView();
         });
 
-
       nodeEl.select('polygon')
         .attr('points', d => getNode(d).sink ? "-5,-5 5,-5 5,5 -5,5" : "0,-5 3,-4 4,-3 5,0 4,3 3,4 0,5 -3,4 -4,3 -5,0 -4,-3 -3,-4")
         .style("fill", d => Colors.getColor(getNode(d).class))
@@ -181,7 +178,7 @@ export function render(full_graph) {
         .attr("dx", nodeRadius * 2 + 5 + "px")
         .attr("dy", nodeRadius + "px")
         .attr("visibility", (d) => getNode(d).textEnabled ? "visible" : "hidden")
-        .text((d) => getNode(d).name);
+        .text((d) => Utils.shortenClassName(getNode(d).name));
 
       return nodeEl
     }
