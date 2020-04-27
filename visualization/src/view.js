@@ -4,10 +4,11 @@ import { Utils } from "./util.js";
 
 export function render(full_graph) {
 
-  var width = screen.width * 2
-  var height = screen.height * 2
+  var width = screen.width * 1.1
+  var height = screen.height * 1.1
   var nodeRadius = 5 // TODO polygons are not dynamic based on radius
-  var textSize = 0.01 * height
+  var tooltipTextSize = 0.02 * height
+  var nodeTextSize = 10 * 1.5
 
   // append the svg object to the body of the page
   var div = d3.select("#viz")
@@ -20,7 +21,7 @@ export function render(full_graph) {
   //tooltip
   var tooltip = d3.select("#tooltip")
     .attr("class", "tooltip")
-    .style("font-size", textSize + "px")
+    .style("font-size", tooltipTextSize + "px")
     .style("background-color", "#e6e6e6")
     .style("visibility", "hidden")
     .style("position", "absolute")
@@ -39,7 +40,7 @@ export function render(full_graph) {
     .style("fill", "#4f4f4f");
 
 
-  Graphs.shrinkStraightPaths(full_graph)
+  //Graphs.shrinkStraightPaths(full_graph)
   Graphs.enableParentsOfSinks(full_graph)
   Graphs.disableReaderTraces(full_graph)
 
@@ -88,102 +89,124 @@ export function render(full_graph) {
 
     updateData()
     updateView()
+  }
 
-    function updateData() {
-      Graphs.updateLinks(full_graph)
-      dag = builder(...Graphs.getEnabledRoots(full_graph))
-      console.log("layouting started... Can take some time")
-      layout(dag);
-      console.log("layouting finished")
+  function updateData() {
+    Graphs.updateLinks(full_graph)
+    dag = builder(...Graphs.getEnabledRoots(full_graph))
+    console.log("layouting started... Can take some time")
+    layout(dag);
+    console.log("layouting finished")
 
-      linkData = dag.links().concat(getWeakLinks(dag))
-      linkData.forEach((e) => shortenLink(e))
-    }
+    linkData = dag.links().concat(getWeakLinks(dag))
+    linkData.forEach((e) => shortenLink(e))
+  }
 
-    function updateView() {
-      link = link.data(linkData).join(
-        enter => onLinkUpdate(onLinkEnter(enter)),
-        update => onLinkUpdate(update),
-        exit => exit.remove())
+  function updateView() {
+    link = link.data(linkData).join(
+      enter => onLinkUpdate(onLinkEnter(enter)),
+      update => onLinkUpdate(update),
+      exit => exit.remove())
 
-      node = node.data(dag.descendants()).join(
-        enter => onNodeUpdate(onNodeEnter(enter)),
-        update => onNodeUpdate(update),
-        exit => exit.remove())
-    }
+    node = node.data(dag.descendants()).join(
+      enter => onNodeUpdate(onNodeEnter(enter)),
+      update => onNodeUpdate(update),
+      exit => exit.remove())
+  }
 
-    function onLinkEnter(root) {
-      return root.append('path')
-        .attr("class", "link")
-        .attr('marker-end', "url(#triangle)")
-        .attr('fill', 'none')
-        .attr('stroke-width', 1);
-    }
+  function onLinkEnter(root) {
+    return root.append('path')
+      .attr("class", "link")
+      .attr('marker-end', "url(#triangle)")
+      .attr('fill', 'none')
+      .attr('stroke-width', 1);
+  }
 
-    function onLinkUpdate(linkViewEl) {
-      linkViewEl.attr('stroke', (link) => {
-        if (link.target.highlight) return "red";
-        else return 'black';
-      })
-        .attr('d', (link) => line(getNode(link).points));
-      return linkViewEl
-    }
+  function onLinkUpdate(linkViewEl) {
+    linkViewEl.attr('stroke', (link) => {
+      if (link.target.highlight) return "red";
+      else return 'black';
+    })
+      .attr('d', (link) => line(getNode(link).points));
+    return linkViewEl
+  }
 
-    function onNodeEnter(root) {
-      var groupEl = root.append("g")
-        .attr("class", "node");
+  function onNodeEnter(root) {
+    var groupEl = root.append("g")
+      .attr("class", "node");
 
-      groupEl.append('polygon')
-        .style("stroke", "black")
-      groupEl.append('text')
-      return groupEl
-    }
+    groupEl.append('polygon')
+      .style("stroke", "black")
+    groupEl.append('text')
+    return groupEl
+  }
 
-    function onNodeUpdate(nodeEl) {
-      nodeEl.attr('transform', ({ x, y }) => `translate(${x}, ${y})`)
-        .on("mouseover", function (d) {
-          tooltip
-            .style("visibility", "visible")
-            .text(Utils.shortenClassName(getNode(d).name)) //.html(d.name + "<br>" +"aa")
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - textSize - nodeRadius * 3) + "px");
+  function onNodeUpdate(nodeEl) {
+    nodeEl.attr('transform', ({ x, y }) => `translate(${x}, ${y})`)
+      .on("mouseover", function (d) {
+        tooltip
+          .style("visibility", "visible")
+          .text(Utils.shortenClassName(getNode(d).name)) //.html(d.name + "<br>" +"aa")
+          .style("left", (d3.event.pageX) + "px")
+          .style("top", (d3.event.pageY - tooltipTextSize - nodeRadius * 3) + "px");
 
-          if (!d.toggled) {
-            d.highlight = true
-            updateView();
-          }
-        })
-        .on("mouseout", function (d) {
-          tooltip.style("visibility", "hidden");
-          if (!d.toggled) {
-            d.highlight = false
-            updateView();
-          }
-        })
-        .on("dblclick", function (d) {
-          var changed = Graphs.expand(getNode(d), full_graph)
-          if (changed) update()
-        })
-        .on("click", function (d) {
-          toggleHighlighting(d)
+        if (!d.toggled) {
+          d.highlight = true
           updateView();
-        });
+        }
+      })
+      .on("mouseout", function (d) {
+        tooltip.style("visibility", "hidden");
+        if (!d.toggled) {
+          d.highlight = false
+          updateView();
+        }
+      })
+      .on("dblclick", function (d) {
+        var changed = Graphs.expand(getNode(d), full_graph)
+        if (changed) update()
+      })
+      .on("click", function (d) {
+        toggleHighlighting(d)
+        updateView();
+      });
 
-      nodeEl.select('polygon')
-        .attr('points', d => getNode(d).sink ? "-5,-5 5,-5 5,5 -5,5" : "0,-5 3,-4 4,-3 5,0 4,3 3,4 0,5 -3,4 -4,3 -5,0 -4,-3 -3,-4")
-        .style("fill", d => Colors.getColor(getNode(d).class))
-        .style("stroke-width", (d) => Graphs.canExpand(getNode(d)) ? 1.5 : 0);
+    nodeEl.select('polygon')
+      .attr('points', d => getNode(d).sink ? "-5,-5 5,-5 5,5 -5,5" : "0,-5 3,-4 4,-3 5,0 4,3 3,4 0,5 -3,4 -4,3 -5,0 -4,-3 -3,-4")
+      .style("fill", d => Colors.getColor(getNode(d).class))
+      .style("stroke-width", (d) => Graphs.canExpand(getNode(d)) ? 1.5 : 0);
 
-      nodeEl.select('text')
-        .attr("dx", nodeRadius * 2 + 5 + "px")
-        .attr("dy", nodeRadius + "px")
-        .attr("visibility", (d) => getNode(d).textEnabled ? "visible" : "hidden")
-        .text((d) => Utils.shortenClassName(getNode(d).name));
+    nodeEl.select('text')
+      .attr("dx", nodeRadius * 2 + 5 + "px")
+      .attr("dy", nodeRadius + "px")
+      .attr("font-size", nodeTextSize + "px")
+      .attr("visibility", (d) => d.textEnabled ? "visible" : "hidden")
+      .text((d) => Utils.shortenClassName(getNode(d).name));
 
-      return nodeEl
+    return nodeEl
+  }
+
+  d3.select("body").on("keydown", function showEmbeddedNodeNames() {
+    const event = d3.event
+    if (event.key == 'n') {
+      var dagNodes = dag.descendants()
+
+      // if there are toggled nodes, only show the names of their children,
+      // otherwise show all names
+      var nodes = []
+      dagNodes.filter(n => n.toggled).forEach(n => {
+        var ll = n.descendants()
+        nodes = nodes.concat(ll)
+      })
+      if (nodes.length == 0) nodes = dagNodes
+
+      nodes.forEach(n => {
+        if (!n.textEnabled) n.textEnabled = true
+        else n.textEnabled = false
+      })
+      updateView()
     }
-
-  };
+  });
 
   function toggleHighlighting(node) {
     if (node.toggled) {

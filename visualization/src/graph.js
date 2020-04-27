@@ -6,7 +6,7 @@ function Graph() { }
 Graphs.parseDAG = function (dets, events, startEntry = "") {
     var node_map = new Map();
     var id = new Object()
-    var depthLimit = 50
+    var depthLimit = 75
     id.val = 0
     for (var i = 0; i < dets.length; i++) {
         var detect = dets[i]
@@ -314,13 +314,20 @@ function disableAll(graph) {
 }
 
 function expandForSink(sink, graph) {
+    // TODO this method is awful, it does many arbitrary actions, partialy visually motivated. Split this in generic graph methods and
+    // ui related stuff that goes in view.js
     var enabledNodes = []
     disableAll(graph)
     sink.enabled = true
     expandParentsRecursive(sink, enabledNodes)
-    expandChildrenRecursive(sink, enabledNodes)
+
+    // TODO no java filter here
+    var en = []
+    expandChildrenRecursive(sink, en)
+    en.forEach(n => { if (n.name.startsWith("java")) n.enabled = false })
+    enabledNodes = enabledNodes.concat(en)
+
     //Graphs.shrinkStraightPaths(enabledNodes)
-    //enabledNodes.forEach(n => n.textEnabled = true);
     sink.parents.forEach(p => p.enabled = true);
 }
 
