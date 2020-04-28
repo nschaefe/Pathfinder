@@ -63,7 +63,7 @@ public class AccessTracker {
             synchronized (AccessTracker.class) {
                 if (!Tasks.hasTask() || !Tasks.getTask().hasEventID() || Tasks.getTask().getEventCounter() > MAX_EVENT_COUNT)
                     return;
-                Logger.log(ReportGenerator.generateMessageJSON(s, "EVENT"));
+                Logger.log(ReportGenerator.generateMessageJSON(s, "EVENT", epoch));
                 Tasks.getTask().incrementEventID();
             }
         } finally {
@@ -78,7 +78,7 @@ public class AccessTracker {
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                Logger.log(ReportGenerator.generateMessageJSON(s, "MESSAGE"));
+                Logger.log(ReportGenerator.generateMessageJSON(s, "MESSAGE", epoch));
             }
         } finally {
             insideTracker.remove();

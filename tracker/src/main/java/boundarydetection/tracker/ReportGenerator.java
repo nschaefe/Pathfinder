@@ -49,7 +49,7 @@ public class ReportGenerator {
         }
     }
 
-    public static String generateMessageJSON(String message, String tag) {
+    public static String generateMessageJSON(String message, String tag, int epoch) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // ByteArrayOutputStream.close has no effect, no closing neccessary
         try {
@@ -58,6 +58,8 @@ public class ReportGenerator {
             g.writeStringField("time", getTime());
             g.writeStringField("tag", tag);
             g.writeStringField("text", message);
+            g.writeNumberField("epoch", epoch);
+            g.writeNumberField("thread_id", Thread.currentThread().getId());
 
             if (Tasks.hasTask()) {
                 Task t = Tasks.getTask();
@@ -68,7 +70,7 @@ public class ReportGenerator {
                     g.writeString(e);
                 }
                 g.writeEndArray();
-                g.writeStringField("eventID",t.getEventID());
+                g.writeStringField("eventID", t.getEventID());
             }
             g.writeEndObject();
             g.close();
