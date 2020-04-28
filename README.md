@@ -1,5 +1,6 @@
-The tool detects concurrent write-read relations by different threads.
-Example: Thread A writes a Runnable to an array, Thread B reads this runnable. The tool logs a report to a file located where the application is started.
+The tool detects inter-thread communication.
+Example: Thread A writes a Runnable to an array, Thread B reads this runnable. The tool detects the write/read relation between thread A and B.
+The tool logs a report to a file located where the application is started.
 The report contains the array location and the stack traces of the writer and the reader.
 
 ## Project Structure

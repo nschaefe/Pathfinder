@@ -1,5 +1,8 @@
 package boundarydetection.tracker;
 
+import boundarydetection.tracker.tasks.Task;
+import boundarydetection.tracker.tasks.Tasks;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,8 +11,8 @@ public class FieldAccessMeta {
     private int writeCounter;
     private boolean matched;
 
-    // TODO makes a global order assumption, which we cannot just assume in this class -> move
-    private static Long logicalClock = 0L;
+    // makes a global order assumption, which we assume to be enforced outside because this class is not threadsafe
+    private static long logicalClock = 0L;
 
     FieldAccessMeta() {
         matched = false;
@@ -23,15 +26,15 @@ public class FieldAccessMeta {
 
     public void registerWriter() {
         long id = Thread.currentThread().getId();
-
         Throwable trace = new Throwable();
-        FieldWriter wr = new FieldWriter(id, trace, incrementClock());
+
+        FieldWriter wr = new FieldWriter(id, new Task(Tasks.getTask()), trace, incrementClock());
         if (writer.size() == 0) writer.add(wr);
         else writer.set(0, wr);
         writeCounter++;
     }
 
-    private long incrementClock() {
+    private static long incrementClock() {
         long clock = logicalClock;
         logicalClock++;
         return clock;
@@ -51,7 +54,7 @@ public class FieldAccessMeta {
         long id = Thread.currentThread().getId();
         List<FieldWriter> list = new ArrayList<>();
         for (FieldWriter w : writer) {
-            if (w.getId() != id) {
+            if (w.getThreadID() != id) {
                 list.add(w);
             }
         }

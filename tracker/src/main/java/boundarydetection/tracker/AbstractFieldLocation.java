@@ -1,8 +1,9 @@
 package boundarydetection.tracker;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
-import com.fasterxml.jackson.core.JsonGenerator;
 
 public abstract class AbstractFieldLocation {
 
@@ -38,6 +39,7 @@ public abstract class AbstractFieldLocation {
                 other.type.equals(type);
     }
 
+    public abstract String getUniqueIdentifier();
 
     public void toJSON(JsonGenerator g) throws IOException {
         g.writeStringField("location", location);

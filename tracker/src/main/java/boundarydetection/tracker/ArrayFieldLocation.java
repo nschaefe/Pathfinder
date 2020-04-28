@@ -54,6 +54,7 @@ public final class ArrayFieldLocation extends AbstractFieldLocation {
         return getLocationByRef(getArrayObjectReference());
     }
 
+    //TODO use type to reduce collision prob for reference
     @Override
     public int hashCode() {
         int hash = 17;
@@ -69,6 +70,11 @@ public final class ArrayFieldLocation extends AbstractFieldLocation {
 
         return other.getArrayObjectReference() == getArrayObjectReference() &&
                 other.index == index;
+    }
+
+    @Override
+    public String getUniqueIdentifier() {
+        return "" + this.getType() + '_' + getArrayObjectReference() + '_' + index;
     }
 
     @Override

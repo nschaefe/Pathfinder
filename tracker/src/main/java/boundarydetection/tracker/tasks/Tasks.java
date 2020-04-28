@@ -1,38 +1,58 @@
-package boundarydetection.tracker;
+package boundarydetection.tracker.tasks;
+
+import boundarydetection.tracker.AccessTracker;
 
 public class Tasks {
 
-    private static volatile ThreadLocal<Boolean> task;
-    private static volatile ThreadLocal<Boolean> pausedTask;
+    private static volatile ThreadLocal<Task> task;
+    private static volatile ThreadLocal<Task> pausedTask;
     private static volatile ThreadLocal<Integer> pausedTaskCounter;
 
 
-    private synchronized static void init() {
-        if (task == null) task = new ThreadLocal<>();
-        if (pausedTask == null) {
-            pausedTask = new ThreadLocal<>();
-            pausedTaskCounter = new ThreadLocal<>();
+    private static volatile boolean b = false;
+    private static void init() {
+        if (b) return;
+        synchronized (Tasks.class) {
+            if (!b) {
+                if (task == null) task = new ThreadLocal<>();
+                if (pausedTask == null) {
+                    pausedTask = new ThreadLocal<>();
+                    pausedTaskCounter = new ThreadLocal<>();
+                }
+                b = true;
+            }
         }
     }
 
-    static void startTask() {
+    public static void startTask() {
         AccessTracker.startTracking();
         init();
-        task.set(true);
+        task.set(Task.createTask());
     }
 
-    static void stopTask() {
+    public static void startTask(Task t) {
         init();
-        task.set(false);
+        t = new Task(t, t.getInheritanceCount() + 1);
+        task.set(t);
     }
 
-    static boolean hasTask() {
+    public static void stopTask() {
         init();
-        boolean b = task.get() != null && task.get();
+        task.remove();
+    }
+
+    public static boolean hasTask() {
+        init();
+        boolean b = task.get() != null;
         return b;
     }
 
-    static void pauseTask() {
+    public static Task getTask() {
+        init();
+        return task.get();
+    }
+
+    public static void pauseTask() {
         // This approach uses a stack like counter to support subsequent pause and resume calls (e.g. pause, pause, resume, resume)
         // we only remember the task state of the really first call of pause and the bring the task back on the corresponding resume call
         // subsequent pauseTask and resumeTask calls will be just ignored.
@@ -51,7 +71,7 @@ public class Tasks {
 
     }
 
-    static void resumeTask() {
+    public static void resumeTask() {
         int c = pausedTaskCounter.get();
         c--;
         pausedTaskCounter.set(c);
