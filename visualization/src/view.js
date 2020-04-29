@@ -54,6 +54,7 @@ export function render(full_graph) {
     .size([width, height])
     .layering(d3.layeringLongestPath())
     .decross(d3.decrossTwoLayer())
+    //.coord(d3.coordCenter())
     .coord(d3.coordMinCurve())
 
   // for reader view
@@ -224,13 +225,13 @@ export function render(full_graph) {
     dag.each(wrappedNode => {
       var n = wrappedNode
       n.data.cuttedChildren.forEach(child => {
-        if (child.enabled) links.push(getLink(n, getOutteNode(child, dag)))
+        if (child.enabled) links.push(getLink(n, getOutterNode(child, dag)))
       });
     });
     return links
   }
 
-  function getOutteNode(innerNode, outterGraph) {
+  function getOutterNode(innerNode, outterGraph) {
     var outterNode;
     outterGraph.each((n) => {
       if (n.data.id == innerNode.id) {
@@ -259,8 +260,8 @@ export function render(full_graph) {
 
   function getLink(source, target) {
     var link = new Object();
-    link.source = source.id;
-    link.target = target.id;
+    link.source = source;
+    link.target = target;
     link.data = { points: [{ x: source.x, y: source.y }, { x: target.x, y: target.y }] }
     return link
   }

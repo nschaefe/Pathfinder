@@ -43,7 +43,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     function cutAfterLast(trace, end) {
         var i = trace.lastIndexOf(end)
         if (i < 0) return trace
-        return trace.slice(0, i)
+        return trace.slice(0, i + 1)
     }
 
     function parseTrace(trace, node_map, id, isWriter) {
@@ -103,7 +103,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         function getChildren(ev_node, events) {
             if (ev_node.ev_children != null) return ev_node.ev_children
 
-            var children = []
+           var children = []
             for (var event of events) {
                 var pp = JSON.parse(event.parentEventID)
                 if (pp.includes(ev_node.eventID)) children.push(event)

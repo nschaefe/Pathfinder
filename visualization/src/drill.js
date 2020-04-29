@@ -2,19 +2,21 @@ export function DrillDriver(url = "http://localhost:8047/query.json") {
     this.url = url;
 }
 
-DrillDriver.prototype.fetchEvents = function (callback, file = "./tracker_report.json") {
+DrillDriver.prototype.fetchEvents = function (file = "./tracker_report.json", epoch = 2) {
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
-        "t11 AS (SELECT * FROM t1 WHERE tag = 'EVENT' ) SELECT * FROM t11"
+        "t11 AS (SELECT * FROM t1 WHERE tag = 'EVENT' ), " +
+        "t111 AS (SELECT * FROM t11 WHERE epoch=" + epoch + ") SELECT * FROM t111"
 
     return query_drill(query, this.url)
 };
 
-DrillDriver.prototype.fetchDetections = function (callback, file = "./tracker_report.json", epoch = 2) {
+DrillDriver.prototype.fetchDetections = function (file = "./tracker_report.json", epoch = 2) {
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
-        "t11 AS (SELECT * FROM t1 WHERE NOT( regexp_matches(regexp_replace(writer_stacktrace,'(\\n)',''), '(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)') or regexp_matches( regexp_replace(reader_stacktrace,'(\\n)',''), '(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)') )), " +
-        "t111 AS (SELECT * FROM t1 WHERE epoch=" + epoch + ") SELECT * FROM t111"
+        "t11 AS (SELECT * FROM t1 WHERE tag = 'CONCURRENT WRITE/READ DETECTION' ), " +
+        "t111 AS (SELECT * FROM t11 WHERE NOT( REPEATED_CONTAINS(writer_stacktrace,'(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)') OR REPEATED_CONTAINS(reader_stacktrace,'(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)')) ), " +
+        "t1111 AS (SELECT * FROM t111 WHERE epoch=" + epoch + ") SELECT * FROM t1111"
 
     //var query = "select * from dfs.`/home/nico/Dokumente/Entwicklung/Uni/Tracing/instrumentationhelper/testClient/track.json` where type = \u0027CONCURRENT WRITE/READ DETECTION\u0027"
     return query_drill(query, this.url)
