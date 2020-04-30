@@ -4,11 +4,14 @@ import { Utils } from "./util.js";
 
 export function render(full_graph) {
 
-  var width = screen.width * 1.1
-  var height = screen.height * 1.1
+  var tooltipTextSize = 19
+  var margin = { top: tooltipTextSize + 5, right: 0, bottom: 0, left: 0 }
+  //document.documentElement.clientWidth does not give the precise window size, 25 offset 
+  var width = document.documentElement.clientWidth - 25 - (margin.left + margin.right)
+  var height = document.documentElement.clientHeight - 25 - (margin.bottom + margin.top)
+
   var nodeRadius = 5 // TODO polygons are not dynamic based on radius
-  var tooltipTextSize = 0.02 * height
-  var nodeTextSize = 10 * 1.5
+  var nodeTextSize = 14
 
   // append the svg object to the body of the page
   var div = d3.select("#viz")
@@ -16,7 +19,8 @@ export function render(full_graph) {
     .append("svg")
     .attr("width", width)
     .attr("height", height)
-    .attr("viewBox", `${-nodeRadius} ${-nodeRadius} ${width + 2 * nodeRadius} ${height + 2 * nodeRadius}`);
+    .attr("viewBox", `${-nodeRadius} ${-nodeRadius} ${width + 2 * nodeRadius} ${height + 2 * nodeRadius}`)
+    .attr("transform", `translate(${margin.left},${margin.top})`);
 
   //tooltip
   var tooltip = d3.select("#tooltip")
@@ -51,7 +55,7 @@ export function render(full_graph) {
 
   // for starting tree
   var layout = d3.sugiyama()
-    .size([width, height])
+    .size([width - (nodeTextSize + 5), height - (nodeTextSize + 5)]) //lowest nodes must be high enough to show bottom text
     .layering(d3.layeringLongestPath())
     .decross(d3.decrossTwoLayer())
     //.coord(d3.coordCenter())
@@ -137,8 +141,12 @@ export function render(full_graph) {
       .attr("class", "node");
 
     groupEl.append('polygon')
-      .style("stroke", "black")
+      .style("stroke", "black");
+
     groupEl.append('text')
+      .attr("class", "textRight");
+    groupEl.append('text')
+      .attr("class", "textBottom");
     return groupEl
   }
 
@@ -177,12 +185,19 @@ export function render(full_graph) {
       .style("fill", d => Colors.getColor(getNode(d).class))
       .style("stroke-width", (d) => Graphs.canExpand(getNode(d)) ? 1.5 : 0);
 
-    nodeEl.select('text')
+    nodeEl.select('.textRight')
       .attr("dx", nodeRadius * 2 + 5 + "px")
       .attr("dy", nodeRadius + "px")
       .attr("font-size", nodeTextSize + "px")
       .attr("visibility", (d) => d.textEnabled ? "visible" : "hidden")
       .text((d) => Utils.shortenClassName(getNode(d).name));
+
+    nodeEl.select('.textBottom')
+      .attr("dx", - nodeTextSize / 2 + "px")
+      .attr("dy", nodeRadius * 3 + 5 + "px")
+      .attr("font-size", nodeTextSize + "px")
+      .attr("visibility", (d) => getNode(d).sink ? "visible" : "hidden")
+      .text((d) => getNode(d).sink ? '|' + getNode(d).firstHitClock + '|' : '');
 
     return nodeEl
   }

@@ -2,16 +2,16 @@ export function DrillDriver(url = "http://localhost:8047/query.json") {
     this.url = url;
 }
 
-DrillDriver.prototype.fetchEvents = function (file = "./tracker_report.json", epoch = 2) {
+DrillDriver.prototype.fetchEvents = function (taskID, file = "./tracker_report.json") {
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
         "t11 AS (SELECT * FROM t1 WHERE tag = 'EVENT' ), " +
-        "t111 AS (SELECT * FROM t11 WHERE epoch=" + epoch + ") SELECT * FROM t111"
+        "t111 AS (SELECT * FROM t11 WHERE taskID='" + taskID + "') SELECT * FROM t111"
 
     return query_drill(query, this.url)
 };
 
-DrillDriver.prototype.fetchDetections = function (file = "./tracker_report.json", epoch = 2) {
+DrillDriver.prototype.fetchDetections = function (epoch = 1, file = "./tracker_report.json") {
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
         "t11 AS (SELECT * FROM t1 WHERE tag = 'CONCURRENT WRITE/READ DETECTION' ), " +
@@ -32,13 +32,7 @@ function query_drill(query, url) {
     // http.timeout = 5000;
     http.setRequestHeader('Content-type', 'application/json')
     http.send(message)
-    // http.onload = function () {
-    //     if (http.status != 200) {
-    //         console.log("Error", http.statusText);
-    //     }
-    //     const result = JSON.parse(http.response).rows
-    //     callback(result)
-    // }
+    
     if (http.status != 200) {
         console.log("Error", http.statusText);
     }

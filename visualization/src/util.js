@@ -18,7 +18,7 @@ function getClassName(traceEntry) {
 Utils.shortenClassName = shortenClassName
 function shortenClassName(traceEntry) {
     var clName = getClassName(traceEntry)
-    var rest = traceEntry.substring(clName.length - 1, traceEntry.length)
+    var rest = traceEntry.substring(clName.length, traceEntry.length)
     var names = clName.split('.')
     return names[names.length - 1] + rest
 }
