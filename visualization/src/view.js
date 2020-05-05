@@ -222,7 +222,20 @@ export function render(full_graph) {
       })
       updateView()
     }
+    else if (event.key == 'r') {
+      var dagNodes = dag.descendants()
+      dagNodes.forEach(n => {
+        resetHighlighting(n)
+        n.textEnabled = false
+      })
+      updateView()
+    }
   });
+
+  function resetHighlighting(node) {
+    node.highlight = false
+    node.toggled = false
+  }
 
   function toggleHighlighting(node) {
     if (node.toggled) {

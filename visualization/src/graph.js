@@ -98,6 +98,9 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         // hashing
         startSinks.forEach(el => {
             el.eventIDs.forEach(id => event_map.set(id, el))
+            // we init the children set here, because it is in priciple possible that a sink has no child, if it was generated right before shutdown and 
+            // no event was emmited
+            el.ev_children = new Set()
         })
         for (var event of eventData) {
             event_map.set(event.eventID, event)
