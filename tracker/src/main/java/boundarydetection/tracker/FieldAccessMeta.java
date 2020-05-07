@@ -11,6 +11,7 @@ public class FieldAccessMeta {
     private int writeCounter;
     private boolean matched;
 
+    //TODO dont do this here, gloabl writer clock should not be just in the class that needs to access it, it is semantically not related
     // makes a global order assumption, which we assume to be enforced outside because this class is not threadsafe
     private static long logicalClock = 0L;
 

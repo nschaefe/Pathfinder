@@ -14,7 +14,7 @@ import java.util.Random;
 public class AccessTracker {
 
     private static final int MAP_INIT_SIZE = 10000;
-    public static volatile int MAX_EVENT_COUNT = 55;
+    public static volatile int MAX_EVENT_COUNT = 75;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
@@ -29,12 +29,15 @@ public class AccessTracker {
     private static volatile boolean eventLoggingEnabled = false;
     private static volatile boolean arrayCopyRedirectEnabled = false;
 
+    private static long globalDetectionCounter;
 
     private static void init() {
         synchronized (initLock) {
             if (!inited) {
                 // DO NOT PUT inited AT THE END (NECESSARY FOR RECURSION BREAKING)
                 inited = true;
+
+                globalDetectionCounter = 0;
 
                 int random = (new Random()).nextInt(Integer.MAX_VALUE);
                 Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new FileLoggerEngine("./tracker_report_" + random + ".json")));
@@ -63,7 +66,7 @@ public class AccessTracker {
             synchronized (AccessTracker.class) {
                 if (!Tasks.hasTask() || !Tasks.getTask().hasEventID() || Tasks.getTask().getEventCounter() > MAX_EVENT_COUNT)
                     return;
-                Logger.log(ReportGenerator.generateMessageJSON(s, "EVENT", epoch));
+                Logger.log(ReportGenerator.generateMessageJSON(s, "EVENT"));
                 Tasks.getTask().incrementEventID();
             }
         } finally {
@@ -78,7 +81,7 @@ public class AccessTracker {
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                Logger.log(ReportGenerator.generateMessageJSON(s, "MESSAGE", epoch));
+                Logger.log(ReportGenerator.generateMessageJSON(s, "MESSAGE"));
             }
         } finally {
             insideTracker.remove();
@@ -147,6 +150,8 @@ public class AccessTracker {
         }
     }
 
+    private static long readSerial = 0L;
+
     private static void readAccessInner(AbstractFieldLocation field) {
         FieldAccessMeta meta = accesses.get(field);
         if (meta == null) return;
@@ -157,9 +162,11 @@ public class AccessTracker {
 
         FieldWriter writer = l.get(0);
 
-        String eventID = field.getUniqueIdentifier() + meta.getWriteCount();
+        // a write can be read several times, so we use a global id to make all event ids unique
+        String eventID = field.getUniqueIdentifier() + '_' + meta.getWriteCount() + '_' + (AccessTracker.globalDetectionCounter++);
         Logger.log(
                 ReportGenerator.generateDetectionReportJSON(epoch,
+                        readSerial++,
                         Thread.currentThread().getId(),
                         Thread.currentThread().getStackTrace(),
                         field,
@@ -168,11 +175,22 @@ public class AccessTracker {
         // Auto inheritance of task
         if (writer.getTask().getInheritanceCount() == 0) {
             if (!Tasks.hasTask()) Tasks.startTask(writer.getTask());
-            else if (!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID()))
-                ; //TODO report collision
+            else if (!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID())) {
+                // for now we just overtake the other task id. If we start a new Task that replaces the new one (new epoch)
+                // this is fine and necessary, otherwise the new task is not propagated. If we have collision with another active task,
+                // this is a problem that should be reported.
+                // To do this we have to keep track of active tasks and only overtake if the old task died already
+                // This can be future work.
+                // TODO report warning
+                Tasks.startTask(writer.getTask());
+            }
+
             assert (Tasks.hasTask());
             Tasks.getTask().addAsParentEventID(eventID);
-            if (!Tasks.getTask().hasInheritanceLocation(field)) Tasks.getTask().resetEventCounter();
+            //Tasks.getTask().getEventCounter() < 10 * MAX_EVENT_COUNT
+            if (!Tasks.getTask().hasInheritanceLocation(field)) {
+                Tasks.getTask().resetEventCounter();
+            }
             Tasks.getTask().addInheritanceLocation(field);
         }
     }
@@ -209,6 +227,7 @@ public class AccessTracker {
         synchronized (initLock) {
             accesses = new HashMap<>(MAP_INIT_SIZE);
             epoch++;
+            readSerial = 0;
         }
     }
 
@@ -389,6 +408,7 @@ public class AccessTracker {
 
     public static void stopTask() {
         Tasks.stopTask();
+
     }
 
     public static boolean hasTask() {
