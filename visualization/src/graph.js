@@ -18,9 +18,14 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         var sink = parseTrace(w_trace, node_map, id, true)
         sink.sink = true
 
-        //treat detection node
-        sink.eventID = detect.eventID
-        parseEvents(sink, events, node_map, id, depthLimit)
+        // can have multiple event ids because of node merging, several instances of the location over several java objects (e.g. hbase.Call will appear severla times in a run)
+        if (sink.eventIDs == null) sink.eventIDs = new Set()
+        sink.eventIDs.add(detect.eventID)
+
+        // we want to maintain a logical order when the detection field was first hit by a reader
+        // therefore we maintain the min serial number per detection over node merging
+        if (sink.minSerial == null) sink.minSerial = Number.MAX_SAFE_INTEGER
+        sink.minSerial = Math.min(sink.minSerial, detect.serial)
 
         var r_trace = JSON.parse(detect.reader_stacktrace)
         r_trace = r_trace.reverse()
@@ -28,6 +33,14 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         sink = parseTrace(r_trace, node_map, id, false)
     }
 
+    var sinks = Array.from(node_map.values()).filter(e => e.sink)
+
+    // init an order starting at 0
+    sinks.sort((a, b) => a.minSerial - b.minSerial)
+    var c = 1
+    for (var sink of sinks) sink.firstHitClock = c++
+
+    parseEventsFromStart(sinks, events, node_map, id, depthLimit)
     var nodes = Array.from(node_map.values());
 
     // Depending on the node merging strategy when parsing, cycles can occur
@@ -43,7 +56,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     function cutAfterLast(trace, end) {
         var i = trace.lastIndexOf(end)
         if (i < 0) return trace
-        return trace.slice(0, i)
+        return trace.slice(0, i + 1)
     }
 
     function parseTrace(trace, node_map, id, isWriter) {
@@ -79,36 +92,48 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
 
     }
 
-    var event_map;
-    function parseEvents(root, eventData, node_map, id, depthLimit) {
+    function parseEventsFromStart(startSinks, eventData, node_map, id, depthLimit) {
+        var event_map = new Map();
 
-        function hashEvents(events) {
-            for (var event of events) {
-                event_map.set(event.eventID, event)
-            }
+        // hashing
+        startSinks.forEach(el => {
+            el.eventIDs.forEach(id => event_map.set(id, el))
+            // we init the children set here, because it is in priciple possible that a sink has no child, if it was generated right before shutdown and 
+            // no event was emmited
+            el.ev_children = new Set()
+        })
+        for (var event of eventData) {
+            event_map.set(event.eventID, event)
         }
+        createChildLinksForParents(eventData)
 
-        function createChildLinks(events) {
+        startSinks.forEach(sink => {
+            // parsing TODO
+            parseFromSrc(sink, sink, eventData)
+        })
+
+        function createChildLinksForParents(events) {
             for (var event of events) {
                 var parents = JSON.parse(event.parentEventID)
                 for (var parentID of parents) {
                     var ev_node = event_map.get(parentID)
-                    if (ev_node == null) continue;
+                    if (ev_node == null) {
+                        console.log("WANING: parent with id " + parentID +
+                            " NOT IN MAP, maybe detection was filtered out but not the correpsonding events, parent is skipped")
+                        continue;
+                    }
                     if (ev_node.ev_children == null) ev_node.ev_children = new Set()
                     ev_node.ev_children.add(event)
                 }
+                // end nodes are not parent of another node, we init the childset here to hit all nodes
+                if (event.ev_children == null) event.ev_children = new Set()
             }
         }
 
-        function getChildren(ev_node, events) {
-            if (ev_node.ev_children != null) return ev_node.ev_children
 
-            var children = []
-            for (var event of events) {
-                var pp = JSON.parse(event.parentEventID)
-                if (pp.includes(ev_node.eventID)) children.push(event)
-            }
-            return children
+        function getChildren(ev_node, events) {
+            console.assert(ev_node.ev_children != null, "NO CHILDREN")
+            return ev_node.ev_children
         }
 
         function parseFromSrc(src_node, src_event, data, depthCounter = 0) {
@@ -116,7 +141,9 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
             var children = getChildren(src_event, data)
 
             for (var child of children) {
-                var entry = child.text + '_' + 'RE' + '_' + id.val
+
+                var entry = child.eventID
+                //var entry = child.text + '_' + 'RE' + '_' + id.val
 
                 var target = node_map.get(entry)
                 if (target == null) {
@@ -130,16 +157,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
                 parseFromSrc(target, child, data, depthCounter + 1)
             }
         }
-
-        if (event_map == null) {
-            event_map = new Map();
-            hashEvents(eventData)
-            createChildLinks(eventData)
-        }
-        parseFromSrc(root, root, eventData)
     }
-
-
 }
 
 Graphs.enableParentsOfSinks = function (graph) {
@@ -150,11 +168,11 @@ Graphs.enableParentsOfSinks = function (graph) {
     });
 }
 
-Graphs.mergeEqualPathsRecursive = function (node, nodeCompare = (a, b) => a.name.localeCompare(b.name)) {
-    if (node.children.size == 0) return;
-    var children = Array.from(node.children)
+Graphs.mergeEqualPathsRecursive = function (node, getChildren = (n) => n.children, childrenSet = (n, s) => n.children = s, nodeCompare = (a, b) => a.name.localeCompare(b.name)) {
+    if (getChildren(node).size == 0) return;
+    var children = Array.from(getChildren(node))
     for (var i = 0; i < children.length; i++) {
-        Graphs.mergeEqualPathsRecursive(children[i])
+        Graphs.mergeEqualPathsRecursive(children[i], getChildren, childrenSet, nodeCompare)
     }
 
     for (var i = 0; i < children.length - 1; i++) { // last one has not partner
@@ -163,24 +181,27 @@ Graphs.mergeEqualPathsRecursive = function (node, nodeCompare = (a, b) => a.name
         for (var d = i + 1; d < children.length; d++) {
             var child_p = children[d]
             if (child_p == null) continue;
-            if (equals(child, child_p)) children[d] = null
+            if (equals(child, child_p, getChildren)) children[d] = null
         }
     }
-    node.children = new Set(children.filter(e => e != null))
+    childrenSet(node, new Set(children.filter(e => e != null)))
 
-    function equals(n1, n2) {
+    function equals(n1, n2, getChildren) {
         if (nodeCompare(n1, n2) != 0) return false
-        if (n1.children.size != n2.children.size) return false
-        if (n1.children.size == 0) return true
 
-        var n1_children = Array.from(n1.children)
-        n1_children.sort(nodeCompare)
+        var n1Children = getChildren(n1)
+        var n2Children = getChildren(n2)
+        if (n1Children.size != n2Children.size) return false
+        if (n1Children.size == 0) return true
 
-        var n2_children = Array.from(n2.children)
-        n2_children.sort(nodeCompare)
+        n1Children = Array.from(n1Children)
+        n1Children.sort(nodeCompare)
 
-        for (var i = 0; i < n1_children.length; i++) {
-            if (!equals(n1_children[i], n2_children[i])) return false
+        n2Children = Array.from(n2Children)
+        n2Children.sort(nodeCompare)
+
+        for (var i = 0; i < n1Children.length; i++) {
+            if (!equals(n1Children[i], n2Children[i], getChildren)) return false
         }
         return true
     }
@@ -276,11 +297,11 @@ Graphs.shrinkStraightPaths = function (nodes) {
     }
 }
 
-Graphs.expand = function (node, graph) {
+Graphs.expand = function (node, graph, limit = 250) {
     var changed = false
 
     if (node.sink) {
-        expandForSink(node, graph);
+        expandForSink(node, graph, limit);
         changed = true
     }
     else {
@@ -297,11 +318,17 @@ Graphs.expand = function (node, graph) {
 
 Graphs.updateLinks = function (graph) {
     graph.forEach(n => {
+        n.viewParents = new Set();
+        n.viewChildren = new Set();
+    })
+    graph.forEach(n => {
         if (n.enabled) {
-            n.viewChildren = new Set()
             n.children.forEach(child => {
                 var enabled_tgt = getEnabledOnLine(child)
-                if (enabled_tgt != null) n.viewChildren.add(enabled_tgt)
+                if (enabled_tgt != null) {
+                    n.viewChildren.add(enabled_tgt)
+                    enabled_tgt.viewParents.add(n)
+                }
             });
         }
     });
@@ -313,7 +340,7 @@ function disableAll(graph) {
     })
 }
 
-function expandForSink(sink, graph) {
+function expandForSink(sink, graph, limit) {
     // TODO this method is awful, it does many arbitrary actions, partialy visually motivated. Split this in generic graph methods and
     // ui related stuff that goes in view.js
     var enabledNodes = []
@@ -321,32 +348,38 @@ function expandForSink(sink, graph) {
     sink.enabled = true
     expandParentsRecursive(sink, enabledNodes)
 
-    // TODO no java filter here
-    var en = []
-    expandChildrenRecursive(sink, en)
-    en.forEach(n => { if (n.name.startsWith("java")) n.enabled = false })
-    enabledNodes = enabledNodes.concat(en)
+    var children = sink.children
+    var maxPaths = 8
+    if (children.size > maxPaths) {
+        //sampling for performance and reduce data that is presented (not optimal) TODO 
+        alert("subset of reader path is displayed for performance reasons")
+        children = Array.from(children).slice(0, maxPaths)
+    }
+    for (var child of children) {
+        child.enabled = true
+        expandChildrenRecursive(child, limit - 1)
+    }
 
+    //be carfeul when disabling arbitray nodes. Disablesing a node with several in or outputs results in disabling also all succeding nodes
     //Graphs.shrinkStraightPaths(enabledNodes)
     sink.parents.forEach(p => p.enabled = true);
 }
 
-function expandParentsRecursive(node, enabledNodes) {
+function expandParentsRecursive(node, enabledNodes = null) {
     node.parents.forEach((d) => {
         d.enabled = true
-        enabledNodes.push(d)
+        if (enabledNodes != null) enabledNodes.push(d)
         expandParentsRecursive(d, enabledNodes)
     })
 }
 
-function expandChildrenRecursive(node, enabledNodes) {
+function expandChildrenRecursive(node, limit, depth = 0) {
+    if (depth >= limit) return
     node.children.forEach((d) => {
         d.enabled = true
-        enabledNodes.push(d)
-        expandChildrenRecursive(d, enabledNodes)
+        expandChildrenRecursive(d, limit, depth + 1)
     })
 }
-
 function hasSingleChild(n) {
     return n.children.size == 1
 }
@@ -359,7 +392,8 @@ function getSingleEntry(set) {
 }
 
 function getEnabledOnLine(n) {
-    while (hasSingleChild(n) && hasAtMostOneParent(n) && n.enabled == false) {
+    // Does not support branches
+    while (hasSingleChild(n) && hasAtMostOneParent(n) && !n.enabled) {
         n = getSingleEntry(n.children);
     }
     if (n.enabled) return n;
