@@ -1,0 +1,28 @@
+{
+  "type": "file",
+  "connection": "file:///",
+  "config": null,
+  "workspaces": {
+    "root": {
+      "location": "TODO",
+      "writable": false,
+      "defaultInputFormat": null,
+      "allowAccessOutsideWorkspace": false
+    },
+    "out": {
+      "location": "TODO",
+      "writable": true,
+      "defaultInputFormat": null,
+      "allowAccessOutsideWorkspace": false
+    }
+  },
+  "formats": {
+    "json": {
+      "type": "json",
+      "extensions": [
+        "json"
+      ]
+    }
+  },
+  "enabled": true
+}

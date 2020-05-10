@@ -2,7 +2,7 @@
   "type": "module",
   "name": "visualization",
   "version": "1.0.0",
-  "private":true,
+  "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -13,5 +13,9 @@
   "devDependencies": {
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11"
+  },
+  "dependencies": {
+    "file-loader": "^6.0.0",
+    "json-loader": "^0.5.7"
   }
 }

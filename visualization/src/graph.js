@@ -141,7 +141,9 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
             var children = getChildren(src_event, data)
 
             for (var child of children) {
-                var entry = child.text + '_' + 'RE' + '_' + id.val
+
+                var entry = child.eventID
+                //var entry = child.text + '_' + 'RE' + '_' + id.val
 
                 var target = node_map.get(entry)
                 if (target == null) {
@@ -155,11 +157,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
                 parseFromSrc(target, child, data, depthCounter + 1)
             }
         }
-
-
     }
-
-
 }
 
 Graphs.enableParentsOfSinks = function (graph) {
@@ -170,11 +168,11 @@ Graphs.enableParentsOfSinks = function (graph) {
     });
 }
 
-Graphs.mergeEqualPathsRecursive = function (node, nodeCompare = (a, b) => a.name.localeCompare(b.name)) {
-    if (node.children.size == 0) return;
-    var children = Array.from(node.children)
+Graphs.mergeEqualPathsRecursive = function (node, getChildren = (n) => n.children, childrenSet = (n, s) => n.children = s, nodeCompare = (a, b) => a.name.localeCompare(b.name)) {
+    if (getChildren(node).size == 0) return;
+    var children = Array.from(getChildren(node))
     for (var i = 0; i < children.length; i++) {
-        Graphs.mergeEqualPathsRecursive(children[i])
+        Graphs.mergeEqualPathsRecursive(children[i], getChildren, childrenSet, nodeCompare)
     }
 
     for (var i = 0; i < children.length - 1; i++) { // last one has not partner
@@ -183,24 +181,27 @@ Graphs.mergeEqualPathsRecursive = function (node, nodeCompare = (a, b) => a.name
         for (var d = i + 1; d < children.length; d++) {
             var child_p = children[d]
             if (child_p == null) continue;
-            if (equals(child, child_p)) children[d] = null
+            if (equals(child, child_p, getChildren)) children[d] = null
         }
     }
-    node.children = new Set(children.filter(e => e != null))
+    childrenSet(node, new Set(children.filter(e => e != null)))
 
-    function equals(n1, n2) {
+    function equals(n1, n2, getChildren) {
         if (nodeCompare(n1, n2) != 0) return false
-        if (n1.children.size != n2.children.size) return false
-        if (n1.children.size == 0) return true
 
-        var n1_children = Array.from(n1.children)
-        n1_children.sort(nodeCompare)
+        var n1Children = getChildren(n1)
+        var n2Children = getChildren(n2)
+        if (n1Children.size != n2Children.size) return false
+        if (n1Children.size == 0) return true
 
-        var n2_children = Array.from(n2.children)
-        n2_children.sort(nodeCompare)
+        n1Children = Array.from(n1Children)
+        n1Children.sort(nodeCompare)
 
-        for (var i = 0; i < n1_children.length; i++) {
-            if (!equals(n1_children[i], n2_children[i])) return false
+        n2Children = Array.from(n2Children)
+        n2Children.sort(nodeCompare)
+
+        for (var i = 0; i < n1Children.length; i++) {
+            if (!equals(n1Children[i], n2Children[i], getChildren)) return false
         }
         return true
     }
@@ -296,11 +297,11 @@ Graphs.shrinkStraightPaths = function (nodes) {
     }
 }
 
-Graphs.expand = function (node, graph) {
+Graphs.expand = function (node, graph, limit = 250) {
     var changed = false
 
     if (node.sink) {
-        expandForSink(node, graph);
+        expandForSink(node, graph, limit);
         changed = true
     }
     else {
@@ -317,11 +318,17 @@ Graphs.expand = function (node, graph) {
 
 Graphs.updateLinks = function (graph) {
     graph.forEach(n => {
+        n.viewParents = new Set();
+        n.viewChildren = new Set();
+    })
+    graph.forEach(n => {
         if (n.enabled) {
-            n.viewChildren = new Set()
             n.children.forEach(child => {
                 var enabled_tgt = getEnabledOnLine(child)
-                if (enabled_tgt != null) n.viewChildren.add(enabled_tgt)
+                if (enabled_tgt != null) {
+                    n.viewChildren.add(enabled_tgt)
+                    enabled_tgt.viewParents.add(n)
+                }
             });
         }
     });
@@ -333,7 +340,7 @@ function disableAll(graph) {
     })
 }
 
-function expandForSink(sink, graph) {
+function expandForSink(sink, graph, limit) {
     // TODO this method is awful, it does many arbitrary actions, partialy visually motivated. Split this in generic graph methods and
     // ui related stuff that goes in view.js
     var enabledNodes = []
@@ -341,32 +348,38 @@ function expandForSink(sink, graph) {
     sink.enabled = true
     expandParentsRecursive(sink, enabledNodes)
 
-    // TODO no java filter here
-    var en = []
-    expandChildrenRecursive(sink, en)
-    en.forEach(n => { if (n.name.startsWith("java")) n.enabled = false })
-    enabledNodes = enabledNodes.concat(en)
+    var children = sink.children
+    var maxPaths = 8
+    if (children.size > maxPaths) {
+        //sampling for performance and reduce data that is presented (not optimal) TODO 
+        alert("subset of reader path is displayed for performance reasons")
+        children = Array.from(children).slice(0, maxPaths)
+    }
+    for (var child of children) {
+        child.enabled = true
+        expandChildrenRecursive(child, limit - 1)
+    }
 
+    //be carfeul when disabling arbitray nodes. Disablesing a node with several in or outputs results in disabling also all succeding nodes
     //Graphs.shrinkStraightPaths(enabledNodes)
     sink.parents.forEach(p => p.enabled = true);
 }
 
-function expandParentsRecursive(node, enabledNodes) {
+function expandParentsRecursive(node, enabledNodes = null) {
     node.parents.forEach((d) => {
         d.enabled = true
-        enabledNodes.push(d)
+        if (enabledNodes != null) enabledNodes.push(d)
         expandParentsRecursive(d, enabledNodes)
     })
 }
 
-function expandChildrenRecursive(node, enabledNodes) {
+function expandChildrenRecursive(node, limit, depth = 0) {
+    if (depth >= limit) return
     node.children.forEach((d) => {
         d.enabled = true
-        enabledNodes.push(d)
-        expandChildrenRecursive(d, enabledNodes)
+        expandChildrenRecursive(d, limit, depth + 1)
     })
 }
-
 function hasSingleChild(n) {
     return n.children.size == 1
 }

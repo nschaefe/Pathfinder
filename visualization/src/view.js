@@ -98,7 +98,11 @@ export function render(full_graph) {
 
   function updateData() {
     Graphs.updateLinks(full_graph)
-    dag = builder(...Graphs.getEnabledRoots(full_graph))
+
+    var roots = Graphs.getEnabledRoots(full_graph)
+    roots.forEach(n => Graphs.mergeEqualPathsRecursive(n, (d) => d.viewChildren, (d, s) => d.viewChildren = s))
+
+    dag = builder(...roots)
     console.log("layouting started... Can take some time")
     layout(dag);
     console.log("layouting finished")
@@ -172,7 +176,7 @@ export function render(full_graph) {
         }
       })
       .on("dblclick", function (d) {
-        var changed = Graphs.expand(getNode(d), full_graph)
+        var changed = Graphs.expand(getNode(d), full_graph, 40)
         if (changed) update()
       })
       .on("click", function (d) {
@@ -304,5 +308,13 @@ export function render(full_graph) {
 
   function boundY(y) {
     return Math.max(Math.min(y, height), 0 + nodeRadius * 2);
+  }
+
+  function graphToJSON(linkData) {
+    const links = linkData.map(d => ({ source: d.source.id, target: d.target.id }))
+    var set = new Set();
+    links.forEach(d => { set.add(d.source); set.add(d.target) });
+    const nodes = Array.from(set).map(d => ({ id: d }));
+    return JSON.stringify({ links: links, nodes: nodes })
   }
 }
