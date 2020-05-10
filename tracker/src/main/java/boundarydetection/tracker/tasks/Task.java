@@ -20,10 +20,12 @@ public class Task {
 
     private Collection<String> parentEventIDs;
 
+    private int serial;
     private int eventCounter;
 
     private Collection<AbstractFieldLocation> taskInheritanceLocation;
 
+    private static int globalTaskCounter = 1;
 
     public Task(Task t) {
         this(t, t.inheritanceCount);
@@ -33,6 +35,7 @@ public class Task {
         //copy construc.
         this.taskID = t.taskID;
         this.inheritanceCount = inheritanceCount;
+        this.serial = t.serial;
         this.eventIdPrefix = t.eventIdPrefix;
         this.eventIDSeqNum = t.eventIDSeqNum;
         this.parentEventIDs = new ArrayList<>(t.parentEventIDs);
@@ -51,6 +54,7 @@ public class Task {
         this.eventIDSeqNum = 0;
         this.eventCounter = 0;
         this.taskInheritanceLocation = new HashSet<>();
+        this.serial = globalTaskCounter++;
     }
 
     public int getInheritanceCount() {
@@ -69,6 +73,10 @@ public class Task {
         return taskInheritanceLocation.contains(f);
     }
 
+    public int getSerial() {
+        return serial;
+    }
+
     //--------------
     public void addAsParentEventID(String id) {
         if (hasEventID())
@@ -80,7 +88,7 @@ public class Task {
     }
 
     public int getEventCounter() {
-        return eventCounter+1;
+        return eventCounter + 1;
     }
 
     public void resetEventCounter() {

@@ -27,15 +27,16 @@ public class ReportGenerator {
         try {
             JsonGenerator g = factory.createGenerator(out);
             g.writeStartObject();
-            g.writeNumberField("epoch", epoch);
             g.writeNumberField("serial", serial);
             g.writeStringField("time", getTime());
             g.writeStringField("tag", "CONCURRENT WRITE/READ DETECTION");
             loc.toJSON(g);
+            g.writeNumberField("epoch", epoch);
             g.writeStringField("eventID", id);
             g.writeNumberField("reader_thread_id", readerThreadID);
             g.writeNumberField("writer_thread_id", w.getThreadID());
             g.writeStringField("writer_taskID", w.getTask().getTaskID());
+            g.writeNumberField("writer_task_serial", w.getTask().getSerial());
             g.writeNumberField("writer_count", meta.getWriteCount());
             g.writeNumberField("writer_global_clock", w.getClock());
             g.writeArrayFieldStart("reader_stacktrace");

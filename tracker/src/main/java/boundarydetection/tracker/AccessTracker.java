@@ -23,7 +23,7 @@ public class AccessTracker {
     private static Object initLock = new Object();
 
     private static HashMap<AbstractFieldLocation, FieldAccessMeta> accesses;
-    private static int epoch = 0;
+    private static int epoch = 0; //only as debug info
     private static volatile boolean enabled = false;
 
     private static volatile boolean eventLoggingEnabled = false;
