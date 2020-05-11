@@ -72,6 +72,63 @@ public class ReportGenerator {
         }
     }
 
+    public static String generateAutoInheritanceMessageJSON(String message, String tag, StackTraceElement[] readerTrace, StackTraceElement[] writerTrace) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        // ByteArrayOutputStream.close has no effect, no closing neccessary
+        try {
+            JsonGenerator g = factory.createGenerator(out);
+            g.writeStartObject();
+            g.writeStringField("time", getTime());
+            g.writeStringField("tag", tag);
+            g.writeStringField("text", message);
+            g.writeNumberField("thread_id", Thread.currentThread().getId());
+
+            if (Tasks.hasTask()) {
+                Task t = Tasks.getTask();
+                g.writeStringField("taskID", t.getTaskID());
+                g.writeNumberField("eventPathCounter", t.getEventCounter());
+                g.writeNumberField("inheritanceCount", t.getInheritanceCount());
+                g.writeArrayFieldStart("parentEventID");
+                for (String e : t.getParentEventIDs()) {
+                    g.writeString(e);
+                }
+                g.writeEndArray();
+                g.writeStringField("eventID", t.getEventID());
+            }
+
+            g.writeArrayFieldStart("reader_stacktrace");
+
+            int start = Util.getIndexAfter(readerTrace, 1, CLASS_PREFIX);
+            Arrays.asList(readerTrace).subList(start, Math.min(readerTrace.length, STACKTRACE_MAX_DEPTH + start)).forEach(t -> {
+                try {
+                    g.writeString(t.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            g.writeEndArray();
+
+            start = Util.getIndexAfter(writerTrace, 1, CLASS_PREFIX);
+            g.writeArrayFieldStart("writer_stacktrace");
+            Arrays.asList(writerTrace).subList(start, Math.min(writerTrace.length, STACKTRACE_MAX_DEPTH + start)).forEach(t -> {
+                try {
+                    g.writeString(t.toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            g.writeEndArray();
+
+            g.writeEndObject();
+            g.close();
+            return out.toString();
+        } catch (IOException e) {
+            System.err.println("BUG");
+            e.printStackTrace();
+            return "$$BUG";
+        }
+    }
+
     public static String generateMessageJSON(String message, String tag) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // ByteArrayOutputStream.close has no effect, no closing neccessary

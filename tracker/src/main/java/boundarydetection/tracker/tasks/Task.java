@@ -12,6 +12,8 @@ import java.util.UUID;
  */
 public class Task {
 
+    private Task parentTask; // null by default. Can be set to bind to another task
+
     private String taskID;
     private int inheritanceCount;
 
@@ -26,6 +28,8 @@ public class Task {
     private Collection<AbstractFieldLocation> taskInheritanceLocation;
 
     private static int globalTaskCounter = 1;
+
+    private boolean stopped;
 
     public Task(Task t) {
         this(t, t.inheritanceCount);
@@ -44,6 +48,8 @@ public class Task {
         // There can be exist several instances of a location. But they describe the same thing.
         // If we operate via equals, just knowing one instance is safe.
         this.taskInheritanceLocation = new HashSet<>(t.taskInheritanceLocation);
+        this.parentTask = t.parentTask;
+        this.stopped = t.stopped;
     }
 
     public Task(String taskID, int inheritanceCount) {
@@ -55,6 +61,24 @@ public class Task {
         this.eventCounter = 0;
         this.taskInheritanceLocation = new HashSet<>();
         this.serial = globalTaskCounter++;
+        this.parentTask = null;
+        this.stopped = false;
+    }
+
+    public void setParentTask(Task parentTask) {
+        this.parentTask = parentTask;
+    }
+
+    public Task getParentTask() {
+        return parentTask;
+    }
+
+    public void stop() {
+        stopped = true;
+    }
+
+    public boolean isAlive() {
+        return !stopped;
     }
 
     public int getInheritanceCount() {

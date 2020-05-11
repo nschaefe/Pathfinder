@@ -1,5 +1,6 @@
 package boundarydetection.tracker;
 
+import boundarydetection.tracker.tasks.Task;
 import boundarydetection.tracker.tasks.Tasks;
 import boundarydetection.tracker.util.logging.FileLoggerEngine;
 import boundarydetection.tracker.util.logging.LazyLoggerFactory;
@@ -28,6 +29,7 @@ public class AccessTracker {
 
     private static volatile boolean eventLoggingEnabled = false;
     private static volatile boolean arrayCopyRedirectEnabled = false;
+    private static volatile boolean autoTaskInheritance = false;
 
     private static long globalDetectionCounter;
 
@@ -172,16 +174,34 @@ public class AccessTracker {
                         field,
                         writer, meta, eventID));
 
+
+        if (!autoTaskInheritance) return;
         // Auto inheritance of task
         if (writer.getTask().getInheritanceCount() == 0) {
             if (!Tasks.hasTask()) Tasks.startTask(writer.getTask());
             else if (!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID())) {
-                // for now we just overtake the other task id. If we start a new Task that replaces the new one (new epoch)
-                // this is fine and necessary, otherwise the new task is not propagated. If we have collision with another active task,
-                // this is a problem that should be reported.
-                // To do this we have to keep track of active tasks and only overtake if the old task died already
-                // This can be future work.
-                // TODO report warning
+                // there is already another task present in the target thread
+
+                // undesired situations that need to be reported
+
+                // if there is another main task running (inheritance count = 0)
+                // we should not inherit
+                Task present = Tasks.getTask();
+                if (present.getInheritanceCount() == 0) {
+                    Logger.log(ReportGenerator.generateAutoInheritanceMessageJSON("Auto task inheritance failed. There is already a main task present in the target thread", "ERROR", Thread.currentThread().getStackTrace(), writer.getStackTrace()));
+                    return;
+                }
+
+                // if there is already a reader task running (inheritance count > 0)
+                // we should only override if the bounded parent task is dead already
+                if (present.getInheritanceCount() > 0 && present.getParentTask().isAlive()) {
+                    Logger.log(ReportGenerator.generateAutoInheritanceMessageJSON(" Auto task inheritance: task is inherited to a thread that still has another inherited task running which parent is still alive", "WARNING", Thread.currentThread().getStackTrace(), writer.getStackTrace()));
+                    return;
+                }
+
+                // else if there is already a reader task running (inheritance count > 0)
+                // but parent already died, we overtake the task of the writer. This is when a new task was started and replaces
+                // the old inherited task now
                 Tasks.startTask(writer.getTask());
             }
 
@@ -231,6 +251,7 @@ public class AccessTracker {
         }
     }
 
+    //TODO rename this to set... so we do not need two methods
     public static void enableEventLogging() {
         eventLoggingEnabled = true;
     }
@@ -240,7 +261,15 @@ public class AccessTracker {
     }
 
 
-    // --------------------------------ACCESS HOOKS-------------------------------------
+    public static void enableAutoTaskInheritance() {
+        autoTaskInheritance = true;
+    }
+
+    public static void disableAutoTaskInheritance() {
+        autoTaskInheritance = false;
+    }
+
+// --------------------------------ACCESS HOOKS-------------------------------------
 
     // SPECIAL---------------------------
     public static void arrayCopy(Object src, int srcPos,

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.*;
 import java.io.IOException;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class TestTaskInheritance extends TestBase {
+public class TestTaskInheritanceEventLogging extends TestBase {
 
     private int MAX_COUNT_BACKUP;
 
@@ -16,6 +16,7 @@ public class TestTaskInheritance extends TestBase {
         super.prepare(testInfo);
         MAX_COUNT_BACKUP = AccessTracker.MAX_EVENT_COUNT;
         AccessTracker.enableEventLogging();
+        AccessTracker.enableAutoTaskInheritance();
     }
 
     @Test
@@ -47,6 +48,7 @@ public class TestTaskInheritance extends TestBase {
     @Override
     @AfterEach
     public void close(TestInfo testInfo) throws IOException, InterruptedException {
+        AccessTracker.disableAutoTaskInheritance();
         AccessTracker.disableEventLogging();
         AccessTracker.MAX_EVENT_COUNT = MAX_COUNT_BACKUP;
         super.close(testInfo);

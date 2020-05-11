@@ -10,6 +10,7 @@ public class Tasks {
 
 
     private static volatile boolean b = false;
+
     private static void init() {
         if (b) return;
         synchronized (Tasks.class) {
@@ -30,14 +31,18 @@ public class Tasks {
         task.set(Task.createTask());
     }
 
-    public static void startTask(Task t) {
+    public static void startTask(Task parent) {
         init();
-        t = new Task(t, t.getInheritanceCount() + 1);
+        Task t = new Task(parent, parent.getInheritanceCount() + 1);
+        t.setParentTask(t);
         task.set(t);
     }
 
     public static void stopTask() {
         init();
+        if (task.get() != null) {
+            task.get().stop();
+        }
         task.remove();
     }
 
