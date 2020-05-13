@@ -15,8 +15,10 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         w_trace = w_trace.reverse()
         var s = detect.location + (detect.parent != null ? "" : "_" + detect.reference)
         w_trace.push(s)
-        var sink = parseTrace(w_trace, node_map, id, true)
+        var sink = parseTrace(w_trace, node_map, id, true, detect.writer_thread_id)
         sink.sink = true
+        if (sink.jsons == null) sink.jsons = new Set()
+        sink.jsons.add(detect)
 
         // can have multiple event ids because of node merging, several instances of the location over several java objects (e.g. hbase.Call will appear severla times in a run)
         if (sink.eventIDs == null) sink.eventIDs = new Set()
@@ -30,7 +32,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         var r_trace = JSON.parse(detect.reader_stacktrace)
         r_trace = r_trace.reverse()
         r_trace.push(s)
-        sink = parseTrace(r_trace, node_map, id, false)
+        sink = parseTrace(r_trace, node_map, id, false, detect.reader_thread_id)
     }
 
     var sinks = Array.from(node_map.values()).filter(e => e.sink)
@@ -59,7 +61,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         return trace.slice(0, i + 1)
     }
 
-    function parseTrace(trace, node_map, id, isWriter) {
+    function parseTrace(trace, node_map, id, isWriter, thId) {
         var source = null
         var postfix = isWriter ? "W" : "R"
         //is used to avoid recursion loops, count for every element, 
@@ -75,7 +77,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
             // get node if existant
             var target = node_map.get(entry)
             if (target == null) {
-                target = getNode(entry, id.val++, isWriter)//this.id++ TODO
+                target = getNode(entry, id.val++, isWriter, thId)//this.id++ TODO
                 if (source == null) target.root = true
                 node_map.set(entry, target)
             }
@@ -147,7 +149,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
 
                 var target = node_map.get(entry)
                 if (target == null) {
-                    target = getNode(child.text, id.val++, false)
+                    target = getNode(child.text, id.val++, false, child.thread_id)
                     node_map.set(entry, target)
                 }
 
@@ -220,16 +222,20 @@ Graphs.canExpand = function (node) {
     return false;
 }
 
-//TODO make clear working on view or on all
-Graphs.getEnabledRoots = function (nodes) {
-    return Graphs.getRoots(nodes).filter(d => d.enabled)
+
+Graphs.getViewRoots = function (nodes) {
+    return getRootsInner(nodes.filter(d => d.enabled), (n) => n.viewParents)
 }
 
 Graphs.getRoots = function (nodes) {
+    return getRootsInner(nodes, (n) => n.parents)
+}
+
+function getRootsInner(nodes, getParents) {
     //collect root nodes, make sets to arrays
     var roots = []
     nodes.forEach((el) => {
-        if (el.parents.size == 0) roots.push(el)
+        if (getParents(el).size == 0) roots.push(el)
     })
     return roots
 }
@@ -406,7 +412,7 @@ function getNextEnabledOnLine(n) {
     return getEnabledOnLine(n)
 }
 
-function getNode(name, id, isWriter, parent = null) {
+function getNode(name, id, isWriter, thID) {
     var node = new Object();
     node.id = id
     node.class = Utils.getClassName(name)
@@ -417,9 +423,6 @@ function getNode(name, id, isWriter, parent = null) {
     node.viewChildren = new Set()
     node.cuttedChildren = new Set()
     node.isWriter = isWriter
-    if (parent != null) {
-        node.parents.add(parent)
-        parent.children.add(node)
-    }
+    node.threadID = thID
     return node
 }

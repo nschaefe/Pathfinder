@@ -11,7 +11,7 @@ DrillDriver.prototype.fetchEvents = function (taskID, file = "./tracker_report.j
     return sendQuery(query, this.baseUrl)
 };
 
-DrillDriver.prototype.fetchDetections = function (serial = 0, file = "./tracker_report.json") {
+DrillDriver.prototype.fetchDetections = function (serial = 1, file = "./tracker_report.json") {
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
         "t11 AS (SELECT * FROM t1 WHERE tag = 'CONCURRENT WRITE/READ DETECTION' ), " +

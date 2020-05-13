@@ -99,7 +99,7 @@ export function render(full_graph) {
   function updateData() {
     Graphs.updateLinks(full_graph)
 
-    var roots = Graphs.getEnabledRoots(full_graph)
+    var roots = Graphs.getViewRoots(full_graph)
     roots.forEach(n => Graphs.mergeEqualPathsRecursive(n, (d) => d.viewChildren, (d, s) => d.viewChildren = s))
 
     dag = builder(...roots)
@@ -157,9 +157,13 @@ export function render(full_graph) {
   function onNodeUpdate(nodeEl) {
     nodeEl.attr('transform', ({ x, y }) => `translate(${x}, ${y})`)
       .on("mouseover", function (d) {
+        var unrwapNode = getNode(d)
+        var txt = Utils.shortenClassName(unrwapNode.name) + "; rid=" + unrwapNode.threadID
+
         tooltip
           .style("visibility", "visible")
-          .text(Utils.shortenClassName(getNode(d).name)) //.html(d.name + "<br>" +"aa")
+          //.html(d.name + "<br>" +"aa")
+          .text(txt)
           .style("left", (d3.event.pageX) + "px")
           .style("top", (d3.event.pageY - tooltipTextSize - nodeRadius * 3) + "px");
 
@@ -283,6 +287,10 @@ export function render(full_graph) {
     var vecX = p2.x - p1.x
     var vecY = p2.y - p1.y
     var norm = Math.sqrt(vecX ** 2 + vecY ** 2)
+    if (norm == 0) {
+      console.log("WARNING: norm of link between two nodes is 0, no shortening; " + link)
+      return
+    }
     var scale = 1 - (nodeRadius * 2 / norm)
 
     var linkP2 = points[points.length - 1]
