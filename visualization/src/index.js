@@ -12,7 +12,7 @@ try {
     drill.loadStoragePlugin("rep", plugin)
     console.log("installed storage plugin")
 
-    var dets = drill.fetchDetections()
+    var dets = drill.fetchDetections(1)
     var events = drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
 
