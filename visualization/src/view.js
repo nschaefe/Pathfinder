@@ -46,7 +46,7 @@ export function render(full_graph) {
 
   //Graphs.shrinkStraightPaths(full_graph)
   Graphs.enableParentsOfSinks(full_graph)
-  Graphs.disableReaderTraces(full_graph)
+  // Graphs.disableReaderTraces(full_graph)
 
   var builder = d3.dagHierarchy()
   builder = builder.children((d) => {
@@ -158,7 +158,7 @@ export function render(full_graph) {
     nodeEl.attr('transform', ({ x, y }) => `translate(${x}, ${y})`)
       .on("mouseover", function (d) {
         var unrwapNode = getNode(d)
-        var txt = Utils.shortenClassName(unrwapNode.name) + "; rid=" + unrwapNode.threadID
+        var txt = unrwapNode.name + "; rid=" + unrwapNode.threadID
 
         tooltip
           .style("visibility", "visible")

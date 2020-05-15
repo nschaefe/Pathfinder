@@ -42,7 +42,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     var c = 1
     for (var sink of sinks) sink.firstHitClock = c++
 
-    parseEventsFromStart(sinks, events, node_map, id, depthLimit)
+   // parseEventsFromStart(sinks, events, node_map, id, depthLimit)
     var nodes = Array.from(node_map.values());
 
     // Depending on the node merging strategy when parsing, cycles can occur
