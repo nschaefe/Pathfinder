@@ -3,10 +3,9 @@ import { Utils } from "./util.js";
 export var Graphs = new Graph()
 function Graph() { }
 
-Graphs.parseDAG = function (dets, events, startEntry = "") {
+Graphs.parseDAG = function (dets, events = null, startEntry = "") {
     var node_map = new Map();
     var id = new Object()
-    var depthLimit = 75
     id.val = 0
     for (var i = 0; i < dets.length; i++) {
         var detect = dets[i]
@@ -49,7 +48,10 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     c = 1
     for (var sink of sinks) sink.firstWriterHitClock = c++
 
-    // parseEventsFromStart(sinks, events, node_map, id, depthLimit)
+    if (events != null) {
+        var depthLimit = 75
+        parseEventsFromStart(sinks, events, node_map, id, depthLimit)
+    }
     var nodes = Array.from(node_map.values());
 
     // Depending on the node merging strategy when parsing, cycles can occur
