@@ -13,11 +13,32 @@ try {
     console.log("installed storage plugin")
 
     var dets = drill.fetchDetections(1)
+
+    var coveredReader = new Set()
+    dets = dets.filter(d => {
+        const a = JSON.parse(d.reader_joined_trace_ids).includes(d.writer_sub_traceID)
+        if (a) coveredReader.add(d.reader_thread_id);
+        return !a
+    })
+
+    var ignoreIfOneChannelCovered = true; //TODO config
+    if (ignoreIfOneChannelCovered) {
+        dets = dets.filter(d => !coveredReader.has(d.reader_thread_id))
+    }
+
     //SELECT writer_task_id FROM rep.root.`./tracker_report.json`
  
+    //TODO move this code
     //assumes only one writer
     //assumes detections are distinct
     function eliminateDuplicateCommunication(dets) {
+        //eliminates redundant communication paths
+        //first groups detections by reader_thread_id
+        //then compares these groups. Identical are removed.
+        //We need to group first to not destroy consistency between groups.
+        //We want to keep the communication between 2 threads complete and not delete some detections in different groups
+        //where we would have a disitinct set of detections but all detection sets per thread pair might be incomplete
+
         var m = new Map()
         for (var d of dets) {
             var set = m.get(d.reader_thread_id)
@@ -61,7 +82,7 @@ try {
 
     //it is possible that several distinct execution paths are displayed (several roots), if the same thread is reused
     dets = dets.filter(a => a.reader_thread_id == selection)
-    var events = drill.fetchEvents(dets[0].writer_taskID)
+    var events = drill.fetchEvents(dets[0].writer_traceID)
     console.log("fetched data")
 
     //"org.apache.hadoop.hbase.client.HTable.put(HTable.java:566)"

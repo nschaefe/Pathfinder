@@ -29,6 +29,9 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
         if (sink.minSerial == null) sink.minSerial = Number.MAX_SAFE_INTEGER
         sink.minSerial = Math.min(sink.minSerial, detect.serial)
 
+        if (sink.minWriterSerial == null) sink.minWriterSerial = Number.MAX_SAFE_INTEGER
+        sink.minWriterSerial = Math.min(sink.minWriterSerial, detect.writer_global_clock)
+
         var r_trace = JSON.parse(detect.reader_stacktrace)
         r_trace = r_trace.reverse()
         r_trace.push(s)
@@ -41,6 +44,10 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     sinks.sort((a, b) => a.minSerial - b.minSerial)
     var c = 1
     for (var sink of sinks) sink.firstHitClock = c++
+
+    sinks.sort((a, b) => a.minWriterSerial - b.minWriterSerial)
+    c = 1
+    for (var sink of sinks) sink.firstWriterHitClock = c++
 
    // parseEventsFromStart(sinks, events, node_map, id, depthLimit)
     var nodes = Array.from(node_map.values());
@@ -261,6 +268,7 @@ Graphs.hasCycle = function (nodes) {
 }
 
 Graphs.cutCycle = function (nodes) {
+    //TODO does not work if we have a total cycle so not root
     var roots = Graphs.getRoots(nodes)
     for (var i = 0; i < roots.length; i++) {
         var n = roots[i]

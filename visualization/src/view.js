@@ -55,11 +55,11 @@ export function render(full_graph) {
 
   // for starting tree
   var layout = d3.sugiyama()
-    .size([width - (nodeTextSize + 5), height - (nodeTextSize + 5)]) //lowest nodes must be high enough to show bottom text
+    .size([width - (nodeTextSize + 5), height - (nodeTextSize * 2 + 5)]) //lowest nodes must be high enough to show bottom text
     .layering(d3.layeringLongestPath())
     .decross(d3.decrossTwoLayer())
-    //.coord(d3.coordCenter())
-    .coord(d3.coordMinCurve())
+    .coord(d3.coordCenter())
+  //.coord(d3.coordMinCurve())
 
   // for reader view
   // var layout = d3.sugiyama()
@@ -149,8 +149,13 @@ export function render(full_graph) {
 
     groupEl.append('text')
       .attr("class", "textRight");
-    groupEl.append('text')
+    var txt = groupEl.append('text')
       .attr("class", "textBottom");
+    txt.append("tspan")
+      .attr("class", "textBottomL1");
+    txt.append("tspan")
+      .attr("class", "textBottomL2");
+
     return groupEl
   }
 
@@ -201,12 +206,16 @@ export function render(full_graph) {
       .text((d) => Utils.shortenClassName(getNode(d).name));
 
     nodeEl.select('.textBottom')
-      .attr("dx", - nodeTextSize / 2 + "px")
-      .attr("dy", nodeRadius * 3 + 5 + "px")
       .attr("font-size", nodeTextSize + "px")
-      .attr("visibility", (d) => getNode(d).sink ? "visible" : "hidden")
+      .attr("visibility", (d) => getNode(d).sink ? "visible" : "hidden");
+    nodeEl.select('.textBottomL1')
+      .attr("x", (d) => - nodeTextSize / 2 + "px")
+      .attr("y", nodeRadius * 3 + 5 + "px")
+      .text((d) => getNode(d).sink ? '|' + getNode(d).firstWriterHitClock + '|' : '');
+    nodeEl.select('.textBottomL2')
+      .attr("x", (d) => - nodeTextSize / 2 + "px")
+      .attr("y", nodeRadius * 3 + 5 + nodeTextSize + "px")
       .text((d) => getNode(d).sink ? '|' + getNode(d).firstHitClock + '|' : '');
-
     return nodeEl
   }
 

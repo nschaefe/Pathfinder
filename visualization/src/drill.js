@@ -6,7 +6,7 @@ DrillDriver.prototype.fetchEvents = function (taskID, file = "./tracker_report.j
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
         "t11 AS (SELECT * FROM t1 WHERE tag = 'EVENT' ), " +
-        "t111 AS (SELECT * FROM t11 WHERE taskID='" + taskID + "') SELECT * FROM t111"
+        "t111 AS (SELECT * FROM t11 WHERE traceID='" + taskID + "') SELECT * FROM t111"
 
     return sendQuery(query, this.baseUrl)
 };
@@ -16,18 +16,7 @@ DrillDriver.prototype.fetchDetections = function (serial = 1, file = "./tracker_
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
         "t11 AS (SELECT * FROM t1 WHERE tag = 'CONCURRENT WRITE/READ DETECTION' ), " +
         "t111 AS (SELECT * FROM t11 WHERE NOT( REPEATED_CONTAINS(writer_stacktrace,'(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)') OR REPEATED_CONTAINS(reader_stacktrace,'(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)')) ), " +
-        "t1111 AS (SELECT * FROM t111 WHERE writer_task_serial=" + serial + ") SELECT * FROM t1111"
-
-    //var query = "select * from dfs.`/home/nico/Dokumente/Entwicklung/Uni/Tracing/instrumentationhelper/testClient/track.json` where type = \u0027CONCURRENT WRITE/READ DETECTION\u0027"
-    return sendQuery(query, this.baseUrl)
-};
-
-DrillDriver.prototype.fetchDetections = function (serial = 6, file = "./tracker_report.json") {
-    var query = "WITH " +
-        "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
-        "t11 AS (SELECT * FROM t1 WHERE tag = 'CONCURRENT WRITE/READ DETECTION' ), " +
-        "t111 AS (SELECT * FROM t11 WHERE NOT( REPEATED_CONTAINS(writer_stacktrace,'(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)') OR REPEATED_CONTAINS(reader_stacktrace,'(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)')) ), " +
-        "t1111 AS (SELECT * FROM t11 WHERE writer_task_serial=" + serial + ") SELECT * FROM t1111"
+        "t1111 AS (SELECT * FROM t111 WHERE writer_trace_serial=" + serial + ") SELECT * FROM t1111"
 
     //var query = "select * from dfs.`/home/nico/Dokumente/Entwicklung/Uni/Tracing/instrumentationhelper/testClient/track.json` where type = \u0027CONCURRENT WRITE/READ DETECTION\u0027"
     return sendQuery(query, this.baseUrl)
