@@ -1,6 +1,7 @@
 package boundarydetection.tracker;
 
 import boundarydetection.tracker.tasks.Task;
+import boundarydetection.tracker.tasks.TaskCollisionException;
 import boundarydetection.tracker.tasks.Tasks;
 import boundarydetection.tracker.util.logging.FileLoggerEngine;
 import boundarydetection.tracker.util.logging.LazyLoggerFactory;
@@ -120,7 +121,7 @@ public class AccessTracker {
 
     private static void writeAccessInner(AbstractFieldLocation field, boolean valueIsNull) {
         if (!Tasks.hasTask()) return;
-        if (Tasks.getTask().getInheritanceCount() > 0) return;
+        if (!Tasks.getTask().hasWriteCapability()) return;
         FieldAccessMeta meta = accesses.get(field);
         if (meta == null) {
             meta = new FieldAccessMeta();
@@ -171,38 +172,40 @@ public class AccessTracker {
                         readSerial++,
                         Thread.currentThread().getId(),
                         Thread.currentThread().getStackTrace(),
+                        Tasks.getTask(),
                         field,
                         writer, meta, eventID));
 
 
         if (!autoTaskInheritance) return;
         // Auto inheritance of task
-        if (writer.getTask().getInheritanceCount() == 0) {
-            if (!Tasks.hasTask()) Tasks.startTask(writer.getTask());
-            else if (!Tasks.getTask().getTaskID().equals(writer.getTask().getTaskID())) {
+        if (writer.getTask().getAutoInheritanceCount() == 0) { //inherit only one step down
+            if (!Tasks.hasTask()) Tasks.inheritTask(writer.getTask());
+            else {
                 // there is already another task present in the target thread
-
                 // undesired situations that need to be reported
 
                 // if there is another main task running (inheritance count = 0)
                 // we should not inherit
                 Task present = Tasks.getTask();
-                if (present.getInheritanceCount() == 0) {
+                if (present.getAutoInheritanceCount() == 0) {
                     Logger.log(ReportGenerator.generateAutoInheritanceMessageJSON("Auto task inheritance failed. There is already a main task present in the target thread", "ERROR", Thread.currentThread().getStackTrace(), writer.getStackTrace()));
                     return;
                 }
 
                 // if there is already a reader task running (inheritance count > 0)
                 // we should only override if the bounded parent task is dead already
-                if (present.getInheritanceCount() > 0 && present.getParentTask().isAlive()) {
+                if (present.getAutoInheritanceCount() > 0 && !present.getParentTask().getSubTraceID().equals(writer.getTask().getSubTraceID()) && present.getParentTask().isAlive()) {
                     Logger.log(ReportGenerator.generateAutoInheritanceMessageJSON(" Auto task inheritance: task is inherited to a thread that still has another inherited task running which parent is still alive", "WARNING", Thread.currentThread().getStackTrace(), writer.getStackTrace()));
                     return;
                 }
 
-                // else if there is already a reader task running (inheritance count > 0)
+                // else if there is already another reader task running (inheritance count > 0)
                 // but parent already died, we overtake the task of the writer. This is when a new task was started and replaces
                 // the old inherited task now
-                Tasks.startTask(writer.getTask());
+                if (present.getAutoInheritanceCount() > 0 && !present.getParentTask().getSubTraceID().equals(writer.getTask().getSubTraceID())  && !present.getParentTask().isAlive()) {
+                    Tasks.inheritTask(writer.getTask());
+                }
             }
 
             assert (Tasks.hasTask());
@@ -444,11 +447,32 @@ public class AccessTracker {
         return Tasks.hasTask();
     }
 
+    public static Task getTask() {
+        return Tasks.getTask();
+    }
+
     public static void pauseTask() {
         Tasks.pauseTask();
     }
 
     public static void resumeTask() {
         Tasks.resumeTask();
+    }
+
+    public static void join(Task t) {
+        try {
+            Tasks.join(t);
+        } catch (TaskCollisionException e) {
+            init();
+            Logger.log(e.toString(), "ERROR");
+        }
+    }
+
+    public static void discard() {
+        Tasks.discard();
+    }
+
+    public static Task fork() {
+        return Tasks.fork();
     }
 }

@@ -8,7 +8,6 @@ public class Tasks {
     private static volatile ThreadLocal<Task> pausedTask;
     private static volatile ThreadLocal<Integer> pausedTaskCounter;
 
-
     private static volatile boolean b = false;
 
     private static void init() {
@@ -31,10 +30,12 @@ public class Tasks {
         task.set(Task.createTask());
     }
 
-    public static void startTask(Task parent) {
+    public static void inheritTask(Task parent) {
         init();
-        Task t = new Task(parent, parent.getInheritanceCount() + 1);
-        t.setParentTask(t);
+        Task t = new Task(parent);
+        t.setAutoInheritanceCount(parent.getAutoInheritanceCount() + 1);
+        t.setWriteCapability(false);
+        t.setParentTask(parent);
         task.set(t);
     }
 
@@ -85,5 +86,38 @@ public class Tasks {
         }
     }
 
+    public static void join(Task t) throws TaskCollisionException {
+        init();
+        if (!Tasks.hasTask()) {
+            task.set(new Task(t));
+            Tasks.getTask().addJoiner(t); // add to joiners
+            Tasks.getTask().newSubTraceID();
+
+        } else if (Tasks.getTask().getTraceID().equals(t.getTraceID())) {
+            //normal join
+            // Current task and task to be joined originated from the same task id
+            // their parents does not need to be the same object but have the same task id
+            Tasks.getTask().addJoiner(t);
+        } else {
+            throw new TaskCollisionException("Collision between present:" + Tasks.getTask().getTraceID() + " and to join:" + t.getTraceID());
+            //collision
+            // we have a current task running and there is another task to join.
+            // this is inproper use. discard needed.
+        }
+    }
+
+    public static void discard() {
+        Tasks.stopTask();
+    }
+
+    public static Task fork() {
+        if (!Tasks.hasTask()) return null;
+        init();
+        Task parent = Tasks.getTask();
+        Task t = new Task(parent);
+        t.clearJoiner();
+        t.setParentTask(parent);
+        return t;
+    }
 
 }

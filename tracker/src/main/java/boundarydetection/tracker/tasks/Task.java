@@ -2,10 +2,7 @@ package boundarydetection.tracker.tasks;
 
 import boundarydetection.tracker.AbstractFieldLocation;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Immutable task metadata
@@ -13,32 +10,32 @@ import java.util.UUID;
 public class Task {
 
     private Task parentTask; // null by default. Can be set to bind to another task
+    private String traceID; // serial and trace id belong to high level
+    private int serial;
 
-    private String taskID;
-    private int inheritanceCount;
+    private String subTraceID;
+    private boolean stopped;
+    private Set<Task> joiners;
+
 
     private String eventIdPrefix;
     private int eventIDSeqNum;
-
     private Collection<String> parentEventIDs;
-
-    private int serial;
     private int eventCounter;
 
     private Collection<AbstractFieldLocation> taskInheritanceLocation;
+    private int autoInheritanceCount;
+
+    private boolean writeCapability;
 
     private static int globalTaskCounter = 1;
 
-    private boolean stopped;
-
     public Task(Task t) {
-        this(t, t.inheritanceCount);
-    }
-
-    public Task(Task t, int inheritanceCount) {
+        if (t == null) throw new NullPointerException("Task to copy is null");
         //copy construc.
-        this.taskID = t.taskID;
-        this.inheritanceCount = inheritanceCount;
+        this.traceID = t.traceID;
+        this.subTraceID = t.subTraceID;
+        this.autoInheritanceCount = t.autoInheritanceCount;
         this.serial = t.serial;
         this.eventIdPrefix = t.eventIdPrefix;
         this.eventIDSeqNum = t.eventIDSeqNum;
@@ -50,11 +47,14 @@ public class Task {
         this.taskInheritanceLocation = new HashSet<>(t.taskInheritanceLocation);
         this.parentTask = t.parentTask;
         this.stopped = t.stopped;
+        this.joiners = new HashSet<>(t.joiners);
+        this.writeCapability = t.writeCapability;
     }
 
-    public Task(String taskID, int inheritanceCount) {
-        this.taskID = taskID;
-        this.inheritanceCount = inheritanceCount;
+    public Task(String traceID) {
+        this.traceID = traceID;
+        this.subTraceID = traceID + "_" + Math.random();
+        this.autoInheritanceCount = 0;
         this.parentEventIDs = new ArrayList<>();
         this.eventIdPrefix = null;
         this.eventIDSeqNum = 0;
@@ -63,6 +63,20 @@ public class Task {
         this.serial = globalTaskCounter++;
         this.parentTask = null;
         this.stopped = false;
+        this.joiners = new HashSet<>();
+        this.writeCapability = true;
+    }
+
+    public void addJoiner(Task task) {
+        joiners.add(task);
+    }
+
+    public Task[] getJoiners() {
+        return joiners.toArray(new Task[joiners.size()]);
+    }
+
+    public void clearJoiner() {
+        joiners.clear();
     }
 
     public void setParentTask(Task parentTask) {
@@ -81,12 +95,25 @@ public class Task {
         return !stopped;
     }
 
-    public int getInheritanceCount() {
-        return inheritanceCount;
+    public int getAutoInheritanceCount() {
+        return autoInheritanceCount;
     }
 
-    public String getTaskID() {
-        return taskID;
+    void setAutoInheritanceCount(int autoInheritanceCount) {
+        this.autoInheritanceCount = autoInheritanceCount;
+    }
+
+    public String getTraceID() {
+        return traceID;
+    }
+
+    public void newSubTraceID() {
+        String[] s = subTraceID.split("_");
+        subTraceID = s[0] + "_" + (Double.parseDouble(s[1]) * 17 + Math.random());
+    }
+
+    public String getSubTraceID() {
+        return this.subTraceID;
     }
 
     public void addInheritanceLocation(AbstractFieldLocation f) {
@@ -99,6 +126,14 @@ public class Task {
 
     public int getSerial() {
         return serial;
+    }
+
+    public boolean hasWriteCapability() {
+        return writeCapability;
+    }
+
+    public void setWriteCapability(boolean writeCapability) {
+        this.writeCapability = writeCapability;
     }
 
     //--------------
@@ -145,7 +180,7 @@ public class Task {
     }
 
     public static Task createTask() {
-        return new Task(getNewTaskID(), 0);
+        return new Task(getNewTaskID());
     }
 
 
