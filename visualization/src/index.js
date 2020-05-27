@@ -14,6 +14,7 @@ try {
     console.log("installed storage plugin")
 
     var dets = drill.fetchDetections(1)
+    // var events = drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
 
     dets = Filters.filterDistinct(dets)
