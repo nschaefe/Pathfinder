@@ -21,13 +21,27 @@ try {
         return !a
     })
 
-    var ignoreIfOneChannelCovered = true; //TODO config
+    var ignoreIfOneChannelCovered = false; //TODO config
     if (ignoreIfOneChannelCovered) {
         dets = dets.filter(d => !coveredReader.has(d.reader_thread_id))
     }
 
+    dets = filterByTraces(dets, "(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)")
+    function filterByTraces(dets, regexString) {
+        var regex = new RegExp(regexString)
+        return dets.filter(d => !matchRegex(JSON.parse(d.writer_stacktrace)) && !matchRegex(JSON.parse(d.reader_stacktrace)))
+
+        function matchRegex(trace) {
+            for (var entry of trace) {
+                if (entry.match(regex)) return true
+            }
+            return false
+        }
+    }
+
+
     //SELECT writer_task_id FROM rep.root.`./tracker_report.json`
- 
+
     //TODO move this code
     //assumes only one writer
     //assumes detections are distinct

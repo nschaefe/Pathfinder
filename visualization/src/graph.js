@@ -49,7 +49,7 @@ Graphs.parseDAG = function (dets, events, startEntry = "") {
     c = 1
     for (var sink of sinks) sink.firstWriterHitClock = c++
 
-   // parseEventsFromStart(sinks, events, node_map, id, depthLimit)
+    // parseEventsFromStart(sinks, events, node_map, id, depthLimit)
     var nodes = Array.from(node_map.values());
 
     // Depending on the node merging strategy when parsing, cycles can occur
@@ -248,9 +248,9 @@ function getRootsInner(nodes, getParents) {
 }
 
 Graphs.hasCycle = function (nodes) {
-    var roots = Graphs.getRoots(nodes)
-    for (var i = 0; i < roots.length; i++) {
-        var n = roots[i]
+    // TODO this could be optimized, since nodes are visited several times
+    for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i]
         if (hasCycleInner(n)) return true
     }
     return false
@@ -262,16 +262,15 @@ Graphs.hasCycle = function (nodes) {
         for (var child of n.children) {
             if (hasCycleInner(child)) return true
         }
-        n.visited = null
+        n.visited = undefined
         return false
     }
 }
 
 Graphs.cutCycle = function (nodes) {
-    //TODO does not work if we have a total cycle so not root
-    var roots = Graphs.getRoots(nodes)
-    for (var i = 0; i < roots.length; i++) {
-        var n = roots[i]
+    // TODO this could be optimized, since nodes are visited several times
+    for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i]
         cutCycleInner(n)
     }
 
@@ -283,7 +282,7 @@ Graphs.cutCycle = function (nodes) {
             var cycleEdge = cutCycleInner(child)
             if (cycleEdge) cutChild(n, child)
         }
-        n.visited = null
+        n.visited = undefined //delete helper variable
         return false
     }
 
