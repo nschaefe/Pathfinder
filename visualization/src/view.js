@@ -71,6 +71,33 @@ export function render(full_graph) {
   // var layout = d3.zherebko()
   //   .size([width, height])
 
+  var button;
+  { // to blacklist buttion
+    button = svg.append('g')
+      .attr("id", "button")
+      .attr("x", 5)
+      .attr("y", 5)
+      .on("click", function (d) {
+        var sets = dag.descendants().filter(d => getNode(d).sink).map(d => getNode(d).jsons)
+        var rs = new Set()
+        for (var s of sets) {
+          rs = new Set([...rs, ...s])
+        }
+        printToBlacklist(Array.from(rs))
+      });
+
+    button.append("rect")
+      .attr("width", 145)
+      .attr("height", 30)
+
+    button.append("text")
+      .attr("x", 5)
+      .attr("y", 20)
+      .attr("font-size", 22 + "px")
+      .attr("fill", "white")
+      .text("All to blacklist");
+  }
+
   var link = svg.append('g')
     .attr('class', 'links')
     .selectAll('path')
@@ -248,6 +275,16 @@ export function render(full_graph) {
       updateView()
     }
   });
+
+  function printToBlacklist(detections) {
+    // var str = ""
+    // for (var d of detections) {
+    //   str += JSON.stringify(d) + '\n'
+    // }
+    // str = str.substring(0, str.length - 1);
+    const name = "report"
+    Utils.download(JSON.stringify(detections), name + ".bl.json", "application/json")
+  }
 
   function resetHighlighting(node) {
     node.highlight = false

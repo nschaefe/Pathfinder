@@ -21,7 +21,33 @@ DrillDriver.prototype.fetchDetections = function (serial = 1, file = "./tracker_
     return sendQuery(query, this.baseUrl)
 };
 
-DrillDriver.prototype.loadStoragePlugin = function (pluginName, pluginConfig, baseUrl) {
+DrillDriver.prototype.locationHistogram = function (file = "./tracker_report.json") {
+    var query = "SELECT location, COUNT(*) as count FROM rep.root.`" + file + "` GROUP BY location ORDER BY count DESC"
+    return sendQuery(query, this.baseUrl)
+};
+
+DrillDriver.prototype.fetchTraceSerials = function (file = "./tracker_report.json") {
+    var query = "SELECT DISTINCT writer_trace_serial FROM rep.root.`" + file + "`"
+    return sendQuery(query, this.baseUrl)
+};
+
+// idea to write tables with drill, not working
+// DrillDriver.prototype.storeInTable = function (tableName) {
+//     var file = tableName
+//     var t = "rep.root.`" + file + "`"
+//     var oldT = "(SELECT * FROM " + t + ")"
+//     var newT = "(SELECT 'test' as testCol)"
+//     var union = "(" + oldT + " union " + newT + ")"
+//     var create = "CREATE TABLE " + t + " AS " + union
+//     var query = "ALTER SESSION SET `store.format`='json' "
+
+//     console.log(query)
+//     sendQuery(query, this.baseUrl)
+//     sendQuery(create, this.baseUrl)
+// }
+
+
+DrillDriver.prototype.loadStoragePlugin = function (pluginName, pluginConfig) {
     var message = JSON.stringify({ "name": pluginName, "config": pluginConfig })
     console.log(message)
     var pluginURL = this.baseUrl + "/storage/myplugin.json"

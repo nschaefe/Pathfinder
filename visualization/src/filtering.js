@@ -30,9 +30,30 @@ function filterByTraces(dets, regexString) {
     }
 }
 
+Filters.intersectWithTraces = intersectWithTraces
+function intersectWithTraces(dets, traces) {
+    var intersec = [...new Set(dets.map(d => d.location))]
+    for (var trace of traces) {
+        var loc = [...new Set(trace.map(d => d.location))]
+        intersec = intersec.filter(s => loc.indexOf(s) != -1)
+    }
+    return dets.filter(d => intersec.includes(d.location))
+}
+
+
 Filters.filterDistinct = filterDistinct
 function filterDistinct(dets) {
     return [...new Set(dets.map(d => JSON.stringify(d)))].map(d => JSON.parse(d))
+}
+
+
+Filters.filterBlacklist = filterBlacklist
+function filterBlacklist(dets, blacklist) {
+    var flatBL = blacklist.map(d => JSON.stringify({ loc: d.location, wt: d.writer_stacktrace, rt: d.reader_stacktrace }))
+    return dets.filter(d => {
+        var flatd = JSON.stringify({ loc: d.location, wt: d.writer_stacktrace, rt: d.reader_stacktrace })
+        return !flatBL.includes(flatd)
+    })
 }
 
 Filters.filterDuplicateCommunication = filterDuplicateCommunication

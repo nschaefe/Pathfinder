@@ -3,6 +3,7 @@ import { render } from "./view.js";
 import { Graphs } from "./graph.js";
 import { Filters } from "./filtering.js";
 import stPluginTemplate from './storage_plugin_template.json';
+import blacklist from './report.bl.json';
 
 try {
     var drill = new DrillDriver()
@@ -17,8 +18,16 @@ try {
     // var events = drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
 
+    { // intersect over several traces
+        var serials = drill.fetchTraceSerials().map(d => d.writer_trace_serial)
+        var traces = []
+        for (var serial of serials) traces.push(drill.fetchDetections(serial))
+        //dets = Filters.intersectWithTraces(dets, traces)
+    }
+
+    //dets = Filters.filterBlacklist(dets, blacklist)
     dets = Filters.filterDistinct(dets)
-    dets = Filters.filterCovered(dets, true)
+    dets = Filters.filterCovered(dets, false)
     dets = Filters.filterByTraces(dets, "(.*edu\.brown\.cs\.systems.*|.*org\.apache\.hadoop\.hbase\.zookeeper.*)")
     dets = Filters.filterDuplicateCommunication(dets)
     console.log("filtered data")
