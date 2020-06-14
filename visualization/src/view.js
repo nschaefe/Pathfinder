@@ -277,13 +277,13 @@ export function render(full_graph) {
   });
 
   function printToBlacklist(detections) {
-    // var str = ""
-    // for (var d of detections) {
-    //   str += JSON.stringify(d) + '\n'
-    // }
-    // str = str.substring(0, str.length - 1);
+    var str = ""
+    for (var d of detections) {
+      str += JSON.stringify(d) + '\n'
+    }
+    str = str.substring(0, str.length - 1);
     const name = "report"
-    Utils.download(JSON.stringify(detections), name + ".bl.json", "application/json")
+    Utils.download(str, name + ".bl.json", "application/json")
   }
 
   function resetHighlighting(node) {

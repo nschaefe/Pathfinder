@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.HashMap;
 
 
+//TODO naming
 public final class ArrayFieldLocation extends AbstractFieldLocation {
 
     private int index;

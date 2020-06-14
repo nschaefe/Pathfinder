@@ -232,10 +232,12 @@ public class AccessTracker {
         insideTracker.set(true);
         try {
             if (!Tasks.hasTask()) return;
-            // this is an approximate solution. It is possible that the writer that has the task does not read the global
+            // To only track under a task is an approximate solution if we only register on reads.
+            // It is possible that the writer that has the task does not read the global
             // field and only the reader does. In that case the array location cannot be inferred.
             // (e.g. writer manipulates a local array and stores it later)
-            // but this is a lot faster and experiments showed it works in the most cases.
+            // But usually the array is already there and is used as infrastructure
+            // and this is a lot faster and experiments showed it works in the most cases.
             ArrayFieldLocation.registerLocation(field, location);
         } finally {
             insideTracker.remove();
@@ -314,6 +316,7 @@ public class AccessTracker {
 
     }
 
+    //TODO add on writeObject field for more coverage
     public static void readObjectArrayField(Object field, String location) {
         registerArrayLocation(field, location);
     }
