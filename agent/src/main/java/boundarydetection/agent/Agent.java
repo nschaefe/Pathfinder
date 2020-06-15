@@ -1,6 +1,7 @@
 package boundarydetection.agent;
 
 import boundarydetection.instrumentation.CodeInstrumenter;
+import boundarydetection.instrumentation.Util;
 import javassist.*;
 import javassist.build.JavassistBuildException;
 import javassist.expr.ExprEditor;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.util.function.Predicate;
 
 
 public class Agent implements ClassFileTransformer, javassist.build.IClassTransformer {
@@ -53,24 +55,13 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             "org.aspectj",
             "org.jruby",
             "jnr",
-            "org.joda",
-            "org.joni",
-            "org.apache.hbase.thirdparty.com.google.common.util.concurrent.Monitor", //TODO Stackmap in excpetion handler problem
-            "org.apache.hadoop.hbase.regionserver.HRegion", //TODO Stackmap in excpetion handler problem
             "org.apache.zookeeper", //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation, only VM reset is possible then
-            "com.google.comm", //TODO remove this
             "org.apache.htrace", //built in tracing
-            // "org.apache.hadoop.hbase", // WHEN STATICLY INTRUMENTED
 
-            //  APPLICATION PACKAGES BLACKLIST (JUnit)
+            // APPLICATION PACKAGES BLACKLIST (JUnit)
             "org.junit",
 
-            //DEBUG
-
-            "java.net",
-            "java.security",
-            "java.io",
-            "java.nio",
+            // Covered by rt.jar instrumentation
             "java",
     };
 
@@ -166,8 +157,10 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         CodeInstrumenter conv = new CodeInstrumenter();
         // adds transformers at the head (so reverse order)
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
-        conv.replaceFieldRead(tracker);
-        conv.replaceFieldWrite(tracker);
+
+        Predicate<String> filter = (s) -> Util.isSingleObjectSignature(s);
+        conv.instrumentFieldRead(tracker, filter);
+        conv.instrumentFieldWrite(tracker, filter);
         conv.reformatConstructor();
         ctCl.instrument(conv);
 

@@ -5,10 +5,12 @@ import javassist.CtClass;
 import javassist.bytecode.*;
 import javassist.convert.Transformer;
 
+import java.util.function.Predicate;
+
 public class FieldReadHook extends FieldAccessHook {
 
-    public FieldReadHook(Transformer next, String methodClassname) {
-        super(next, methodClassname);
+    public FieldReadHook(Transformer next, String methodClassname, Predicate<String> filter) {
+        super(next, methodClassname, filter);
     }
 
     @Override
@@ -41,6 +43,8 @@ public class FieldReadHook extends FieldAccessHook {
                 if (isStatic) iterator.writeByte(ACONST_NULL, pos);
                 else iterator.writeByte(Opcode.DUP, pos);
                 pos += 1;
+                CodeAttribute ca = iterator.get();
+                ca.setMaxStack(ca.getMaxStack() + 1);
 
                 if (Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc)) mdName = "readObject";
                 else mdName = "read" + typedesc;
@@ -58,8 +62,6 @@ public class FieldReadHook extends FieldAccessHook {
                 iterator.write16bit(methodref, pos + 1);
                 pos += 3;
 
-                CodeAttribute ca = iterator.get();
-                ca.setMaxStack(ca.getMaxStack() + 2);
                 pos = iterator.next();
             }
             return pos;
@@ -67,8 +69,8 @@ public class FieldReadHook extends FieldAccessHook {
         return pos;
     }
 
-    private boolean toInstrument(String typedesc) {
-        return Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc);
+    protected boolean toInstrument(String typedesc) {
+        return Util.isSingleObjectSignature(typedesc); //|| Util.isArraySignature(typedesc);
     }
 
 }

@@ -20,6 +20,8 @@ package boundarydetection.instrumentation;
 import javassist.CodeConverter;
 import javassist.CtClass;
 
+import java.util.function.Predicate;
+
 /**
  * Simple translator of method bodies
  * (also see the <code>javassist.expr</code> package).
@@ -48,18 +50,18 @@ import javassist.CtClass;
  */
 public class CodeInstrumenter extends CodeConverter {
 
-    public void replaceFieldRead(CtClass calledClass) {
+    public void instrumentFieldRead(CtClass calledClass, Predicate<String> filter) {
         transformers = new ArrayFieldValueReadHook(transformers,
                 calledClass.getName());
         transformers = new FieldReadHook(transformers,
-                calledClass.getName());
+                calledClass.getName(), filter);
     }
 
 
-    public void replaceFieldWrite(
-            CtClass calledClass) {
+    public void instrumentFieldWrite(
+            CtClass calledClass, Predicate<String> filter) {
         transformers = new FieldWriteHook(transformers,
-                calledClass.getName());
+                calledClass.getName(), filter);
     }
 
     public void reformatConstructor() {

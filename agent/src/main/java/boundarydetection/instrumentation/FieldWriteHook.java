@@ -4,10 +4,12 @@ import javassist.CtClass;
 import javassist.bytecode.*;
 import javassist.convert.Transformer;
 
+import java.util.function.Predicate;
+
 public class FieldWriteHook extends FieldAccessHook {
 
-    public FieldWriteHook(Transformer next, String methodClassname) {
-        super(next, methodClassname);
+    public FieldWriteHook(Transformer next, String methodClassname, Predicate<String> filter) {
+        super(next, methodClassname, filter);
     }
 
     @Override
@@ -72,8 +74,6 @@ public class FieldWriteHook extends FieldAccessHook {
                 String fieldname = cp.getFieldrefName(index);
                 int str_index = cp.addStringInfo(classname + '.' + fieldname);
                 pos = addLdc(str_index, iterator, pos);
-                CodeAttribute ca = iterator.get();
-                ca.setMaxStack(ca.getMaxStack() + 1);
 
                 pos = iterator.insertGap(3);
 
@@ -100,8 +100,5 @@ public class FieldWriteHook extends FieldAccessHook {
         return pos;
     }
 
-    private boolean toInstrument(String typeDesc) {
-        return  Util.isSingleObjectSignature(typeDesc);
-    }
 
 }

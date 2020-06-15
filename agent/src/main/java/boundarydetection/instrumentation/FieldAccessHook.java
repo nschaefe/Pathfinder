@@ -1,17 +1,25 @@
 package boundarydetection.instrumentation;
 
-import javassist.*;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtField;
+import javassist.NotFoundException;
 import javassist.bytecode.BadBytecode;
+import javassist.bytecode.CodeAttribute;
 import javassist.bytecode.CodeIterator;
 import javassist.bytecode.ConstPool;
 import javassist.convert.Transformer;
 
+import java.util.function.Predicate;
+
 public abstract class FieldAccessHook extends TransformerBase {
 
     protected String methodClassname;
+    private Predicate<String> filter;
 
-    public FieldAccessHook(Transformer next, String methodClassname) {
+    public FieldAccessHook(Transformer next, String methodClassname, Predicate<String> filter) {
         super(next);
+        this.filter = filter;
         this.methodClassname = methodClassname;
     }
 
@@ -62,14 +70,22 @@ public abstract class FieldAccessHook extends TransformerBase {
             iterator.writeByte(LDC_W, pos);
             iterator.write16bit(i, pos + 1);
             pos += 3;
+            CodeAttribute ca = iterator.get();
+            ca.setMaxStack(ca.getMaxStack() + 2);
 
         } else {
             pos = iterator.insertGap(2);
             iterator.writeByte(LDC, pos);
             iterator.writeByte(i, pos + 1);
             pos += 2;
+            CodeAttribute ca = iterator.get();
+            ca.setMaxStack(ca.getMaxStack() + 1);
         }
         return pos;
     }
 
+
+    protected boolean toInstrument(String typedesc) {
+        return filter == null ? true : filter.test(typedesc);
+    }
 }

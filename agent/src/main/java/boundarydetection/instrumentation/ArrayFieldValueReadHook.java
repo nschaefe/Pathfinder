@@ -8,7 +8,7 @@ import javassist.convert.Transformer;
 public class ArrayFieldValueReadHook extends FieldAccessHook {
 
     public ArrayFieldValueReadHook(Transformer next, String methodClassname) {
-        super(next, methodClassname);
+        super(next, methodClassname, null);
     }
 
     @Override
@@ -61,9 +61,4 @@ public class ArrayFieldValueReadHook extends FieldAccessHook {
         }
         return pos;
     }
-
-    private boolean toInstrument(String typedesc) {
-        return true|| Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc);
-    }
-
 }
