@@ -49,6 +49,8 @@ import javassist.CtClass;
 public class CodeInstrumenter extends CodeConverter {
 
     public void replaceFieldRead(CtClass calledClass) {
+        transformers = new ArrayFieldValueReadHook(transformers,
+                calledClass.getName());
         transformers = new FieldReadHook(transformers,
                 calledClass.getName());
     }

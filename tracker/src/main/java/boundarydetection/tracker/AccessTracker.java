@@ -319,12 +319,12 @@ public class AccessTracker {
 
     //-----------------------------------
 
-    //TODO add on writeObject field for more coverage
+    /*
+    This method was only introduced for array location inference.
+    The array object of the field read is captured what is not the case for the other tracking methods
+     */
     public static void readArrayField(Object value, String location) {
         registerArrayLocation(value, location);
-    }
-
-    public static void writeArrayField(Object parent, Object value, String location) {
     }
 
     public static void readObject(Object parent, String location) {
@@ -333,6 +333,7 @@ public class AccessTracker {
     }
 
     public static void writeObject(Object parent, Object value, String location) {
+        if (value != null && value.getClass().isArray()) registerArrayLocation(value, location);
         FieldLocation f = new FieldLocation(location, Object.class, parent);
         writeAccess(f, value == null);
     }
@@ -498,7 +499,7 @@ public class AccessTracker {
         return ((double[]) arr)[index];
     }
 
-    public static void arrayWriteFloat(Object arr, int index, char value) {
+    public static void arrayWriteFloat(Object arr, int index, float value) {
         ArrayFieldLocation f = new ArrayFieldLocation(float[].class, arr, index);
         writeAccess(f);
         ((float[]) arr)[index] = value;

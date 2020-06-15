@@ -79,12 +79,9 @@ public class FieldWriteHook extends FieldAccessHook {
 
                 String mdName;
                 String typ;
-                if (Util.isSingleObjectSignature(typedesc)) {
+                if (Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc)) {
                     typ = "Ljava/lang/Object;";
                     mdName = "writeObject";
-                } else if (Util.isArraySignature(typedesc)) {
-                    typ = "Ljava/lang/Object;";
-                    mdName = "writeArrayField";
                 } else {
                     typ = "";
                     mdName = "write" + typedesc;
@@ -103,8 +100,8 @@ public class FieldWriteHook extends FieldAccessHook {
         return pos;
     }
 
-    private boolean toInstrument(String typeDesc){
-        return Util.isSingleObjectSignature(typeDesc);
+    private boolean toInstrument(String typeDesc) {
+        return  Util.isSingleObjectSignature(typeDesc);
     }
 
 }

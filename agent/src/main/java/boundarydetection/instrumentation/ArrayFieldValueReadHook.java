@@ -5,9 +5,9 @@ import javassist.CtClass;
 import javassist.bytecode.*;
 import javassist.convert.Transformer;
 
-public class FieldReadHook extends FieldAccessHook {
+public class ArrayFieldValueReadHook extends FieldAccessHook {
 
-    public FieldReadHook(Transformer next, String methodClassname) {
+    public ArrayFieldValueReadHook(Transformer next, String methodClassname) {
         super(next, methodClassname);
     }
 
@@ -33,17 +33,15 @@ public class FieldReadHook extends FieldAccessHook {
             int index = iterator.u16bitAt(pos + 1);
 
             String typedesc = cp.getFieldrefType(index);
-            if (typedesc != null && toInstrument(typedesc)) {
+            if (typedesc != null && Util.isArraySignature(typedesc)) {
 
                 String mdName;
-                iterator.move(pos);
+                mdName = "readArrayField";
                 pos = iterator.insertGap(1);
-                if (isStatic) iterator.writeByte(ACONST_NULL, pos);
-                else iterator.writeByte(Opcode.DUP, pos);
+                iterator.writeByte(Opcode.DUP, pos);
                 pos += 1;
-
-                if (Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc)) mdName = "readObject";
-                else mdName = "read" + typedesc;
+                CodeAttribute ca = iterator.get();
+                ca.setMaxStack(ca.getMaxStack() + 1);
 
                 String classname = getFieldRefDeclaringClassName(tclazz, cp, index);
                 String fieldname = cp.getFieldrefName(index);
@@ -58,9 +56,6 @@ public class FieldReadHook extends FieldAccessHook {
                 iterator.write16bit(methodref, pos + 1);
                 pos += 3;
 
-                CodeAttribute ca = iterator.get();
-                ca.setMaxStack(ca.getMaxStack() + 2);
-                pos = iterator.next();
             }
             return pos;
         }
@@ -68,7 +63,7 @@ public class FieldReadHook extends FieldAccessHook {
     }
 
     private boolean toInstrument(String typedesc) {
-        return Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc);
+        return true|| Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc);
     }
 
 }
