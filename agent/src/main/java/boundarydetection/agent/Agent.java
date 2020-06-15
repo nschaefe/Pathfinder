@@ -166,8 +166,8 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         CodeInstrumenter conv = new CodeInstrumenter();
         // adds transformers at the head (so reverse order)
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
-        conv.replaceFieldRead(tracker, "readObject");
-        conv.replaceFieldWrite(tracker, "writeObject");
+        conv.replaceFieldRead(tracker);
+        conv.replaceFieldWrite(tracker);
         conv.reformatConstructor();
         ctCl.instrument(conv);
 

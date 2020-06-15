@@ -17,7 +17,8 @@ package boundarydetection.instrumentation;
  */
 
 
-import javassist.*;
+import javassist.CodeConverter;
+import javassist.CtClass;
 
 /**
  * Simple translator of method bodies
@@ -46,82 +47,17 @@ import javassist.*;
  * @see javassist.expr.ExprEditor
  */
 public class CodeInstrumenter extends CodeConverter {
-    /**
-     * Modify a method body so that an expression reading the specified
-     * field is replaced with a call to the specified <i>static</i> method.
-     * This static method receives the target object of the original
-     * read expression as a parameter.  It must return a value of
-     * the same type as the field.
-     *
-     * <p>For example, the program below
-     *
-     * <pre>Point p = new Point();
-     * int newX = p.x + 3;</pre>
-     *
-     * <p>can be translated into:
-     *
-     * <pre>Point p = new Point();
-     * int newX = Accessor.readX(p) + 3;</pre>
-     *
-     * <p>where
-     *
-     * <pre>public class Accessor {
-     *     public static int readX(Object target) { ... }
-     * }</pre>
-     *
-     * <p>The type of the parameter of <code>readX()</code> must
-     * be <code>java.lang.Object</code> independently of the actual
-     * type of <code>target</code>.  The return type must be the same
-     * as the field type.
-     *
-     * @param calledClass  the class in which the static method is
-     *                     declared.
-     * @param calledMethod the name of the static method.
-     */
-    public void replaceFieldRead(CtClass calledClass, String calledMethod) {
+
+    public void replaceFieldRead(CtClass calledClass) {
         transformers = new FieldReadHook(transformers,
-                calledClass.getName(),
-                calledMethod);
+                calledClass.getName());
     }
 
-    /**
-     * Modify a method body so that an expression writing the specified
-     * field is replaced with a call to the specified static method.
-     * This static method receives two parameters: the target object of
-     * the original
-     * write expression and the assigned value.  The return type of the
-     * static method is <code>void</code>.
-     *
-     * <p>For example, the program below
-     *
-     * <pre>Point p = new Point();
-     * p.x = 3;</pre>
-     *
-     * <p>can be translated into:
-     *
-     * <pre>Point p = new Point();
-     * Accessor.writeX(3);</pre>
-     *
-     * <p>where
-     *
-     * <pre>public class Accessor {
-     *     public static void writeX(Object target, int value) { ... }
-     * }</pre>
-     *
-     * <p>The type of the first parameter of <code>writeX()</code> must
-     * be <code>java.lang.Object</code> independently of the actual
-     * type of <code>target</code>.  The type of the second parameter
-     * is the same as the field type.
-     *
-     * @param calledClass  the class in which the static method is
-     *                     declared.
-     * @param calledMethod the name of the static method.
-     */
+
     public void replaceFieldWrite(
-            CtClass calledClass, String calledMethod) {
+            CtClass calledClass) {
         transformers = new FieldWriteHook(transformers,
-                calledClass.getName(),
-                calledMethod);
+                calledClass.getName());
     }
 
     public void reformatConstructor() {

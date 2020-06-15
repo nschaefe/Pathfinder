@@ -1,15 +1,13 @@
 package boundarydetection.instrumentation;
 
 import javassist.CtClass;
-import javassist.CtField;
-import javassist.NotFoundException;
 import javassist.bytecode.*;
 import javassist.convert.Transformer;
 
 public class FieldWriteHook extends FieldAccessHook {
 
-    public FieldWriteHook(Transformer next, String methodClassname, String methodName) {
-        super(next, methodClassname, methodName);
+    public FieldWriteHook(Transformer next, String methodClassname) {
+        super(next, methodClassname);
     }
 
     @Override
@@ -26,28 +24,49 @@ public class FieldWriteHook extends FieldAccessHook {
         if (isFieldWrite) {
             int index = iterator.u16bitAt(pos + 1);
             String typedesc = cp.getFieldrefType(index);
-            if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
-
+            if (typedesc != null && toInstrument(typedesc)) {
                 iterator.move(pos);
                 if (isStatic) {
-                    pos = iterator.insertGap(3);
-                    iterator.writeByte(Opcode.DUP, pos);
-                    iterator.writeByte(ACONST_NULL, pos + 1);
-                    iterator.writeByte(Opcode.SWAP, pos + 2);
-                    pos += 3;
-                    CodeAttribute ca = iterator.get();
-                    ca.setMaxStack(ca.getMaxStack() + 2);
+                    if (Util.isObjectSignature(typedesc)) {
+                        pos = iterator.insertGap(3);
+                        iterator.writeByte(Opcode.DUP, pos);
+                        iterator.writeByte(ACONST_NULL, pos + 1);
+                        iterator.writeByte(Opcode.SWAP, pos + 2);
+                        pos += 3;
+                        CodeAttribute ca = iterator.get();
+                        ca.setMaxStack(ca.getMaxStack() + 2);
+                    } else {
+                        pos = iterator.insertGap(1);
+                        iterator.writeByte(ACONST_NULL, pos);
+                        pos += 1;
+                        CodeAttribute ca = iterator.get();
+                        ca.setMaxStack(ca.getMaxStack() + 1);
+                    }
                 } else {
-                    pos = iterator.insertGap(4);
-                    iterator.writeByte(Opcode.SWAP, pos);
-                    iterator.writeByte(Opcode.DUP_X1, pos + 1);
-                    iterator.writeByte(Opcode.SWAP, pos + 2);
-                    iterator.writeByte(Opcode.DUP_X1, pos + 3);
-                    pos += 4;
-                    CodeAttribute ca = iterator.get();
-                    ca.setMaxStack(ca.getMaxStack() + 2);
+                    if (Util.isDoubleOrLong(typedesc)) {
+                        pos = iterator.insertGap(3);
+                        iterator.writeByte(Opcode.DUP2_X1, pos);
+                        iterator.writeByte(Opcode.POP2, pos + 1);
+                        iterator.writeByte(Opcode.DUP_X2, pos + 2);
+                        pos += 3;
+                        CodeAttribute ca = iterator.get();
+                        ca.setMaxStack(ca.getMaxStack() + 2);
+                    } else {
+                        pos = iterator.insertGap(4);
+                        iterator.writeByte(Opcode.SWAP, pos);
+                        iterator.writeByte(Opcode.DUP_X1, pos + 1);
+                        iterator.writeByte(Opcode.SWAP, pos + 2);
+                        iterator.writeByte(Opcode.DUP_X1, pos + 3);
+                        pos += 4;
+                        CodeAttribute ca = iterator.get();
+                        ca.setMaxStack(ca.getMaxStack() + 2);
+                        if (!Util.isObjectSignature(typedesc)) {
+                            pos = iterator.insertGap(1);
+                            iterator.writeByte(Opcode.POP, pos);
+                            pos += 1;
+                        }
+                    }
                 }
-
 
                 String classname = getFieldRefDeclaringClassName(tclazz, cp, index);
                 String fieldname = cp.getFieldrefName(index);
@@ -57,9 +76,22 @@ public class FieldWriteHook extends FieldAccessHook {
                 ca.setMaxStack(ca.getMaxStack() + 1);
 
                 pos = iterator.insertGap(3);
-                String type = "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;)V";
+
+                String mdName;
+                String typ;
+                if (Util.isSingleObjectSignature(typedesc)) {
+                    typ = "Ljava/lang/Object;";
+                    mdName = "writeObject";
+                } else if (Util.isArraySignature(typedesc)) {
+                    typ = "Ljava/lang/Object;";
+                    mdName = "writeArrayField";
+                } else {
+                    typ = "";
+                    mdName = "write" + typedesc;
+                }
+                String type = "(Ljava/lang/Object;" + typ + "Ljava/lang/String;)V";
                 int mi = cp.addClassInfo(methodClassname);
-                int methodref = cp.addMethodrefInfo(mi, methodName, type);
+                int methodref = cp.addMethodrefInfo(mi, mdName, type);
                 iterator.writeByte(INVOKESTATIC, pos);
                 iterator.write16bit(methodref, pos + 1);
                 pos += 3;
@@ -71,46 +103,8 @@ public class FieldWriteHook extends FieldAccessHook {
         return pos;
     }
 
+    private boolean toInstrument(String typeDesc){
+        return Util.isSingleObjectSignature(typeDesc);
+    }
 
-//
-//    public int transform(CtClass tclazz, int pos, CodeIterator iterator, ConstPool cp) throws BadBytecode {
-//
-//        int c = iterator.byteAt(pos);
-//        if (c == PUTFIELD || c == PUTSTATIC) {
-//            int index = iterator.u16bitAt(pos + 1);
-//            String typedesc = isField(tclazz.getClassPool(), cp,
-//                    fieldClass, fieldname, isPrivate, index);
-//            if (typedesc != null && Util.isSingleObjectSignature(typedesc)) {
-//                if (c == PUTSTATIC) {
-//                    CodeAttribute ca = iterator.get();
-//                    iterator.move(pos);
-//                    char c0 = typedesc.charAt(0);
-//                    if (c0 == 'J' || c0 == 'D') {       // long or double
-//                        // insertGap() may insert 4 bytes.
-//                        pos = iterator.insertGap(3);
-//                        iterator.writeByte(ACONST_NULL, pos);
-//                        iterator.writeByte(DUP_X2, pos + 1);
-//                        iterator.writeByte(POP, pos + 2);
-//                        ca.setMaxStack(ca.getMaxStack() + 2);
-//                    } else {
-//                        // insertGap() may insert 4 bytes.
-//                        pos = iterator.insertGap(2);
-//                        iterator.writeByte(ACONST_NULL, pos);
-//                        iterator.writeByte(SWAP, pos + 1);
-//                        ca.setMaxStack(ca.getMaxStack() + 1);
-//                    }
-//
-//                    pos = iterator.next();
-//                }
-//
-//                int mi = cp.addClassInfo(methodClassname);
-//                String type = "(Ljava/lang/Object;" + typedesc + ")V";
-//                int methodref = cp.addMethodrefInfo(mi, methodName, type);
-//                iterator.writeByte(INVOKESTATIC, pos);
-//                iterator.write16bit(methodref, pos + 1);
-//            }
-//        }
-//
-//        return pos;
-//    }
 }

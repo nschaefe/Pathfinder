@@ -1,29 +1,14 @@
 package boundarydetection.instrumentation;
 
-/*
- * Javassist, a Java-bytecode translator toolkit.
- * Copyright (C) 1999- Shigeru Chiba. All Rights Reserved.
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License.  Alternatively, the contents of this file may be used under
- * the terms of the GNU Lesser General Public License Version 2.1 or later,
- * or the Apache License Version 2.0.
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- */
 
-import javassist.*;
+import javassist.CtClass;
 import javassist.bytecode.*;
 import javassist.convert.Transformer;
 
 public class FieldReadHook extends FieldAccessHook {
 
-      public FieldReadHook(Transformer next, String methodClassname, String methodName) {
-        super(next, methodClassname, methodName);
+    public FieldReadHook(Transformer next, String methodClassname) {
+        super(next, methodClassname);
     }
 
     @Override
@@ -48,17 +33,20 @@ public class FieldReadHook extends FieldAccessHook {
             int index = iterator.u16bitAt(pos + 1);
 
             String typedesc = cp.getFieldrefType(index);
-            if (typedesc != null && (Util.isSingleObjectSignature(typedesc) || Util.isObjectArraySignature(typedesc))) {
+            if (typedesc != null && toInstrument(typedesc)) {
 
-                String mdName = methodName;
-                if (Util.isSingleObjectSignature(typedesc)) {
+                String mdName;
+                if (!Util.isArraySignature(typedesc)) {
                     iterator.move(pos);
                     pos = iterator.insertGap(1);
                     if (isStatic) iterator.writeByte(ACONST_NULL, pos);
                     else iterator.writeByte(Opcode.DUP, pos);
                     pos += 1;
-                } else if (Util.isObjectArraySignature(typedesc)) {
-                    mdName += "ArrayField";
+
+                    if (Util.isSingleObjectSignature(typedesc)) mdName = "readObject";
+                    else mdName = "read" + typedesc;
+                } else {
+                    mdName = "readArrayField";
                     pos = iterator.insertGap(1);
                     iterator.writeByte(Opcode.DUP, pos);
                     pos += 1;
@@ -79,11 +67,15 @@ public class FieldReadHook extends FieldAccessHook {
 
                 CodeAttribute ca = iterator.get();
                 ca.setMaxStack(ca.getMaxStack() + 2);
-                if (Util.isSingleObjectSignature(typedesc)) pos = iterator.next();
+                if (!Util.isArraySignature(typedesc)) pos = iterator.next();
             }
             return pos;
         }
         return pos;
+    }
+
+    private boolean toInstrument(String typedesc){
+        return Util.isSingleObjectSignature(typedesc) || Util.isArraySignature(typedesc);
     }
 
 }

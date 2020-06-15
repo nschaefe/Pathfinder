@@ -203,7 +203,7 @@ public class AccessTracker {
                 // else if there is already another reader task running (inheritance count > 0)
                 // but parent already died, we overtake the task of the writer. This is when a new task was started and replaces
                 // the old inherited task now
-                if (present.getAutoInheritanceCount() > 0 && !present.getParentTask().getSubTraceID().equals(writer.getTask().getSubTraceID())  && !present.getParentTask().isAlive()) {
+                if (present.getAutoInheritanceCount() > 0 && !present.getParentTask().getSubTraceID().equals(writer.getTask().getSubTraceID()) && !present.getParentTask().isAlive()) {
                     Tasks.inheritTask(writer.getTask());
                 }
             }
@@ -218,12 +218,12 @@ public class AccessTracker {
         }
     }
 
-    private static void registerArrayLocation(Object field, String location) {
+    private static void registerArrayLocation(Object value, String location) {
         // this access point is only used to infer to which global field an array belongs
         // if an array field is read, the location is stored and later if the array reference is used,
         // the location can be looked up
 
-        if (field == null) return; // a field read can give a null value
+        if (value == null) return; // a field read can give a null value
         if (!enabled) return;
         init();
 
@@ -238,7 +238,7 @@ public class AccessTracker {
             // (e.g. writer manipulates a local array and stores it later)
             // But usually the array is already there and is used as infrastructure
             // and this is a lot faster and experiments showed it works in the most cases.
-            ArrayFieldLocation.registerLocation(field, location);
+            ArrayFieldLocation.registerLocation(value, location);
         } finally {
             insideTracker.remove();
         }
@@ -316,12 +316,17 @@ public class AccessTracker {
 
     }
 
-    //TODO add on writeObject field for more coverage
-    public static void readObjectArrayField(Object field, String location) {
-        registerArrayLocation(field, location);
-    }
 
     //-----------------------------------
+
+    //TODO add on writeObject field for more coverage
+    public static void readArrayField(Object value, String location) {
+        registerArrayLocation(value, location);
+    }
+
+    public static void writeArrayField(Object parent, Object value, String location) {
+    }
+
     public static void readObject(Object parent, String location) {
         FieldLocation f = new FieldLocation(location, Object.class, parent);
         readAccess(f);
@@ -331,6 +336,87 @@ public class AccessTracker {
         FieldLocation f = new FieldLocation(location, Object.class, parent);
         writeAccess(f, value == null);
     }
+
+    public static void readI(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, int.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeI(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, int.class, parent);
+        writeAccess(f, false);
+    }
+
+    public static void readD(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, double.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeD(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, double.class, parent);
+        writeAccess(f, false);
+    }
+
+    public static void readF(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, float.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeF(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, float.class, parent);
+        writeAccess(f, false);
+    }
+
+    public static void readJ(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, long.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeJ(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, long.class, parent);
+        writeAccess(f, false);
+    }
+
+    public static void readZ(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, boolean.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeZ(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, boolean.class, parent);
+        writeAccess(f, false);
+    }
+
+    public static void readB(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, byte.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeB(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, byte.class, parent);
+        writeAccess(f, false);
+    }
+
+    public static void readC(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, char.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeC(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, char.class, parent);
+        writeAccess(f, false);
+    }
+
+    public static void readS(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, short.class, parent);
+        readAccess(f);
+    }
+
+    public static void writeS(Object parent, String location) {
+        FieldLocation f = new FieldLocation(location, short.class, parent);
+        writeAccess(f, false);
+    }
+
 
     public static int arrayReadInt(Object arr, int index) {
         ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);

@@ -9,12 +9,10 @@ import javassist.convert.Transformer;
 public abstract class FieldAccessHook extends TransformerBase {
 
     protected String methodClassname;
-    protected String methodName;
 
-    public FieldAccessHook(Transformer next, String methodClassname, String methodName) {
+    public FieldAccessHook(Transformer next, String methodClassname) {
         super(next);
         this.methodClassname = methodClassname;
-        this.methodName = methodName;
     }
 
     protected static String isField(ClassPool pool, ConstPool cp, CtClass fclass,
