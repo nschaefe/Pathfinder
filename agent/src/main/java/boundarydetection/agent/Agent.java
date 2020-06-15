@@ -23,8 +23,6 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             "sun",
             "com.sun",
             "jdk.internal",
-            "java.util.jar",
-            "java.lang", // TODO also includes Thread what needs special treatment
 //            "java.lang.ThreadLocal",
 //            "java.lang.ref",
 //            "java.lang.invoke",
@@ -55,14 +53,16 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             "org.aspectj",
             "org.jruby",
             "jnr",
+            "org.apache.hbase.thirdparty.com.google.common.util.concurrent.Monitor", //TODO Stackmap in excpetion handler problem
+            "org.apache.hadoop.hbase.regionserver.HRegion", //TODO Stackmap in excpetion handler problem
             "org.apache.zookeeper", //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation, only VM reset is possible then
             "org.apache.htrace", //built in tracing
 
             // APPLICATION PACKAGES BLACKLIST (JUnit)
             "org.junit",
 
-            // Covered by rt.jar instrumentation
-            "java",
+            //COVERED BY STATIC RT INSTRUMENTATION
+            "java"
     };
 
 
