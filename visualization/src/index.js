@@ -43,7 +43,7 @@ try {
     //"org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:324)"
     //"org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:631)"
     //"org.apache.hadoop.hbase.procedure2.ProcedureExecutor$WorkerThread.run(ProcedureExecutor.java:2058)"
-    var nodes = Graphs.parseDAG(dets)
+    var nodes = Graphs.parseDAG(dets, events)
     console.log("parsed data")
 
     render(nodes)
