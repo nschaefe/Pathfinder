@@ -179,6 +179,7 @@ public class TestTaskForkJoinDiscard extends TestBase {
 
         public void doRun() {
             AccessTracker.join(outterTask);
+            AccessTracker.getTask().setWriteCapability(true);
             assertTrue(AccessTracker.hasTask());
             System.out.print(outToIn);
 

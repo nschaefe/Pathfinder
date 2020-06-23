@@ -87,11 +87,14 @@ public class Tasks {
     }
 
     public static void join(Task t) throws TaskCollisionException {
+        if (t == null) return;
         init();
         if (!Tasks.hasTask()) {
-            task.set(new Task(t));
-            Tasks.getTask().addJoiner(t); // add to joiners
-            Tasks.getTask().newSubTraceID();
+            Task nt = new Task(t);
+            nt.setWriteCapability(false);
+            nt.addJoiner(t); // add to joiners
+            nt.newSubTraceID();
+            task.set(nt);
 
         } else if (Tasks.getTask().getTraceID().equals(t.getTraceID())) {
             //normal join
@@ -115,7 +118,10 @@ public class Tasks {
         init();
         Task parent = Tasks.getTask();
         Task t = new Task(parent);
-        t.clearJoiner();
+        // we inherit joiners. This allows to detect transitive joins.
+        // let a,b,c be threads; if context prop a->b->c and c reads from a, c will have a as joiner.
+        // however this hides the case of an explicit join of a to c.
+        // So we will ignore detections that are proved to be covered by a trace but might appear in the wrong branch
         t.setParentTask(parent);
         return t;
     }
