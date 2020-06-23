@@ -1,6 +1,6 @@
 The tool hooks into compiled java classes by inserting method calls to a central tracking framework on field/array accesses.  
-Classes of the java lib (e.g. java.util) are statically instrumented by rewriting classes contained in the rt.jar.  
-Application specific or thirdparty classes are instrumented at runtime when these are loaded (using javaagent support).  
+Classes of the java lib (e.g. java.util) are statically instrumented by rewriting the rt.jar.  
+Application specific and thirdparty classes are instrumented at runtime when these are loaded (using javaagent support).  
 At runtime, when the instrumented code is executed, inserted methods are invoked when a field/array is accessed.
 Field/array location information is passed along with these calls. In addtion, the tracking framework captures thread related information on each call.  
 Incoming data is correlated with tracked data to detect inter thread communication.  
