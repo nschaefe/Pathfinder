@@ -51,6 +51,7 @@ public class RTInstrumentation {
                 //TODO filtering
                 if (clName.startsWith("java/util") || clName.startsWith("java/io")) a.applyTransformations(cl);
                 if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
+                if (clName.equals("java/lang/invoke/InnerClassLambdaMetafactory")) a.instLambdaMetaFactory(cl);
             } catch (Exception e) {
                 // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
                 System.err.println("ERROR in " +cl.getName()+", continue");

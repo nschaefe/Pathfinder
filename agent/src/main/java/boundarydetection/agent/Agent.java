@@ -7,6 +7,7 @@ import javassist.build.JavassistBuildException;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.Instrumentation;
@@ -201,9 +202,53 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
 
     public void instClassLoader(CtClass ctCl) throws NotFoundException, CannotCompileException {
         if (logging_enabled) System.out.println("INST: " + ctCl.getName());
+        //TODO assert is classloader class
         CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
         //CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
         instloading(m);
+    }
+
+    public void instLambdaMetaFactory(CtClass ctCl) throws NotFoundException, CannotCompileException {
+        if (logging_enabled) System.out.println("INST: " + ctCl.getName());
+        if (!ctCl.getName().equals("java.lang.invoke.InnerClassLambdaMetafactory"))
+            throw new CannotCompileException(ctCl.getName() + " not supported");
+        //private Class<?> spinInnerClass() throws LambdaConversionException {
+        CtMethod m = ctCl.getMethod("spinInnerClass", "()Ljava/lang/Class;");
+        m.instrument(new ExprEditor() {
+
+            public void edit(MethodCall m) throws CannotCompileException {
+                //UNSAFE.defineAnonymousClass(targetClass, classBytes, null);
+                if (m.getMethodName().equals("defineAnonymousClass")) {
+                    m.replace("$2 = " + Agent.class.getName() + ".instLambda($1,$2);" +
+                            "$_ = $proceed($$); ");
+                }
+            }
+
+        });
+    }
+
+    private static Agent agentInstance = null;
+    private static boolean entered = false; //for recursion breaking, lambdas that are accessed within the framework are ignored.
+    //TODO verify that thread independent is enough, or thread local is needed
+    // intuition why this is enough: If two threads simultaneously bootstrap a lambda (on first invocation) and generate the functional interface implementation, this leads to
+    // multiple class definitions and multiple executions of the same code generation, so this can be hardly happening.
+
+    public static byte[] instLambda(Class<?> targetClass, byte[] classBytes) throws NotFoundException, IOException, CannotCompileException, JavassistBuildException {
+        if (entered) return classBytes;
+        try {
+            entered = true;
+            if (agentInstance == null) agentInstance = new Agent();
+            String name = Util.getClassNameFromBytes(new ByteArrayInputStream(classBytes));
+            //TODO move this filtering; use constatnt
+            if (name.startsWith("boundarydetection")) return classBytes;
+            ClassPool cp = agentInstance.getClassPool();
+            cp.insertClassPath(new ByteArrayClassPath(name, classBytes));
+            CtClass ctCl = cp.get(name);
+            agentInstance.applyTransformations(ctCl);
+            return ctCl.toBytecode();
+        } finally {
+            entered = false;
+        }
     }
 
     private void instloading(CtMethod m) throws CannotCompileException {

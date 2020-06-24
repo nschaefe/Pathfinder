@@ -2,7 +2,10 @@ package client;
 
 import boundarydetection.tracker.AccessTracker;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.PriorityQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -60,7 +63,7 @@ public class Client extends ClientBase {
 
     public void lambdaTest() throws InterruptedException {
         AccessTracker.startTask();
-        double a=Math.random();
+        double a = Math.random();
         Thread t = new Thread(() -> {
             System.out.println(this.li);
             System.out.println(a);
@@ -71,7 +74,7 @@ public class Client extends ClientBase {
     }
 
     public synchronized String read() {
-        return "" +a.get(0)+ m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
+        return "" + a.get(0) + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
     }
 
     public synchronized void setNull() {
@@ -82,6 +85,7 @@ public class Client extends ClientBase {
         try {
             Test tt = new Test();
             Client c = new Client();
+            c.lambdaTest();
             Thread t = new Thread(() -> {
                 AccessTracker.startTask();
                 for (int i = 0; i < 10; i++) {

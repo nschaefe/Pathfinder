@@ -59,11 +59,14 @@
                         <configuration>
                             <executable>java</executable>
                             <arguments>
+<!--                                <argument>-->
+<!--                                    -Djdk.internal.lambda.dumpProxyClasses=/home/nico/Dokumente/Entwicklung/Uni/Tracing/instrumentationhelper/testClient/lambdas-->
+<!--                                </argument>-->
                                 <argument>
                                     -javaagent:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
                                 </argument>
                                 <argument>
-                                    -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
+                                    -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
                                 </argument>
                                 <argument>-cp</argument>
                                 <argument>
@@ -128,7 +131,7 @@
                 <configuration>
                     <argLine>
                         -javaagent:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar=no_logging
-                        -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar
+                        -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
                     </argLine>
                 </configuration>
             </plugin>
