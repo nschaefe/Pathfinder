@@ -26,7 +26,7 @@ public class Client extends ClientBase {
         super(42);
         messages = new Integer[2];
         q = new ArrayDeque<>();
-        a = new ArrayList<>(3);
+        a = new ArrayList<>();
         b = new ArrayBlockingQueue<Integer>(5);
         i = new Integer(11);
         li = new LinkedList<>();
@@ -55,9 +55,23 @@ public class Client extends ClientBase {
         bq.offer(i);
 
         a.add(i);
-        a.add(i);
-        a.add(i);
+        q.add(i);
 
+    }
+
+    public void noLambdaTest() throws InterruptedException {
+        AccessTracker.startTask();
+        double a = Math.random();
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println(Client.this.li);
+                System.out.println(a);
+            }
+        });
+        t.start();
+        t.join();
+        AccessTracker.stopTask();
 
     }
 
@@ -74,7 +88,7 @@ public class Client extends ClientBase {
     }
 
     public synchronized String read() {
-        return "" + a.get(0) + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
+        return "" + q.getFirst() + a.get(0) + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
     }
 
     public synchronized void setNull() {
@@ -90,7 +104,6 @@ public class Client extends ClientBase {
                 AccessTracker.startTask();
                 for (int i = 0; i < 10; i++) {
                     // in iterations >1 less cases are detected, because on read side some reads refer to 0th item, but the added one is at the end.
-                    AccessTracker.resetTracking();
                     c.write(42);
                     // double write should not be a new write
                 }
