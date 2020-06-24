@@ -1,7 +1,11 @@
 package boundaryDetection;
 
 import boundarydetection.agent.Agent;
-import javassist.*;
+import javassist.CannotCompileException;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.NotFoundException;
+import javassist.build.JavassistBuildException;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -16,6 +20,8 @@ import java.util.jar.Manifest;
 
 public class RTInstrumentation {
 
+    private static boolean FALLBACK_ON_ERROR = false;
+
     public static void main(String[] args) {
         try {
             if (args.length < 2) throw new IllegalArgumentException("Not enough arguments");
@@ -26,7 +32,7 @@ public class RTInstrumentation {
         }
     }
 
-    private static void transformRT(String trackerPath, String baseDir) throws NotFoundException, IOException, CannotCompileException {
+    private static void transformRT(String trackerPath, String baseDir) throws NotFoundException, IOException, CannotCompileException, JavassistBuildException {
         Agent a = new Agent();
         ClassPool cp = a.getClassPool();
 
@@ -35,8 +41,7 @@ public class RTInstrumentation {
         if (javaHome == null || javaHome.isEmpty()) {
             System.out.println("JAVA_HOME not set");
             rtHome = baseDir;
-        }
-        else rtHome = javaHome + "/jre/lib";
+        } else rtHome = javaHome + "/jre/lib";
         String rtpath = rtHome + "/rt.jar";
         System.out.println("Reading rt from " + rtpath);
 
@@ -53,11 +58,13 @@ public class RTInstrumentation {
                 if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
                 if (clName.equals("java/lang/invoke/InnerClassLambdaMetafactory")) a.instLambdaMetaFactory(cl);
             } catch (Exception e) {
-                // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
-                System.err.println("ERROR in " +cl.getName()+", continue");
-                e.printStackTrace();
-                cl.detach();
-                cl = cp.get(clName.replace("/", "."));
+                if (FALLBACK_ON_ERROR) {
+                    // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
+                    System.err.println("ERROR in " + cl.getName() + ", continue");
+                    e.printStackTrace();
+                    cl.detach();
+                    cl = cp.get(clName.replace("/", "."));
+                } else throw e;
             } finally {
                 cl.writeFile(resultPath);
             }
