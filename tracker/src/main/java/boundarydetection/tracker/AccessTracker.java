@@ -28,7 +28,8 @@ public class AccessTracker {
     private static int epoch = 0; //only as debug info
     private static volatile boolean enabled = false;
 
-    private static volatile boolean eventLoggingEnabled = false;
+    private static volatile boolean readerEventLoggingEnabled = false;
+    private static volatile boolean writerEventLoggingEnabled = false;
     private static volatile boolean arrayCopyRedirectEnabled = false;
     private static volatile boolean autoTaskInheritance = false;
 
@@ -60,21 +61,41 @@ public class AccessTracker {
     }
 
     public static void logEvent(String s) {
-        if (!enabled || !eventLoggingEnabled) return;
+        if (!enabled || (!writerEventLoggingEnabled && !readerEventLoggingEnabled)) return;
         init();
 
         if (insideTracker == null || insideTracker.get() != null) return;
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                if (!Tasks.hasTask() || !Tasks.getTask().hasEventID() || Tasks.getTask().getEventCounter() > MAX_EVENT_COUNT)
-                    return;
-                Logger.log(ReportGenerator.generateMessageJSON(s, "EVENT"));
-                Tasks.getTask().incrementEventID();
+                //TODO the logging behavior of the two is not consistent. There are only build for specific use cases:
+                // readerLogging: logging of executed methods of the reader after hitting a write/read relation, only available in combination with auto task inheritance
+                // writerLogging: logging of all executed methods of the writer after starting a task.
+
+                if (writerEventLoggingEnabled) writerLogging(s);
+                if (readerEventLoggingEnabled) readerLogging(s);
             }
         } finally {
             insideTracker.remove();
         }
+    }
+
+    private static void readerLogging(String s) {
+        if (!Tasks.hasTask() || !Tasks.getTask().hasEventID() || Tasks.getTask().getEventCounter() > MAX_EVENT_COUNT)
+            return;
+        Logger.log(ReportGenerator.generateMessageJSON(s, "EVENT"));
+        Tasks.getTask().incrementEventID();
+    }
+
+    private static void writerLogging(String s) {
+        if (!Tasks.hasTask() || !Tasks.getTask().hasWriteCapability()) return;
+
+        if (!Tasks.getTask().hasEventID()) {
+            int random = (new Random()).nextInt(Integer.MAX_VALUE);
+            Tasks.getTask().addAsParentEventID(Thread.currentThread().getId() + "_" + random);
+        }
+        Logger.log(ReportGenerator.generateMessageJSON(s, "WRITER_EVENT"));
+        Tasks.getTask().incrementEventID();
     }
 
     public static void log(String s) {
@@ -257,12 +278,20 @@ public class AccessTracker {
     }
 
     //TODO rename this to set... so we do not need two methods
-    public static void enableEventLogging() {
-        eventLoggingEnabled = true;
+    public static void enableReaderEventLogging() {
+        readerEventLoggingEnabled = true;
     }
 
-    public static void disableEventLogging() {
-        eventLoggingEnabled = false;
+    public static void disableReaderEventLogging() {
+        readerEventLoggingEnabled = false;
+    }
+
+    public static void enableWriterEventLogging() {
+       writerEventLoggingEnabled = true;
+    }
+
+    public static void disableWriterEventLogging() {
+        writerEventLoggingEnabled = false;
     }
 
 

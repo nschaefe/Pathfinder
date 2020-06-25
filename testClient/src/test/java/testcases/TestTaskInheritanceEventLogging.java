@@ -15,7 +15,7 @@ public class TestTaskInheritanceEventLogging extends TestBase {
     public void prepare(TestInfo testInfo) throws IOException {
         super.prepare(testInfo);
         MAX_COUNT_BACKUP = AccessTracker.MAX_EVENT_COUNT;
-        AccessTracker.enableEventLogging();
+        AccessTracker.enableReaderEventLogging();
         AccessTracker.enableAutoTaskInheritance();
     }
 
@@ -49,7 +49,7 @@ public class TestTaskInheritanceEventLogging extends TestBase {
     @AfterEach
     public void close(TestInfo testInfo) throws IOException, InterruptedException {
         AccessTracker.disableAutoTaskInheritance();
-        AccessTracker.disableEventLogging();
+        AccessTracker.disableReaderEventLogging();
         AccessTracker.MAX_EVENT_COUNT = MAX_COUNT_BACKUP;
         super.close(testInfo);
     }

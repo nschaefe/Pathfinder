@@ -29,7 +29,7 @@ public class TestBase {
         //stream = new FileOutputStream("./" + this.getClass().getSimpleName() + ':' + method.getName() + "_tracker_report.json");
         // AccessTracker.setDebugOutputStream(stream);
 
-        AccessTracker.disableEventLogging();
+        AccessTracker.disableReaderEventLogging();
         AccessTracker.resetTracking();
         AccessTracker.startTask();
     }
