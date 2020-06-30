@@ -53,8 +53,8 @@ public class RTInstrumentation {
             CtClass cl = null;
             try {
                 cl = cp.get(clName.replace("/", "."));
-                //TODO filtering
-                if (clName.startsWith("java/util") || clName.startsWith("java/io")) a.applyTransformations(cl);
+                //TODO filtering at central point
+                if (clName.startsWith("java/util") || clName.startsWith("java/io")) a.transformClass(cl);
                 if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
                 if (clName.equals("java/lang/invoke/InnerClassLambdaMetafactory")) a.instLambdaMetaFactory(cl);
             } catch (Exception e) {
