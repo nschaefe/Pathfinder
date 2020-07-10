@@ -30,6 +30,35 @@ function filterByTraces(dets, regexString) {
     }
 }
 
+Filters.filterByLocation = filterByLocation
+function filterByLocation(dets, regexString) {
+    var regex = new RegExp(regexString)
+    return dets.filter(d => !d.location.match(regex))
+}
+
+Filters.filterSiblings = filterSiblings
+function filterSiblings(dets) {
+    return dets.filter((det, i1) => {
+        const sibling = dets.find((d, i2) => {
+            var a = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLineNumber(d.writer_stacktrace)) == JSON.stringify(deleteLineNumber(det.writer_stacktrace)) &&
+                JSON.stringify(deleteLineNumber(d.reader_stacktrace)) == JSON.stringify(deleteLineNumber(det.reader_stacktrace))
+            return a
+        })
+        const hasSibling = sibling != null
+        return !hasSibling
+    }
+    )
+
+}
+
+function deleteLineNumber(stacktrace) {
+    const copy = JSON.parse(stacktrace).slice()
+    const a = copy[0].indexOf(":")
+    if (a == -1) return copy
+    copy[0] = copy[0].substring(0, a)
+    return copy
+}
+
 Filters.intersectWithTraces = intersectWithTraces
 function intersectWithTraces(dets, traces) {
     var intersec = [...new Set(dets.map(d => d.location))]
@@ -45,6 +74,26 @@ Filters.filterDistinct = filterDistinct
 function filterDistinct(dets) {
     return [...new Set(dets.map(d => JSON.stringify(d)))].map(d => JSON.parse(d))
 }
+
+
+Filters.filterDistinctPath = filterDistinctPath
+function filterDistinctPath(dets) {
+    return [...new Set(dets.map(d => d.writer_stacktrace + " --- " + d.reader_stacktrace))]
+}
+
+
+Filters.filterDistinctCodePlace = filterDistinctCodePlace
+function filterDistinctCodePlace(dets) {
+    return [...new Set(dets.map(d => //d.location + "----" +
+        JSON.parse(d.writer_stacktrace)[0] + " --- " + JSON.parse(d.reader_stacktrace)[0]))]
+}
+
+
+Filters.filterDistinctMemoryAddressCodePlace = filterDistinctMemoryAddressCodePlace
+function filterDistinctMemoryAddressCodePlace(dets) {
+    return [...new Set(dets.map(d => d.location))] //TODO if array, how to count?
+}
+
 
 
 Filters.filterBlacklist = filterBlacklist

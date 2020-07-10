@@ -11,11 +11,11 @@ DrillDriver.prototype.fetchEvents = function (taskID, file = "./tracker_report.j
     return sendQuery(query, this.baseUrl)
 };
 
-DrillDriver.prototype.fetchDetections = function (serial = 1, file = "./tracker_report.json") {
+DrillDriver.prototype.fetchDetections = function (serial = 1, taskTag, file = "./tracker_report.json") {
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
         "t11 AS (SELECT * FROM t1 WHERE tag = 'CONCURRENT WRITE/READ DETECTION' ), " +
-        "t111 AS (SELECT * FROM t11 WHERE writer_trace_serial=" + serial + ") SELECT * FROM t111"
+        "t111 AS (SELECT * FROM t11 WHERE writer_trace_serial=" + serial + " and writer_task_tag='" + taskTag + "') SELECT * FROM t111"
 
     //var query = "select * from dfs.`/home/nico/Dokumente/Entwicklung/Uni/Tracing/instrumentationhelper/testClient/track.json` where type = \u0027CONCURRENT WRITE/READ DETECTION\u0027"
     return sendQuery(query, this.baseUrl)
@@ -23,6 +23,11 @@ DrillDriver.prototype.fetchDetections = function (serial = 1, file = "./tracker_
 
 DrillDriver.prototype.locationHistogram = function (file = "./tracker_report.json") {
     var query = "SELECT location, COUNT(*) as count FROM rep.root.`" + file + "` GROUP BY location ORDER BY count DESC"
+    return sendQuery(query, this.baseUrl)
+};
+
+DrillDriver.prototype.fetchTaskTags = function (file = "./tracker_report.json") {
+    var query = "SELECT DISTINCT writer_task_tag, writer_trace_serial FROM rep.root.`" + file + "`"
     return sendQuery(query, this.baseUrl)
 };
 

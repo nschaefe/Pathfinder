@@ -71,32 +71,7 @@ export function render(full_graph) {
   // var layout = d3.zherebko()
   //   .size([width, height])
 
-  var button;
-  { // to blacklist buttion
-    button = svg.append('g')
-      .attr("id", "button")
-      .attr("x", 5)
-      .attr("y", 5)
-      .on("click", function (d) {
-        var sets = dag.descendants().filter(d => getNode(d).sink).map(d => getNode(d).jsons)
-        var rs = new Set()
-        for (var s of sets) {
-          rs = new Set([...rs, ...s])
-        }
-        printToBlacklist(Array.from(rs))
-      });
 
-    button.append("rect")
-      .attr("width", 145)
-      .attr("height", 30)
-
-    button.append("text")
-      .attr("x", 5)
-      .attr("y", 20)
-      .attr("font-size", 22 + "px")
-      .attr("fill", "white")
-      .text("All to blacklist");
-  }
 
   var link = svg.append('g')
     .attr('class', 'links')
@@ -201,6 +176,7 @@ export function render(full_graph) {
 
         if (!d.toggled) {
           d.highlight = true
+          d.descendants().forEach(d => d.highlight = true)
           updateView();
         }
       })
@@ -208,16 +184,38 @@ export function render(full_graph) {
         tooltip.style("visibility", "hidden");
         if (!d.toggled) {
           d.highlight = false
+          d.descendants().forEach(d => d.highlight = false)
           updateView();
         }
       })
       .on("dblclick", function (d) {
-        var changed = Graphs.expand(getNode(d), full_graph, 40)
-        if (changed) update()
+        var changed = Graphs.expand(getNode(d), full_graph, 100)
+        if (changed) {
+          var lay_back = layout
+          layout = layout.coord(d3.coordMinCurve())
+          update()
+          layout = lay_back
+        }
       })
       .on("click", function (d) {
+        if (d3.event.shiftKey) {
+          var oldDesc = getNode(d).jsons.values().next().value.description
+          var desc = prompt("Description for " + getNode(d).name, oldDesc == null ? "" : oldDesc);
+          getNode(d).jsons.forEach(j => j.description = desc)
+        }
+        else if (d3.event.ctrlKey) {
+          var desc = prompt("Is relevant " + getNode(d).name);
+          if (desc != 't' && desc != 'f') {
+            alert("wrong input")
+            return
+          }
+          var relev = desc == 't'
+          getNode(d).jsons.forEach(j => j.relevant = relev)
+        }
+        else {
         toggleHighlighting(d)
         updateView();
+        }
       });
 
     nodeEl.select('polygon')
@@ -274,6 +272,15 @@ export function render(full_graph) {
       })
       updateView()
     }
+    else if (event.key == 'p') {
+      var sets = dag.descendants().filter(d => getNode(d).sink).map(d => getNode(d).jsons)
+      var rs = new Set()
+      for (var s of sets) {
+        rs = new Set([...rs, ...s])
+      }
+      printToBlacklist(Array.from(rs))
+    }
+
   });
 
   function printToBlacklist(detections) {
