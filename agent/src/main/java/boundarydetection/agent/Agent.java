@@ -15,7 +15,7 @@ import java.lang.instrument.UnmodifiableClassException;
 import java.util.function.Predicate;
 
 
-public class Agent implements ClassFileTransformer, javassist.build.IClassTransformer {
+public class Agent implements ClassFileTransformer {
 
 
     private static final String[] EXCLUDES = new String[]{
@@ -60,9 +60,12 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             "org.apache.htrace", //built in tracing
 
             // APPLICATION PACKAGES BLACKLIST (JUnit)
-            "org.junit",
+            "org.junit"
+    };
 
+    private static final String[] STATIC_INSTRUMENT = new String[]{
             //COVERED BY STATIC RT INSTRUMENTATION
+            //TODO static instrumentation does not refer to this list here and might instrument a subset.
             "java"
     };
 
@@ -93,7 +96,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         instrumentation.addTransformer(new Agent(), true);
         // call for classes where agent is dependent on or that are used while bootstrapping
         for (Class c : instrumentation.getAllLoadedClasses()) {
-            if (shouldTransform(c.getName())) {
+            if (dynamicallyTransform(c.getName())) {
                 //if(logging_enabled) System.out.println("RETRA: " + c.getName());
                 try {
                     instrumentation.retransformClasses(c);
@@ -120,7 +123,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         if (className == null) return bytes;
 
         //!isExcluded(className)
-        if (shouldTransform(className)) {
+        if (dynamicallyTransform(className)) {
             try {
                 return transformClass(className, clazz, bytes);
             } catch (NotFoundException e) {
@@ -145,7 +148,7 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
 
     }
 
-    private void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
+    public void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
         if (ctCl.isInterface()) return;
 
         ClassPool cp = getClassPool();
@@ -168,23 +171,6 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         logMethodBeginAsEvent(ctCl);
     }
 
-    public void logMethodBeginAsEvent(CtClass cl) throws CannotCompileException {
-        if (cl.isInterface()) return;
-        CtBehavior[] m = cl.getDeclaredBehaviors();
-        for (CtBehavior b : m) {
-            if (isNative(b) || isAbstract(b)) continue;
-            b.insertBefore(HOOK_CLASS + ".logEvent(\"" + b.getLongName() + "\");"); //TODO caller not contained
-        }
-    }
-
-    public static boolean isNative(CtBehavior method) {
-        return Modifier.isNative(method.getModifiers());
-    }
-
-    public static boolean isAbstract(CtBehavior method) {
-        return Modifier.isAbstract(method.getModifiers());
-    }
-
     private void replaceArrayCopy(CtClass ctCl) throws CannotCompileException {
         // invokestatic  #65                 // Method java/lang/System.arraycopy:(Ljava/lang/Object;ILjava/lang/Object;II)V
         ctCl.instrument(new ExprEditor() {
@@ -199,13 +185,22 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         });
     }
 
+    private void logMethodBeginAsEvent(CtClass cl) throws CannotCompileException {
+        if (cl.isInterface()) return;
+        CtBehavior[] m = cl.getDeclaredBehaviors();
+        for (CtBehavior b : m) {
+            if (Util.isNative(b) || Util.isAbstract(b)) continue;
+            b.insertBefore(HOOK_CLASS + ".logEvent(\"" + b.getLongName() + "\");"); //TODO caller not contained
+        }
+    }
 
     public void instClassLoader(CtClass ctCl) throws NotFoundException, CannotCompileException {
         if (logging_enabled) System.out.println("INST: " + ctCl.getName());
         //TODO assert is classloader class
         CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
         //CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
-        instloading(m);
+        m.insertBefore("boundarydetection.tracker.AccessTracker.pauseTask();");
+        m.insertAfter("boundarydetection.tracker.AccessTracker.resumeTask();", true);
     }
 
     public void instLambdaMetaFactory(CtClass ctCl) throws NotFoundException, CannotCompileException {
@@ -240,20 +235,15 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
             if (agentInstance == null) agentInstance = new Agent();
             String name = Util.getClassNameFromBytes(new ByteArrayInputStream(classBytes));
             //TODO move this filtering; use constatnt
-            if (name.startsWith("boundarydetection")) return classBytes;
+            if (isExcluded(name)) return classBytes;
             ClassPool cp = agentInstance.getClassPool();
             cp.insertClassPath(new ByteArrayClassPath(name, classBytes));
             CtClass ctCl = cp.get(name);
-            agentInstance.applyTransformations(ctCl);
+            agentInstance.transformClass(ctCl);
             return ctCl.toBytecode();
         } finally {
             entered = false;
         }
-    }
-
-    private void instloading(CtMethod m) throws CannotCompileException {
-        m.insertBefore("boundarydetection.tracker.AccessTracker.pauseTask();");
-        m.insertAfter("boundarydetection.tracker.AccessTracker.resumeTask();", true);
     }
 
     public ClassPool getClassPool() throws NotFoundException {
@@ -264,39 +254,33 @@ public class Agent implements ClassFileTransformer, javassist.build.IClassTransf
         return cp;
     }
 
-    public static boolean shouldTransform(String clName) {
-        return (true || isIncluded(clName)) && !isExcluded(clName);
+    private static boolean dynamicallyTransform(String clName) {
+        return (true || isIncluded(clName)) && !isExcluded(clName) && !isStaticallyInstrumented(clName);
     }
 
     //TODO can be optimized (binary search)
     private static boolean isExcluded(String name) {
+        String nameDot = name.replace('/', '.');
         for (int i = 0; i < EXCLUDES.length; i++) {
-            if (name.replace('/', '.').startsWith(EXCLUDES[i])) return true;
+            if (nameDot.startsWith(EXCLUDES[i])) return true;
+        }
+        return false;
+    }
+
+    private static boolean isStaticallyInstrumented(String name) {
+        String nameDot = name.replace('/', '.');
+        for (int i = 0; i < STATIC_INSTRUMENT.length; i++) {
+            if (nameDot.startsWith(STATIC_INSTRUMENT[i])) return true;
         }
         return false;
     }
 
     private static boolean isIncluded(String name) {
+        String nameDot = name.replace('/', '.');
         for (int i = 0; i < INCLUDES.length; i++) {
-            if (name.replace('.', '/').startsWith(INCLUDES[i])) return true;
+            if (nameDot.startsWith(INCLUDES[i])) return true;
         }
         return false;
     }
 
-
-    // -------ACCESS POINTS FOR STATIC INSTRUMENTATION (MAVEN PLUGIN)------
-    @Override
-    public void applyTransformations(CtClass ctCl) throws JavassistBuildException {
-        try {
-            transformClass(ctCl);
-        } catch (NotFoundException | CannotCompileException e) {
-            JavassistBuildException ex = new JavassistBuildException(e);
-            throw ex;
-        }
-    }
-
-    @Override
-    public boolean shouldTransform(CtClass ctClass) throws JavassistBuildException {
-        return shouldTransform(ctClass.getName());
-    }
 }

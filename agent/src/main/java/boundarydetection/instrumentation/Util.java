@@ -1,5 +1,8 @@
 package boundarydetection.instrumentation;
 
+import javassist.CtBehavior;
+import javassist.Modifier;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +36,14 @@ public class Util {
 
     private static boolean isPrimitive(String s) {
         return s.length() == 1; // TODO check this
+    }
+
+    public static boolean isNative(CtBehavior method) {
+        return Modifier.isNative(method.getModifiers());
+    }
+
+    public static boolean isAbstract(CtBehavior method) {
+        return Modifier.isAbstract(method.getModifiers());
     }
 
     public static String getClassNameFromBytes(InputStream is) throws IOException {
