@@ -9,7 +9,7 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
     id.val = 0
     for (var i = 0; i < dets.length; i++) {
         var detect = dets[i]
-        var w_trace = JSON.parse(detect.writer_stacktrace)
+        var w_trace = detect.writer_stacktrace
         w_trace = cutAfterLast(w_trace, startEntry) //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
         w_trace = w_trace.reverse()
         var s = detect.location + (detect.parent != null ? "" : "_" + detect.reference)
@@ -31,7 +31,7 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
         if (sink.minWriterSerial == null) sink.minWriterSerial = Number.MAX_SAFE_INTEGER
         sink.minWriterSerial = Math.min(sink.minWriterSerial, detect.writer_global_clock)
 
-        var r_trace = JSON.parse(detect.reader_stacktrace)
+        var r_trace = detect.reader_stacktrace
         r_trace = r_trace.reverse()
         r_trace.push(s)
         sink = parseTrace(r_trace, node_map, id, false, detect.reader_thread_id)

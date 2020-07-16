@@ -8,7 +8,7 @@ Filters.filterCovered = filterCovered
 function filterCovered(dets, ignoreIfOneChannelCovered) {
     var coveredReader = new Set()
     dets = dets.filter(d => {
-        const a = JSON.parse(d.reader_joined_trace_ids).includes(d.writer_sub_traceID)
+        const a = d.reader_joined_trace_ids.includes(d.writer_sub_traceID)
         if (a) coveredReader.add(d.reader_thread_id);
         return !a
     })
@@ -22,7 +22,7 @@ function filterCovered(dets, ignoreIfOneChannelCovered) {
 Filters.filterByTraces = filterByTraces
 function filterByTraces(dets, regexString) {
     var regex = new RegExp(regexString)
-    return dets.filter(d => !matchRegex(JSON.parse(d.writer_stacktrace)) && !matchRegex(JSON.parse(d.reader_stacktrace)))
+    return dets.filter(d => !matchRegex(d.writer_stacktrace) && !matchRegex(d.reader_stacktrace))
 
     function matchRegex(trace) {
         for (var entry of trace) {
@@ -43,8 +43,8 @@ Filters.filterSiblings = filterSiblings
 function filterSiblings(dets) {
     return dets.filter((det, i1) => {
         const sibling = dets.find((d, i2) => {
-            var a = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLastLineNumber(Utils.wTrace(d))) == JSON.stringify(deleteLastLineNumber(Utils.wTrace(det))) &&
-                JSON.stringify(deleteLastLineNumber(Utils.rTrace(d))) == JSON.stringify(deleteLastLineNumber(Utils.rTrace(det)))
+            var a = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLastLineNumber(d.writer_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.writer_stacktrace)) &&
+                JSON.stringify(deleteLastLineNumber(d.reader_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.reader_stacktrace))
             return a
         })
         const hasSibling = sibling != null
@@ -65,8 +65,8 @@ function filterEditDistance(dets, similarityThresh, ignoreLineNumbers) {
 
     return dets.filter((det, i1) => {
         const sibling = dets.find((d, i2) => {
-            var a = i2 > i1 && Utils.levDistObj(mod(Utils.wTrace(d)), mod(Utils.wTrace(det))) / Utils.wTrace(d).length < (1 - similarityThresh) &&
-                Utils.levDistObj(mod(Utils.rTrace(d)), mod(Utils.rTrace(det))) / Utils.rTrace(d).length < (1 - similarityThresh)
+            var a = i2 > i1 && Utils.levDistObj(mod(d.writer_stacktrace), mod(det.writer_stacktrace)) / d.writer_stacktrace.length < (1 - similarityThresh) &&
+                Utils.levDistObj(mod(d.reader_stacktrace), mod(det.reader_stacktrace)) / d.reader_stacktrace.length < (1 - similarityThresh)
             return a
 
         })
@@ -121,7 +121,7 @@ function filterDistinctPath(dets) {
 Filters.filterDistinctCodePlace = filterDistinctCodePlace
 function filterDistinctCodePlace(dets) {
     return [...new Set(dets.map(d => //d.location + "----" +
-        JSON.parse(d.writer_stacktrace)[0] + " --- " + JSON.parse(d.reader_stacktrace)[0]))]
+        d.writer_stacktrace[0] + " --- " + d.reader_stacktrace)[0])]
 }
 
 

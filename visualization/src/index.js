@@ -17,6 +17,13 @@ try {
     console.log(drill.fetchTaskTags());
 
     var dets = drill.fetchDetections(3, "CreateTable_ClientStart")
+    dets.forEach(el => {
+        el.reader_joined_trace_ids = JSON.parse(el.reader_joined_trace_ids);
+        el.writer_stacktrace = JSON.parse(el.writer_stacktrace);
+        el.reader_stacktrace = JSON.parse(el.reader_stacktrace);
+    });
+
+
     var events = null//drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
 
@@ -43,7 +50,7 @@ try {
     var readerIDs = Array.from(new Set(dets.map(a => a.reader_thread_id)))
     readerIDs = readerIDs.sort() // to make things reproducible for a report
     console.log("Reader-IDs: " + readerIDs)
-    var selection = readerIDs[0]
+    var selection = readerIDs[1]
 
     dets = dets.filter(a => a.reader_thread_id == selection)
     const ITCP = Filters.filterDistinctPath(dets)
@@ -56,7 +63,7 @@ try {
     //"org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:324)"
     //"org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:631)"
     //"org.apache.hadoop.hbase.procedure2.ProcedureExecutor$WorkerThread.run(ProcedureExecutor.java:2058)"
-    var nodes = Graphs.parseDAG(dets, events)
+    var nodes = Graphs.parseDAG(dets, events, "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:629)")
     console.log("parsed data")
 
     render(nodes)

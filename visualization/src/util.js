@@ -42,20 +42,6 @@ function download(data, filename, type) {
     }
 }
 
-
-Utils.rTrace = getParsedReaderTrace
-function getParsedReaderTrace(d) {
-    if (d.parsed_reader_stacktrace == null) d.parsed_reader_stacktrace = JSON.parse(d.reader_stacktrace)
-    return d.parsed_reader_stacktrace
-}
-
-Utils.wTrace = getParsedWriterTrace
-function getParsedWriterTrace(d) {
-    if (d.parsed_writer_stacktrace == null) d.parsed_writer_stacktrace = JSON.parse(d.writer_stacktrace)
-    return d.parsed_writer_stacktrace
-
-}
-
 Utils.levDist = levDist
 function levDist(s, t) {
     var d = []; //2d matrix
