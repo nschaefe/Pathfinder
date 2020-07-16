@@ -16,7 +16,7 @@ try {
 
     console.log(drill.fetchTaskTags());
 
-    var dets = drill.fetchDetections(1, "CallRunner_CreateTable")
+    var dets = drill.fetchDetections(3, "CreateTable_ClientStart")
     var events = null//drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
 
@@ -33,6 +33,9 @@ try {
     //"org\.apache\.hadoop\.hbase\.shaded\.protobuf\.generated.*"
     dets = Filters.filterByTraces(dets, "(.*edu\.brown\.cs\.systems.*|java\.lang\.ref\.Finalizer.*|boundarydetection.*|java\.util\.concurrent\.locks.*|.*ConditionObject\.signalAll.*)")
     dets = Filters.filterSiblings(dets)
+    const dete = Filters.filterEditDistance(dets, 0.95, true)
+    console.log("EditDistanceFiltering removed:" + dets.filter(x => !dete.includes(x)))
+    dets = dete
     //dets = Filters.filterCovered(dets,false)
     dets = Filters.filterDuplicateCommunication(dets)
     console.log("filtered data")

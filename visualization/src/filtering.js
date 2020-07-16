@@ -1,3 +1,5 @@
+import { Utils } from "./util"
+
 export var Filters = new Filter()
 function Filter() { }
 
@@ -36,12 +38,13 @@ function filterByLocation(dets, regexString) {
     return dets.filter(d => !d.location.match(regex))
 }
 
+//TODO array ref?
 Filters.filterSiblings = filterSiblings
 function filterSiblings(dets) {
     return dets.filter((det, i1) => {
         const sibling = dets.find((d, i2) => {
-            var a = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLineNumber(d.writer_stacktrace)) == JSON.stringify(deleteLineNumber(det.writer_stacktrace)) &&
-                JSON.stringify(deleteLineNumber(d.reader_stacktrace)) == JSON.stringify(deleteLineNumber(det.reader_stacktrace))
+            var a = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLastLineNumber(Utils.wTrace(d))) == JSON.stringify(deleteLastLineNumber(Utils.wTrace(det))) &&
+                JSON.stringify(deleteLastLineNumber(Utils.rTrace(d))) == JSON.stringify(deleteLastLineNumber(Utils.rTrace(det)))
             return a
         })
         const hasSibling = sibling != null
@@ -51,12 +54,45 @@ function filterSiblings(dets) {
 
 }
 
-function deleteLineNumber(stacktrace) {
-    const copy = JSON.parse(stacktrace).slice()
-    const a = copy[0].indexOf(":")
-    if (a == -1) return copy
-    copy[0] = copy[0].substring(0, a)
-    return copy
+
+Filters.filterEditDistance = filterEditDistance
+function filterEditDistance(dets, similarityThresh, ignoreLineNumbers) {
+    if (similarityThresh == 1) return dets;
+
+    var mod;
+    if (ignoreLineNumbers) mod = (d) => deleteLineNumbers(d)
+    else mod = (d) => d
+
+    return dets.filter((det, i1) => {
+        const sibling = dets.find((d, i2) => {
+            var a = i2 > i1 && Utils.levDistObj(mod(Utils.wTrace(d)), mod(Utils.wTrace(det))) / Utils.wTrace(d).length < (1 - similarityThresh) &&
+                Utils.levDistObj(mod(Utils.rTrace(d)), mod(Utils.rTrace(det))) / Utils.rTrace(d).length < (1 - similarityThresh)
+            return a
+
+        })
+        const hasSibling = sibling != null
+        return !hasSibling
+    }
+    )
+}
+
+function deleteLastLineNumber(stacktrace) {
+    const trace = stacktrace.slice()
+    const colonIndex = trace[0].indexOf(":")
+    if (colonIndex == -1) return trace
+    trace[0] = trace[0].substring(0, colonIndex)
+    return trace
+}
+
+
+function deleteLineNumbers(stacktrace) {
+    const trace = stacktrace.slice()
+    for (var i = 0; i < trace.length; i++) {
+        const colonIndex = trace[i].indexOf(":")
+        if (colonIndex == -1) continue;
+        trace[i] = trace[i].substring(0, colonIndex)
+    }
+    return trace
 }
 
 Filters.intersectWithTraces = intersectWithTraces
