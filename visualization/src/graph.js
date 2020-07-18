@@ -1,4 +1,5 @@
 import { Utils } from "./util.js";
+import { Filters } from "./filtering.js";
 
 export var Graphs = new Graph()
 function Graph() { }
@@ -11,7 +12,7 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
         var detect = dets[i]
         var w_trace = detect.writer_stacktrace
         w_trace = cutAfterLast(w_trace, startEntry) //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
-        w_trace = w_trace.reverse()
+        w_trace = w_trace.slice().reverse()
         var s = detect.location + (detect.parent != null ? "" : "_" + detect.reference)
         w_trace.push(s)
         var sink = parseTrace(w_trace, node_map, id, true, detect.writer_thread_id)
@@ -32,7 +33,7 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
         sink.minWriterSerial = Math.min(sink.minWriterSerial, detect.writer_global_clock)
 
         var r_trace = detect.reader_stacktrace
-        r_trace = r_trace.reverse()
+        r_trace = r_trace.slice().reverse()
         r_trace.push(s)
         sink = parseTrace(r_trace, node_map, id, false, detect.reader_thread_id)
     }
@@ -47,6 +48,17 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
     sinks.sort((a, b) => a.minWriterSerial - b.minWriterSerial)
     c = 1
     for (var sink of sinks) sink.firstWriterHitClock = c++
+
+    var intersectionClasses = Filters.intersectionClasses(dets)
+    console.log(intersectionClasses)
+    c = 1
+    intersectionClasses.forEach(v => {
+        var matches = sinks.filter(x => x.name.startsWith(v))
+        matches = matches.sort((a, b) => a.firstHitClock - b.firstHitClock)
+        var sample = matches[0]
+        if (sample != null) sample.smallestCommonDepthOrder = c++
+    })
+
 
     if (events != null) {
         var depthLimit = 75

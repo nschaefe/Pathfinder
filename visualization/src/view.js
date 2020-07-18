@@ -236,7 +236,7 @@ export function render(full_graph) {
     nodeEl.select('.textBottomL1')
       .attr("x", (d) => - nodeTextSize / 2 + "px")
       .attr("y", nodeRadius * 3 + 5 + "px")
-      .text((d) => getNode(d).sink ? '|' + getNode(d).firstWriterHitClock + '|' : '');
+      .text((d) => getNode(d).sink && getNode(d).smallestCommonDepthOrder != null ? '|' + getNode(d).smallestCommonDepthOrder + '|' : '');
     nodeEl.select('.textBottomL2')
       .attr("x", (d) => - nodeTextSize / 2 + "px")
       .attr("y", nodeRadius * 3 + 5 + nodeTextSize + "px")

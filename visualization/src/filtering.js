@@ -141,28 +141,44 @@ function filterBlacklist(dets, blacklist) {
     })
 }
 
+
+Filters.intersectionClasses = intersectionClasses
+function intersectionClasses(channel) {
+    var intersects = new Set()
+    for (var det of channel) {
+        var w = det.writer_stacktrace.slice().reverse().map((d, i) => [Utils.getClassName(d), i])
+        var r = det.reader_stacktrace.slice().reverse().map((d, i) => [Utils.getClassName(d), i])
+
+        w = Array.from(w)
+        Array.from(r).filter(s => w.find(x => x[0] == s[0])).forEach(intersects.add, intersects)
+    }
+    //sort according to appearence order in stacktrace, make distinct
+    var x = Array.from(intersects).sort((a, b) => a[1] - b[1]).map(d => d[0])
+    return x.filter((v, i, self) => self.indexOf(v) === i) //filter preserves order
+}
+
+
 Filters.filterDuplicateCommunication = filterDuplicateCommunication
 function filterDuplicateCommunication(dets) {
     //eliminates redundant communication paths.
     //When code is executed several times but by different threads (threadpool) one path is enough to see.
     //first groups detections by reader_thread_id
     //then compares these groups. Identical are removed.
-    //We need to group first to not destroy consistency between groups.
-    //We want to keep the communication between 2 threads complete and not delete some detections in different groups
-    //where we would have a disitinct set of detections but all detection sets per thread pair might be incomplete
 
     //assumes only one writer
     //assumes detections are distinct
 
-    var m = new Map()
+    // group detections by reader_thread_id
+    var readerDetSets = new Map()
     for (var d of dets) {
-        var set = m.get(d.reader_thread_id)
-        if (set == null) set = []
-        set.push(d)
-        m.set(d.reader_thread_id, set)
+        var threadsDets = readerDetSets.get(d.reader_thread_id)
+        if (threadsDets == null) threadsDets = []
+        threadsDets.push(d)
+        readerDetSets.set(d.reader_thread_id, threadsDets)
     }
 
-    var detGrps = Array.from(m.entries())
+    var detGrps = Array.from(readerDetSets.entries())
+    // for each group of detections check if there is another equal grp, if yes delete it.
     for (var i = 0; i < detGrps.length; i++) {
         var el = detGrps[i]
         if (el == null) continue
@@ -174,11 +190,13 @@ function filterDuplicateCommunication(dets) {
     }
 
     function equ(a, b) {
-        var aS = JSON.stringify(a[1].map(m => "" + m.writer_stacktrace + m.reader_stacktrace + m.location).sort())
-        var bS = JSON.stringify(b[1].map(m => "" + m.writer_stacktrace + m.reader_stacktrace + m.location).sort())
+        // a, b are tuples of the form (thread_id, detection array)
+        var aS = JSON.stringify(a[1].map(d => "" + d.writer_stacktrace + d.reader_stacktrace + d.location).sort())
+        var bS = JSON.stringify(b[1].map(d => "" + d.writer_stacktrace + d.reader_stacktrace + d.location).sort())
         return aS == bS
     }
 
+    // concat all groups to have one set again
     var detss = []
     for (var o of detGrps.filter(n => n != null)) {
         detss = detss.concat(o[1])
@@ -187,4 +205,104 @@ function filterDuplicateCommunication(dets) {
 }
 
 
+Filters.filterSimilarCommunication = filterSimilarCommunication
+function filterSimilarCommunication(dets_t1, dets_t2, similarityThresh) {
+    if (dets_t1 === dets_t2) all_dets = dets_t1 // otherwise we change the threadID for both arguments
+    else {
+        var rand = Math.random()
+        //TODO deept copy
+        dets_t2.forEach(d => d.reader_thread_id = d.reader_thread_id + "_" + rand)
+        var all_dets = dets_t1.concat(dets_t2)
+    }
+
+    var channels = groupByReaderThreaderId(all_dets)
+    var grpsOfChannels = []
+    for (var i = 0; i < channels.length; i++) {
+        var channel = channels[i]
+
+        //assign channels to channel groups
+        var max_similar = 0;
+        var max_sim_index;
+        for (var q = 0; q < grpsOfChannels.length; q++) {
+            var grp = grpsOfChannels[q]
+            var sim = similarGrp(channel, grp)
+            if (sim > max_similar) {
+                if (max_similar >= similarityThresh) console.log("two similar")
+                max_similar = sim
+                max_sim_index = q
+            }
+        }
+        if (max_similar >= similarityThresh) grpsOfChannels[max_sim_index].push(channel)
+        else grpsOfChannels.push([channel])
+
+
+    }
+    console.log("built channel grps")
+    //build intersections withing groups
+    for (var q = 0; q < grpsOfChannels.length; q++) {
+        var grp = grpsOfChannels[q]
+        if (grp.length == 1) {
+            grpsOfChannels[q] = grp[0][1]
+            continue;
+        }
+        var resultSet = []
+        grp = grp.sort((a, b) => a.length - b.length);
+        var channel = grp[0]
+
+        for (var det of channel[1]) {
+            var foundAll = true
+            for (var i = 1; i < grp.length; i++) {
+                var found = grp[i][1].find(d => d.location == det.location) != null
+                foundAll = foundAll && found
+            }
+            if (foundAll) resultSet.push(det)
+        }
+        grpsOfChannels[q] = resultSet
+    }
+    console.log("intersected grps")
+
+    function similarGrp(channel, grp) {
+        // avg. similarity
+        var sim_acc = 0
+        for (var chan of grp) {
+            sim_acc = similar(channel[1], chan[1])
+        }
+        return sim_acc / grp.length
+    }
+
+    function similar(ch1, ch2) {
+        return Math.max(similarH(ch1, ch2), similarH(ch2, ch1))
+    }
+
+    function similarH(ch1, ch2) {
+        // if the sizes are to far away from each other we say not equal
+        if (ch1.length / ch2.length < 0.1) return 0
+        if (ch2.length / ch1.length < 0.1) return 0
+        var hits = 0;
+        for (var det of ch1) {
+            if (ch2.find(d => d.location == det.location)) hits++
+        }
+        return hits / ch1.length
+    }
+    // concat all groups to have one set again
+    var detss = []
+    for (var o of grpsOfChannels) {
+        detss = detss.concat(o)
+    }
+    console.log("concated channel grps")
+    return detss
+}
+
+
+Filters.groupByReaderThreaderId = groupByReaderThreaderId
+function groupByReaderThreaderId(dets) {
+    var readerDetSets = new Map()
+    for (var d of dets) {
+        var threadsDets = readerDetSets.get(d.reader_thread_id)
+        if (threadsDets == null) threadsDets = []
+        threadsDets.push(d)
+        readerDetSets.set(d.reader_thread_id, threadsDets)
+    }
+    return Array.from(readerDetSets.entries())
+}
 
