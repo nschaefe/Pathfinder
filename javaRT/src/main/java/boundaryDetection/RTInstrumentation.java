@@ -20,7 +20,7 @@ import java.util.jar.Manifest;
 
 public class RTInstrumentation {
 
-    private static boolean FALLBACK_ON_ERROR = false;
+    private static boolean FALLBACK_ON_ERROR = true;
 
     public static void main(String[] args) {
         try {
@@ -64,7 +64,10 @@ public class RTInstrumentation {
                     e.printStackTrace();
                     cl.detach();
                     cl = cp.get(clName.replace("/", "."));
-                } else throw e;
+                } else{
+                    System.err.println("ERROR in " + cl.getName() );
+                    throw e;
+                }
             } finally {
                 cl.writeFile(resultPath);
             }

@@ -157,6 +157,7 @@ public class Agent implements ClassFileTransformer {
         tracker = cp.get(HOOK_CLASS);
 
         replaceArrayCopy(ctCl);
+        replaceUnsafes(ctCl);
 
         CodeInstrumenter conv = new CodeInstrumenter();
         // adds transformers at the head (so reverse order)
@@ -169,6 +170,29 @@ public class Agent implements ClassFileTransformer {
         ctCl.instrument(conv);
 
         logMethodBeginAsEvent(ctCl);
+    }
+
+
+    private void replaceUnsafes(CtClass ctCl) throws CannotCompileException {
+        replaceUnsafe(ctCl, "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z", "compareAndSwapObject", false);
+        replaceUnsafe(ctCl, "(Ljava/lang/reflect/Field;)J", "objectFieldOffset", false);
+        replaceUnsafe(ctCl, "(Ljava/lang/Object;JLjava/lang/Object;)V", "putObject", true);
+        replaceUnsafe(ctCl, "(Ljava/lang/Object;JLjava/lang/Object;)V", "putOrderedObject", true);
+    }
+
+    private void replaceUnsafe(CtClass ctCl, String signature, String name, boolean isVoid) throws CannotCompileException {
+        ctCl.instrument(new ExprEditor() {
+
+            public void edit(MethodCall m) throws CannotCompileException {
+                if (m.getClassName().equals("sun.misc.Unsafe"))
+                    if (m.getSignature().equals(signature))
+                        if (m.getMethodName().equals(name)) {
+                            String replacement = HOOK_CLASS + "." + name + "($$);";
+                            if (!isVoid) replacement = "$_ = " + replacement;
+                            m.replace(replacement);
+                        }
+            }
+        });
     }
 
     private void replaceArrayCopy(CtClass ctCl) throws CannotCompileException {
