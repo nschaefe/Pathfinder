@@ -583,20 +583,24 @@ public class AccessTracker {
         return valueOffset;
     }
 
+    private static void registerWrite(Object o, long offset, Object val) {
+        Class<?> clas = o.getClass();
+        if (!clas.isArray()) {
+            //TODO check for task and enabled etc
+            String s = getAlias(offset, clas);
+            while (s == null && (clas = clas.getSuperclass()) != null) {
+                s = getAlias(offset, clas);
+            }
+            // we do not track a read here because this method is not used to read a value, expected value is given
+            if (s != null) writeAccess(new FieldLocation(s, Object.class, o), val == null);
+        }
+    }
+
     public static boolean compareAndSwapObject(Object o, long l, Object a, Object b) {
         initUnsafe();
         boolean re = UNSAFE.compareAndSwapObject(o, l, a, b);
         if (!enabled) return re;
-        Class<?> clas = o.getClass();
-        if (re && !clas.isArray()) {
-              //TODO check for task and enabled etc
-            String s = getAlias(l, clas);
-            while (s == null && (clas = clas.getSuperclass()) != null) {
-                s = getAlias(l, clas);
-            }
-            // we do not track a read here because this method is not used to read a value, expected value is given
-            if (s != null) writeAccess(new FieldLocation(s, Object.class, o), b == null);
-        }
+        if (re) registerWrite(o, l, b);
         return re;
     }
 
@@ -604,14 +608,14 @@ public class AccessTracker {
         initUnsafe();
         UNSAFE.putOrderedObject(o, l, val);
         if (!enabled) return;
-        writeAccess(new FieldLocation(getAlias(l, o.getClass()), Object.class, o), val == null);
+        registerWrite(o, l, val);
     }
 
     public static void putObject(Object o, long l, Object val) {
         initUnsafe();
         UNSAFE.putObject(o, l, val);
         if (!enabled) return;
-        writeAccess(new FieldLocation(getAlias(l, o.getClass()), Object.class, o), val == null);
+        registerWrite(o, l, val);
     }
 
     //---------------
