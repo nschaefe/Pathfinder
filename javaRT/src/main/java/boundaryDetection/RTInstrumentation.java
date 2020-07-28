@@ -54,9 +54,9 @@ public class RTInstrumentation {
             try {
                 cl = cp.get(clName.replace("/", "."));
                 //TODO filtering at central point
-                if (clName.startsWith("java/util") || clName.startsWith("java/io")) a.transformClass(cl);
-                if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
-                if (clName.equals("java/lang/invoke/InnerClassLambdaMetafactory")) a.instLambdaMetaFactory(cl);
+                if ((clName.startsWith("java/util") && !clName.startsWith("java/util/concurrent/locks")) || clName.startsWith("java/io")) a.transformClass(cl);
+                else if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
+                else if (clName.equals("java/lang/invoke/InnerClassLambdaMetafactory")) a.instLambdaMetaFactory(cl);
             } catch (Exception e) {
                 if (FALLBACK_ON_ERROR) {
                     // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime

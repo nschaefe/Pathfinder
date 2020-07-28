@@ -290,7 +290,7 @@ public class AccessTracker {
     }
 
     public static void enableWriterEventLogging() {
-       writerEventLoggingEnabled = true;
+        writerEventLoggingEnabled = true;
     }
 
     public static void disableWriterEventLogging() {
@@ -587,10 +587,15 @@ public class AccessTracker {
         initUnsafe();
         boolean re = UNSAFE.compareAndSwapObject(o, l, a, b);
         if (!enabled) return re;
-        if (re && !o.getClass().isArray()) {
+        Class<?> clas = o.getClass();
+        if (re && !clas.isArray()) {
+              //TODO check for task and enabled etc
+            String s = getAlias(l, clas);
+            while (s == null && (clas = clas.getSuperclass()) != null) {
+                s = getAlias(l, clas);
+            }
             // we do not track a read here because this method is not used to read a value, expected value is given
-            //TODO check for task and enabled etc
-            writeAccess(new FieldLocation(getAlias(l, o.getClass()), Object.class, o), b == null);
+            if (s != null) writeAccess(new FieldLocation(s, Object.class, o), b == null);
         }
         return re;
     }
