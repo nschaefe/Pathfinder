@@ -47,4 +47,9 @@ public final class FieldLocation extends AbstractFieldLocation {
         super.toJSON(g);
         g.writeNumberField("parent", getParentRef());
     }
+
+    @Override
+    public String toString() {
+        return "parent: "+parent+" "+super.toString();
+    }
 }

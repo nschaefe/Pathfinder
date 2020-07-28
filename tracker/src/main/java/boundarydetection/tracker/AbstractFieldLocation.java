@@ -46,4 +46,8 @@ public abstract class AbstractFieldLocation {
         g.writeStringField("field_object_type", type.toString());
     }
 
+    @Override
+    public String toString() {
+       return "location: "+getLocation()+" type: "+getType();
+    }
 }

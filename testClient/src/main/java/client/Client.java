@@ -6,8 +6,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 
 public class Client extends ClientBase {
 
@@ -19,6 +18,9 @@ public class Client extends ClientBase {
     private LinkedList<Integer> li;
     private PriorityQueue<Integer> rr;
     private LinkedBlockingQueue<Integer> bq;
+    private ConcurrentLinkedQueue<Integer> cq;
+    private ConcurrentLinkedDeque<Integer> dq;
+    private ConcurrentHashMap<Integer, Integer> ch;
 
     private static Integer si;
 
@@ -32,6 +34,9 @@ public class Client extends ClientBase {
         li = new LinkedList<>();
         rr = new PriorityQueue<>();
         bq = new LinkedBlockingQueue();
+        cq = new ConcurrentLinkedQueue<>();
+        dq = new ConcurrentLinkedDeque<>();
+        ch = new ConcurrentHashMap<>();
     }
 
     public synchronized void write(int i) {
@@ -56,6 +61,10 @@ public class Client extends ClientBase {
 
         a.add(i);
         q.add(i);
+
+        cq.add(i);
+        dq.add(i);
+        ch.put(i, i);
 
     }
 
@@ -88,7 +97,7 @@ public class Client extends ClientBase {
     }
 
     public synchronized String read() {
-        return "" + q.getFirst() + a.get(0) + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
+        return "" + ch.get(42) + dq.poll() + cq.poll() + q.getFirst() + a.get(0) + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
     }
 
     public synchronized void setNull() {
@@ -102,11 +111,11 @@ public class Client extends ClientBase {
             c.lambdaTest();
             Thread t = new Thread(() -> {
                 AccessTracker.startTask();
-                for (int i = 0; i < 10; i++) {
-                    // in iterations >1 less cases are detected, because on read side some reads refer to 0th item, but the added one is at the end.
-                    c.write(42);
-                    // double write should not be a new write
-                }
+                // for (int i = 0; i < 10; i++) {
+                // in iterations >1 less cases are detected, because on read side some reads refer to 0th item, but the added one is at the end.
+                c.write(42);
+                // double write should not be a new write
+                // }
                 AccessTracker.stopTask();
                 // c.setNull(); //reads from null should not appear as detected case
             });

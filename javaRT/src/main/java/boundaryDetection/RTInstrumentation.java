@@ -64,7 +64,10 @@ public class RTInstrumentation {
                     e.printStackTrace();
                     cl.detach();
                     cl = cp.get(clName.replace("/", "."));
-                } else throw e;
+                } else{
+                    System.err.println("ERROR in " + cl.getName() );
+                    throw e;
+                }
             } finally {
                 cl.writeFile(resultPath);
             }
@@ -101,7 +104,7 @@ public class RTInstrumentation {
 
 
         // assuming no rmi, sql is used
-        return clName.startsWith("java/util") ||
+        return (clName.startsWith("java/util") && !clName.startsWith("java/util/concurrent/locks")) ||
                 clName.startsWith("java/nio") ||
                 clName.startsWith("java/net") ||
                 clName.startsWith("java/time") ||

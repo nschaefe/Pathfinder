@@ -3,12 +3,15 @@ package boundarydetection.tracker;
 import boundarydetection.tracker.tasks.Task;
 import boundarydetection.tracker.tasks.TaskCollisionException;
 import boundarydetection.tracker.tasks.Tasks;
+import boundarydetection.tracker.util.Pair;
 import boundarydetection.tracker.util.logging.FileLoggerEngine;
 import boundarydetection.tracker.util.logging.LazyLoggerFactory;
 import boundarydetection.tracker.util.logging.Logger;
 import boundarydetection.tracker.util.logging.StreamLoggerEngine;
+import sun.misc.Unsafe;
 
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -567,6 +570,71 @@ public class AccessTracker {
         readAccess(f);
         return val;
     }
+
+    //--------------- UNSAFE
+    private static volatile Unsafe UNSAFE;
+
+    public static synchronized void initUnsafe() {
+        if (UNSAFE == null) UNSAFE = sun.misc.Unsafe.getUnsafe();
+    }
+
+    private static HashMap<Pair<String, Long>, String> aliasForOffset = new HashMap<Pair<String, Long>, String>();
+
+    private static void setAlias(long offset, Class<?> c, Field f) {
+        String className = c.getName();
+        Pair p = new Pair<>(className, offset);
+        aliasForOffset.put(p, className + '.' + f.getName());
+    }
+
+    private static String getAlias(long offset, Class<?> c) {
+        String className = c.getName();
+        Pair p = new Pair<>(className, offset);
+        return aliasForOffset.get(p);
+    }
+
+    public static long objectFieldOffset(Field f) {
+        initUnsafe();
+        long valueOffset = UNSAFE.objectFieldOffset(f);
+        setAlias(valueOffset, f.getDeclaringClass(), f);
+        return valueOffset;
+    }
+
+    private static void registerWrite(Object o, long offset, Object val) {
+        Class<?> clas = o.getClass();
+        if (!clas.isArray()) {
+            //TODO check for task and enabled etc
+            String s = getAlias(offset, clas);
+            while (s == null && (clas = clas.getSuperclass()) != null) {
+                s = getAlias(offset, clas);
+            }
+            // we do not track a read here because this method is not used to read a value, expected value is given
+            if (s != null) writeAccess(new FieldLocation(s, Object.class, o), val == null);
+        }
+    }
+
+    public static boolean compareAndSwapObject(Object o, long l, Object a, Object b) {
+        initUnsafe();
+        boolean re = UNSAFE.compareAndSwapObject(o, l, a, b);
+        if (!enabled) return re;
+        if (re) registerWrite(o, l, b);
+        return re;
+    }
+
+    public static void putOrderedObject(Object o, long l, Object val) {
+        initUnsafe();
+        UNSAFE.putOrderedObject(o, l, val);
+        if (!enabled) return;
+        registerWrite(o, l, val);
+    }
+
+    public static void putObject(Object o, long l, Object val) {
+        initUnsafe();
+        UNSAFE.putObject(o, l, val);
+        if (!enabled) return;
+        registerWrite(o, l, val);
+    }
+
+    //---------------
 
     // FACADE METHODS-------------------------------------
     public static void startTask() {
