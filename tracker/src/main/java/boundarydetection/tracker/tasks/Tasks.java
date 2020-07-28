@@ -30,6 +30,12 @@ public class Tasks {
         task.set(Task.createTask());
     }
 
+    public static void startTask(String tag) {
+        AccessTracker.startTracking();
+        init();
+        task.set(Task.createTask(tag));
+    }
+
     public static void inheritTask(Task parent) {
         init();
         Task t = new Task(parent);

@@ -12,6 +12,7 @@ public class Task {
     private Task parentTask; // null by default. Can be set to bind to another task
     private String traceID; // serial and trace id belong to high level
     private int serial;
+    private String tag;
 
     private String subTraceID;
     private boolean stopped;
@@ -49,9 +50,14 @@ public class Task {
         this.stopped = t.stopped;
         this.joiners = new HashSet<>(t.joiners);
         this.writeCapability = t.writeCapability;
+        this.tag = t.tag;
     }
 
     public Task(String traceID) {
+        this(traceID,null);
+    }
+
+    public Task(String traceID, String tag) {
         this.traceID = traceID;
         this.subTraceID = traceID + "_" + Math.random();
         this.autoInheritanceCount = 0;
@@ -65,10 +71,19 @@ public class Task {
         this.stopped = false;
         this.joiners = new HashSet<>();
         this.writeCapability = true;
+        this.tag = tag;
     }
 
     public void addJoiner(Task task) {
         joiners.add(task);
+    }
+
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
     }
 
     public Task[] getJoiners() {
@@ -183,5 +198,8 @@ public class Task {
         return new Task(getNewTaskID());
     }
 
+    public static Task createTask(String tag) {
+        return new Task(getNewTaskID(), tag);
+    }
 
 }

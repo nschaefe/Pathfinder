@@ -162,7 +162,7 @@ public class Agent implements ClassFileTransformer {
         // adds transformers at the head (so reverse order)
         conv.replaceArrayAccess(tracker, new CodeConverter.DefaultArrayAccessReplacementMethodNames());
 
-        Predicate<String> filter = (s) -> Util.isSingleObjectSignature(s);
+        Predicate<String> filter = (s) -> true;
         conv.instrumentFieldRead(tracker, filter);
         conv.instrumentFieldWrite(tracker, filter);
         conv.reformatConstructor();
@@ -199,8 +199,8 @@ public class Agent implements ClassFileTransformer {
         //TODO assert is classloader class
         CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;Z)Ljava/lang/Class;");
         //CtMethod m = ctCl.getMethod("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
-        m.insertBefore("boundarydetection.tracker.AccessTracker.pauseTask();");
-        m.insertAfter("boundarydetection.tracker.AccessTracker.resumeTask();", true);
+        m.insertBefore(HOOK_CLASS + ".pauseTask();");
+        m.insertAfter(HOOK_CLASS + ".resumeTask();", true);
     }
 
     public void instLambdaMetaFactory(CtClass ctCl) throws NotFoundException, CannotCompileException {
@@ -214,7 +214,9 @@ public class Agent implements ClassFileTransformer {
             public void edit(MethodCall m) throws CannotCompileException {
                 //UNSAFE.defineAnonymousClass(targetClass, classBytes, null);
                 if (m.getMethodName().equals("defineAnonymousClass")) {
-                    m.replace("$2 = " + Agent.class.getName() + ".instLambda($1,$2);" +
+                    m.replace(HOOK_CLASS + ".pauseTask();" +
+                            "$2 = " + Agent.class.getName() + ".instLambda($1,$2);" +
+                            HOOK_CLASS + ".resumeTask();" +
                             "$_ = $proceed($$); ");
                 }
             }
@@ -224,17 +226,19 @@ public class Agent implements ClassFileTransformer {
 
     private static Agent agentInstance = null;
     private static boolean entered = false; //for recursion breaking, lambdas that are accessed within the framework are ignored.
-    //TODO verify that thread independent is enough, or thread local is needed
+    //TODO verify that thread independent recursion breaking is enough, or thread local is needed
     // intuition why this is enough: If two threads simultaneously bootstrap a lambda (on first invocation) and generate the functional interface implementation, this leads to
     // multiple class definitions and multiple executions of the same code generation, so this can be hardly happening.
 
     public static byte[] instLambda(Class<?> targetClass, byte[] classBytes) throws NotFoundException, IOException, CannotCompileException, JavassistBuildException {
+        // COMMENT: There is a JVM option to dump generated lambdas BEFORE they are passed to this method and rewritten.
+        // -Djdk.internal.lambda.dumpProxyClasses=/a/directory/path
+
         if (entered) return classBytes;
         try {
             entered = true;
             if (agentInstance == null) agentInstance = new Agent();
             String name = Util.getClassNameFromBytes(new ByteArrayInputStream(classBytes));
-            //TODO move this filtering; use constatnt
             if (isExcluded(name)) return classBytes;
             ClassPool cp = agentInstance.getClassPool();
             cp.insertClassPath(new ByteArrayClassPath(name, classBytes));
