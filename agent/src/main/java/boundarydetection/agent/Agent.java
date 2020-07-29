@@ -49,8 +49,6 @@ public class Agent implements ClassFileTransformer {
             "com.fasterxml.jackson",
 
             // APPLICATION PACKAGES BLACKLIST (HBase)
-            "org.apache.log4j",
-            "org.slf4j",
             "org.aspectj",
             "org.jruby",
             "jnr",

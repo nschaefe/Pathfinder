@@ -602,11 +602,13 @@ public class AccessTracker {
     private static void registerWrite(Object o, long offset, Object val) {
         Class<?> clas = o.getClass();
         if (!clas.isArray()) {
+            pauseTask();
             //TODO check for task and enabled etc
             String s = getAlias(offset, clas);
             while (s == null && (clas = clas.getSuperclass()) != null) {
                 s = getAlias(offset, clas);
             }
+            resumeTask();
             // we do not track a read here because this method is not used to read a value, expected value is given
             if (s != null) writeAccess(new FieldLocation(s, Object.class, o), val == null);
         }
