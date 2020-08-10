@@ -69,8 +69,8 @@ This builds everything, instruments the rt.jar and runs the tests.
 
 ## Installation
 To install the tool in an application, the instrumented rt.jar and the javaagent must be provided.
-See mvn exec@dynamic call in the pom.xml of testClient
-Example:
+See mvn exec@dynamic call in the pom.xml of testClient\
+Example:\
 java -Xbootclasspath/p:/some/path/InstrumentationHelper/javaRT/rt_inst.jar:/some/path/InstrumentationHelper/tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar:/some/path/InstrumentationHelper/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar -javaagent:/some/path/InstrumentationHelper/agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
 
 
@@ -80,12 +80,16 @@ If there is a write and read to/from the same location by different threads, thi
 
 **AccessTracker.startTask** starts a tracking scope for the current thread.\
 **AccessTracker.stopTask**  stops the tracking scope if there is any for the current thread.\
-**AccessTracker.hasTask**   returns true if there is a active tracking scope.\
+**AccessTracker.hasTask**   returns true if there is an active tracking scope.\
 **AccessTracker.getTask**   returns the current tracking scope object if there is any, null otherwise.
    
 **AccessTracker.pauseTask** copies the thread local to somewhere else and removes the taskID in the thread local\
 **AccessTracker.resumeTask** brings the copied version back.
 There is a limited support for subsequent calls like pause() pause() resume() resume(). The taskID is only copied on the first pause() and brought back on the last resume().
+
+**AccessTracker.fork**      copies and returns the current tracking scope object to pass it over to another thread.\
+**AccessTracker.join**      continues the given task. If there is already a task present, joins the given task into the existing one.\
+**AccessTracker.discard**   equivalent to stopTask.
 
 The instrumentation process with the InstrumentationHelper requires to successively track inter thread communications, traversing a thread dependency graph.
 We start with the thread A1 calling the API method "myAPIRequest" in the target system. If we want to know with which other threads this thread communicates, we enclose the method body with a tracking scope.
