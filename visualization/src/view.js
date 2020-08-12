@@ -233,10 +233,7 @@ export function render(full_graph) {
     nodeEl.select('.textBottom')
       .attr("font-size", nodeTextSize + "px")
       .attr("visibility", (d) => getNode(d).sink ? "visible" : "hidden");
-    nodeEl.select('.textBottomL1')
-      .attr("x", (d) => - nodeTextSize / 2 + "px")
-      .attr("y", nodeRadius * 3 + 5 + "px")
-      .text((d) => getNode(d).sink && getNode(d).smallestCommonDepthOrder != null ? '|' + getNode(d).smallestCommonDepthOrder + '|' : '');
+   
     nodeEl.select('.textBottomL2')
       .attr("x", (d) => - nodeTextSize / 2 + "px")
       .attr("y", nodeRadius * 3 + 5 + nodeTextSize + "px")
@@ -280,8 +277,31 @@ export function render(full_graph) {
       }
       printToBlacklist(Array.from(rs))
     }
+    else if (event.key == 'e') {
+      var sets = dag.descendants().filter(d => getNode(d).sink).map(d => getNode(d).jsons)
+      var rs = new Set()
+      for (var s of sets) {
+        rs = new Set([...rs, ...s])
+      }
+      printForEval(Array.from(rs))
+    }
 
   });
+
+  function printForEval(detections) {
+    //TODO move this somewhere else
+    var str = ""
+    for (var d of detections) {
+      str += d.location + '\n\n'
+      str += Utils.shortenTrace(d.writer_stacktrace).reverse().join('\n') + '\n\n'
+      str += Utils.shortenTrace(d.reader_stacktrace).reverse().join('\n') + '\n'
+    }
+    str = str.substring(0, str.length - 1);
+    const name = "eval"
+    Utils.download(str, name + ".json", "application/json")
+  }
+
+
 
   function printToBlacklist(detections) {
     var str = ""

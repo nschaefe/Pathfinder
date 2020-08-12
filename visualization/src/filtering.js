@@ -38,22 +38,55 @@ function filterByLocation(dets, regexString) {
     return dets.filter(d => !d.location.match(regex))
 }
 
+Filters.filterByReaderMethodGrouping = filterByReaderMethodGrouping
+function filterByReaderMethodGrouping(dets, prefxixLengths, index) {
+    // Groups detections by prefixes of reader stacktraces and selects one group fitting a prefix based on the index
+    // The idea is to discover all channels per thread pair and iterate over all channels with the index argument
+    var dx = dets.map(d => {
+        var ss = d.reader_stacktrace.slice(d.reader_stacktrace.length - prefxixLengths, d.reader_stacktrace.length)
+        return JSON.stringify(ss)
+    })
+    var prefixes = [...new Set(dx)]
+    var selectedPrefix = prefixes[index]
+    return dets.filter(d => JSON.stringify(d.reader_stacktrace.slice(d.reader_stacktrace.length - prefxixLengths, d.reader_stacktrace.length)).startsWith(selectedPrefix))
+}
+
 //TODO array ref?
 Filters.filterSiblings = filterSiblings
 function filterSiblings(dets) {
-    return dets.filter((det, i1) => {
-        const sibling = dets.find((d, i2) => {
-            var a = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLastLineNumber(d.writer_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.writer_stacktrace)) &&
+    var rev_dets = dets.slice()
+    rev_dets.reverse() //reverse is used to eliminate from end to front in the orginal order
+
+    rev_dets = rev_dets.filter((det, i1) => {
+        const sibling = rev_dets.find((d, i2) => {
+            var isSibling = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLastLineNumber(d.writer_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.writer_stacktrace)) &&
                 JSON.stringify(deleteLastLineNumber(d.reader_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.reader_stacktrace))
-            return a
+            return isSibling
         })
         const hasSibling = sibling != null
         return !hasSibling
     }
     )
-
+    rev_dets.reverse()
+    return rev_dets
 }
 
+Filters.filterCoveredGrpInteractive = filterCoveredGrpInteractive
+function filterCoveredGrpInteractive(grp, covered) {
+    //returns true if a grp was already covered based on the first detection fitting the representative given by the covered argument
+    //TODO make adjustable
+    var det = grp[0]
+    for (var el of covered) {
+        if (filterCoveredGrpInteractiveSingle(det, el)) return true
+    }
+    return false
+}
+
+function filterCoveredGrpInteractiveSingle(det, c) {
+    var a = JSON.stringify({ loc: det.location, wt: det.writer_stacktrace, rt: det.reader_stacktrace })
+    var b = JSON.stringify(c)
+    return a == b
+}
 
 Filters.filterEditDistance = filterEditDistance
 function filterEditDistance(dets, similarityThresh, ignoreLineNumbers) {
@@ -121,13 +154,27 @@ function filterDistinctPath(dets) {
 Filters.filterDistinctCodePlace = filterDistinctCodePlace
 function filterDistinctCodePlace(dets) {
     return [...new Set(dets.map(d => //d.location + "----" +
-        d.writer_stacktrace[0] + " --- " + d.reader_stacktrace)[0])]
+        d.writer_stacktrace[0] + " --- " + d.reader_stacktrace[0]))]
 }
 
 
 Filters.filterDistinctMemoryAddressCodePlace = filterDistinctMemoryAddressCodePlace
 function filterDistinctMemoryAddressCodePlace(dets) {
-    return [...new Set(dets.map(d => d.location))] //TODO if array, how to count?
+    var aliases = [...new Set(dets.map(d => d.location))] //TODO if array, how to count?
+    aliases.sort()
+    return aliases
+}
+
+Filters.filterDistinctResources = filterDistinctMemoryResources
+function filterDistinctMemoryResources(dets) {
+    var aliases = [...new Set(dets.map(d => Utils.getClassName(d.location)))] //TODO if array, how to count?
+    aliases.sort((a, b) => {
+        if (a.includes('$') && b.includes('$')) return 0
+        if (a.includes('$')) return -1
+        else if (b.includes('$')) return 1
+        else return 0
+    })
+    return aliases
 }
 
 
@@ -164,6 +211,8 @@ function filterDuplicateCommunication(dets) {
     //When code is executed several times but by different threads (threadpool) one path is enough to see.
     //first groups detections by reader_thread_id
     //then compares these groups. Identical are removed.
+    //just making the set of all detections distinct is not enough because we could remove detections across ITC channels
+    //such that none of them is complete but all still exist
 
     //assumes only one writer
     //assumes detections are distinct

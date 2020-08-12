@@ -23,6 +23,24 @@ function shortenClassName(traceEntry) {
     return names[names.length - 1] + rest
 }
 
+Utils.shortTraceEntry = shortTraceEntry
+function shortTraceEntry(traceEntry) {
+    var withoutCallPart = traceEntry.substring(0, traceEntry.indexOf("("))
+    return shortenClassName(withoutCallPart) + "()"
+}
+
+Utils.shortenTrace = shortenTrace
+function shortenTrace(trace) {
+    return trace.map(d => Utils.shortTraceEntry(d))
+}
+
+Utils.cutAfterLast = cutAfterLast
+function cutAfterLast(trace, end) {
+    var i = trace.lastIndexOf(end)
+    if (i < 0) return trace
+    return trace.slice(0, i + 1)
+}
+
 Utils.download = download
 function download(data, filename, type) {
     var file = new Blob([data], { type: type });
