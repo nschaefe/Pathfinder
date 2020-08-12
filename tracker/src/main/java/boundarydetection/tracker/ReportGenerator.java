@@ -31,6 +31,7 @@ public class ReportGenerator {
             g.writeNumberField("serial", serial);
             g.writeStringField("time", getTime());
             g.writeStringField("tag", "CONCURRENT WRITE/READ DETECTION");
+            g.writeStringField("writer_task_tag", w.getTask().getTag());
             loc.toJSON(g);
             g.writeNumberField("epoch", epoch);
             g.writeStringField("eventID", id);

@@ -20,7 +20,7 @@ import java.util.jar.Manifest;
 
 public class RTInstrumentation {
 
-    private static boolean FALLBACK_ON_ERROR = true;
+    private static boolean FALLBACK_ON_ERROR = false;
 
     public static void main(String[] args) {
         try {
@@ -54,9 +54,9 @@ public class RTInstrumentation {
             try {
                 cl = cp.get(clName.replace("/", "."));
                 //TODO filtering at central point
-                if ((clName.startsWith("java/util") && !clName.startsWith("java/util/concurrent/locks")) || clName.startsWith("java/io")) a.transformClass(cl);
-                else if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
-                else if (clName.equals("java/lang/invoke/InnerClassLambdaMetafactory")) a.instLambdaMetaFactory(cl);
+                if (doInstrument(clName)) a.transformClass(cl);
+                if (clName.equals("java/lang/ClassLoader")) a.instClassLoader(cl);
+                if (clName.equals("java/lang/invoke/InnerClassLambdaMetafactory")) a.instLambdaMetaFactory(cl);
             } catch (Exception e) {
                 if (FALLBACK_ON_ERROR) {
                     // if instrumentation fails, we skip the class, results in fallback to actual rt at runtime
@@ -75,6 +75,67 @@ public class RTInstrumentation {
         }
         writeJar(resultPath, baseDir + "/rt_inst.jar", readJarManifest(Paths.get(rtpath)));
     }
+
+    private static boolean doInstrument(String clName) {
+        // Requirement for class C to be instrumented: There must be a sensible case where Thread A communicates with Thread B via fields in C as part of an actual ITC task and this is the primary communication channel.
+        // This does not mean that we do not care about an object of this class to be transmitted to another thread but rather if the communication channel happens exclusively over fields of the objects
+        // In the end its a about long-term (many state manipulations) objects vs short-term objects (effectively immutable or barely state manipulations). Without state changes there can not be an ITC.
+        // Otherwise If there is no ITC tracking logic just causes overhead and if there is an ITC but its not at all related to any ITC task it just leads to false positives.
+        // Counter examples:
+        // java.math.* does only contain immutables.
+        // java.time.Date very unlikely to serve as primary communication place.
+
+//        https://docs.oracle.com/javase/8/docs/api/
+//
+//        applet- no!
+//        awt - no!
+//        beans - (no) (to support bean handling (generators, encoder, decoder for serialization)
+//        io - (no) (streams)
+//                lang - (yes) (only basic types,ref; reflection is just a runtime filed, method ref, rest is runtime related)
+//        math - no!
+//        net - (yes)
+//        nio - (yes) buffers
+//        rmi - (no) (inter JVM communication)
+//        security - (no) (to realize security in an app, encryption, access control)
+//        sql - (no) (just SQL Driver stuff)
+//        text - (no)
+//        time - (no)
+//        util - yes
+
+
+        // assuming no rmi, sql is used
+        return (clName.startsWith("java/util") && !clName.startsWith("java/util/concurrent/locks")) ||
+                clName.startsWith("java/nio") ||
+                clName.startsWith("java/net") ||
+                clName.startsWith("java/time") ||
+                clName.startsWith("java/text") ||
+                clName.startsWith("java/io") ||
+                clName.startsWith("java/beans") ||
+                clName.startsWith("java/security/spec") ||
+                clName.startsWith("java/security/acl") ||
+                clName.startsWith("java/security/interfaces") ||
+                clName.startsWith("java/security/cert") ||
+                isBasicType(clName);
+
+    }
+
+    private static boolean isBasicType(String name) {
+        return name.startsWith("java/lang") &&
+                (name.startsWith("java/lang/Long") ||
+                        name.startsWith("java/lang/Integer") ||
+                        name.startsWith("java/lang/Short") ||
+                        name.startsWith("java/lang/Byte") ||
+                        name.startsWith("java/lang/Double") ||
+                        name.startsWith("java/lang/Float") ||
+                        name.startsWith("java/lang/Number") ||
+                        name.startsWith("java/lang/Character"));
+// Strings are immutable and so cannot cause additional inter thread communications.
+// Tracking the field containing the string is sufficient. We do this by tracking object fields.
+// name.startsWith("java/lang/String"));
+
+//TODO  name.startsWith("java/lang/Boolean") causes a SIGSEV. I doubt that this is easy to fix.
+    }
+
 
     //TODO better: return a jarMetadata container with all required data
     private static Manifest readJarManifest(Path path) throws IOException {

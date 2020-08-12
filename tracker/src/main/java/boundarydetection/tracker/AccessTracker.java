@@ -12,6 +12,7 @@ import sun.misc.Unsafe;
 
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
@@ -290,7 +291,7 @@ public class AccessTracker {
     }
 
     public static void enableWriterEventLogging() {
-        writerEventLoggingEnabled = true;
+       writerEventLoggingEnabled = true;
     }
 
     public static void disableWriterEventLogging() {
@@ -452,107 +453,122 @@ public class AccessTracker {
 
 
     public static int arrayReadInt(Object arr, int index) {
+        int val = ((int[]) arr)[index];
         ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);
         readAccess(f);
-        return ((int[]) arr)[index];
+        return val;
     }
 
     public static void arrayWriteInt(Object arr, int index, int value) {
+        ((int[]) arr)[index] = value;
         ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);
         writeAccess(f);
-
-        ((int[]) arr)[index] = value;
     }
 
     public static Object arrayReadObject(Object arr, int index) {
+        Object val = ((Object[]) arr)[index];
         ArrayFieldLocation f = new ArrayFieldLocation(Object[].class, arr, index);
         readAccess(f);
-        return ((Object[]) arr)[index];
+        return val;
     }
 
     public static void arrayWriteObject(Object arr, int index, Object value) {
+        ((Object[]) arr)[index] = value;
         ArrayFieldLocation f = new ArrayFieldLocation(Object[].class, arr, index);
         writeAccess(f, value == null);
-        ((Object[]) arr)[index] = value;
     }
 
     public static void arrayWriteLong(Object arr, int index, long value) {
+        ((long[]) arr)[index] = value;
         ArrayFieldLocation f = new ArrayFieldLocation(long[].class, arr, index);
         writeAccess(f);
-        ((long[]) arr)[index] = value;
     }
 
     public static long arrayReadLong(Object arr, int index) {
+        long val = ((long[]) arr)[index];
         ArrayFieldLocation f = new ArrayFieldLocation(long[].class, arr, index);
         readAccess(f);
-        return ((long[]) arr)[index];
+        return val;
     }
 
     public static void arrayWriteByteOrBoolean(Object arr, int index, byte value) {
-        ArrayFieldLocation f = new ArrayFieldLocation(byte[].class, arr, index);
-        writeAccess(f);
-        if (arr instanceof byte[])
+        Class type;
+        if (arr instanceof byte[]) {
             ((byte[]) arr)[index] = value;
-        else
+            type = byte[].class;
+        } else {
             ((boolean[]) arr)[index] = value == 1;
-
+            type = boolean[].class;
+        }
+        ArrayFieldLocation f = new ArrayFieldLocation(type, arr, index);
+        writeAccess(f);
     }
 
     public static byte arrayReadByteOrBoolean(Object arr, int index) {
-        ArrayFieldLocation f = new ArrayFieldLocation(byte[].class, arr, index);
+        Class type;
+        byte val;
+        if (arr instanceof byte[]) {
+            val = ((byte[]) arr)[index];
+            type = byte[].class;
+        } else {
+            val = (byte) (((boolean[]) arr)[index] ? 1 : 0);
+            type = boolean[].class;
+        }
+        ArrayFieldLocation f = new ArrayFieldLocation(type, arr, index);
         readAccess(f);
-        if (arr instanceof byte[])
-            return ((byte[]) arr)[index];
-        else
-            return (byte) (((boolean[]) arr)[index] ? 1 : 0);
+        return val;
     }
 
     public static void arrayWriteChar(Object arr, int index, char value) {
+        ((char[]) arr)[index] = value;
         ArrayFieldLocation f = new ArrayFieldLocation(char[].class, arr, index);
         writeAccess(f);
-        ((char[]) arr)[index] = value;
     }
 
     public static char arrayReadChar(Object arr, int index) {
+        char val = ((char[]) arr)[index];
         ArrayFieldLocation f = new ArrayFieldLocation(char[].class, arr, index);
         readAccess(f);
-        return ((char[]) arr)[index];
+        return val;
     }
 
     public static void arrayWriteDouble(Object arr, int index, double value) {
+        ((double[]) arr)[index] = value;
         ArrayFieldLocation f = new ArrayFieldLocation(double[].class, arr, index);
         writeAccess(f);
-        ((double[]) arr)[index] = value;
     }
 
     public static double arrayReadDouble(Object arr, int index) {
+        double val = ((double[]) arr)[index];
         ArrayFieldLocation f = new ArrayFieldLocation(double[].class, arr, index);
         readAccess(f);
-        return ((double[]) arr)[index];
+        return val;
     }
 
     public static void arrayWriteFloat(Object arr, int index, float value) {
+        ((float[]) arr)[index] = value;
         ArrayFieldLocation f = new ArrayFieldLocation(float[].class, arr, index);
         writeAccess(f);
-        ((float[]) arr)[index] = value;
     }
 
     public static float arrayReadFloat(Object arr, int index) {
+        float val = ((float[]) arr)[index];
         ArrayFieldLocation f = new ArrayFieldLocation(float[].class, arr, index);
         readAccess(f);
-        return ((float[]) arr)[index];
+        return val;
     }
 
     public static void arrayWriteShort(Object arr, int index, short value) {
+        ((short[]) arr)[index] = value;
         ArrayFieldLocation f = new ArrayFieldLocation(short[].class, arr, index);
         writeAccess(f);
-        ((short[]) arr)[index] = value;
     }
 
     public static short arrayReadShort(Object arr, int index) {
+        short val = ((short[]) arr)[index];
         ArrayFieldLocation f = new ArrayFieldLocation(short[].class, arr, index);
         readAccess(f);
-        return ((short[]) arr)[index];
+        return val;
     }
 
     //--------------- UNSAFE
@@ -586,11 +602,13 @@ public class AccessTracker {
     private static void registerWrite(Object o, long offset, Object val) {
         Class<?> clas = o.getClass();
         if (!clas.isArray()) {
+            pauseTask();
             //TODO check for task and enabled etc
             String s = getAlias(offset, clas);
             while (s == null && (clas = clas.getSuperclass()) != null) {
                 s = getAlias(offset, clas);
             }
+            resumeTask();
             // we do not track a read here because this method is not used to read a value, expected value is given
             if (s != null) writeAccess(new FieldLocation(s, Object.class, o), val == null);
         }
@@ -625,6 +643,10 @@ public class AccessTracker {
         Tasks.startTask();
     }
 
+    public static void startTask(String tag) {
+        Tasks.startTask(tag);
+    }
+
     public static void stopTask() {
         Tasks.stopTask();
 
@@ -651,8 +673,12 @@ public class AccessTracker {
             Tasks.join(t);
         } catch (TaskCollisionException e) {
             init();
-            Logger.log(e.toString(), "ERROR");
+            Logger.log(e.toString() + "\n" + Arrays.toString(e.getStackTrace()), "ERROR");
         }
+    }
+
+    public static void tryJoin(Task t) throws TaskCollisionException {
+        Tasks.join(t);
     }
 
     public static void discard() {

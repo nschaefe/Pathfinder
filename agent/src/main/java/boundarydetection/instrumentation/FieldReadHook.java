@@ -69,8 +69,5 @@ public class FieldReadHook extends FieldAccessHook {
         return pos;
     }
 
-    protected boolean toInstrument(String typedesc) {
-        return Util.isSingleObjectSignature(typedesc); //|| Util.isArraySignature(typedesc);
-    }
 
 }
