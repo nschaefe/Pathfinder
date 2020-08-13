@@ -113,6 +113,13 @@ function levDist(s, t) {
 
 }
 
+Utils. parseTxtToJSON =  parseTxtToJSON
+function parseTxtToJSON(txt) {
+    var lines = txt.split('\n').filter(d => d != "");
+    var jsn = lines.map(l => JSON.parse(l))
+    return jsn
+}
+
 Utils.levDistObj = levDistObj
 function levDistObj(s, t) {
     var d = []; //2d matrix

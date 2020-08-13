@@ -1,39 +1,21 @@
-import { DrillDriver } from "./drill.js";
 import { render } from "./view.js";
 import { Graphs } from "./graph.js";
 import { Filters } from "./filtering.js";
-import stPluginTemplate from './storage_plugin_template.json';
-import blacklist from './blacklist.json';
 import { Utils } from "./util.js";
+import blacklist from './blacklist.json';
+import txt from './tracker_report.txt';
+
 
 try {
-    var drill = new DrillDriver()
+    var dets = Utils.parseTxtToJSON(txt)
 
-    var plugin = stPluginTemplate
-    plugin.workspaces.root.location = "/home/nico/Dokumente/Entwicklung/Uni/Tracing/instrumentationhelper/reports/"
-    plugin.workspaces.out.location = "/home/nico/Dokumente/Entwicklung/Uni/Tracing/instrumentationhelper/reports_filtered/"
-    drill.loadStoragePlugin("rep", plugin)
-    console.log("installed storage plugin")
+    var tags = [...new Set(dets.map(d => [d.writer_task_tag, d.writer_trace_serial]))]
+    console.log(tags)
 
-    console.log(drill.fetchTaskTags());
-
-    var dets = drill.fetchDetections(3, "CreateTable_ClientStart")
-    dets.forEach(el => {
-        el.reader_joined_trace_ids = JSON.parse(el.reader_joined_trace_ids);
-        el.writer_stacktrace = JSON.parse(el.writer_stacktrace);
-        el.reader_stacktrace = JSON.parse(el.reader_stacktrace);
-    });
-
+    dets = dets.filter(d => d.tag == 'CONCURRENT WRITE/READ DETECTION' && d.writer_task_tag == "CreateTable_ClientStart" && d.writer_trace_serial == 3)
 
     var events = null//drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
-
-    { // intersect over several traces
-        var serials = drill.fetchTraceSerials().map(d => d.writer_trace_serial)
-        var traces = []
-        //for (var serial of serials) traces.push(drill.fetchDetections(serial))
-        //dets = Filters.intersectWithTraces(dets, traces)
-    }
 
     function filtering(dets) {
         dets = Filters.filterDistinct(dets)
@@ -49,7 +31,7 @@ try {
             var grp = grpTuple[1]
             grp = Filters.filterSiblings(grp)
             //d = Filters.filterEditDistance(d, 0.95, true)
-            
+
             //grp = grp.sort((a, b) => a.serial - b.serial)
             //if (Filters.filterCoveredGrpInteractive(grp, covered)) return null
             return grp

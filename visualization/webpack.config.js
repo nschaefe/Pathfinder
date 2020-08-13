@@ -6,16 +6,14 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'main.js'
-  }
-  // module: {
-  //   rules: [
-  //     {
-  //       test: /\.(cf)$/,
-  //       use: [
-  //         'json-loader',
-  //       ],
-  //     },
-  //   ],
-  // }
+  },
+  module: {
+    rules: [
+      {
+        test: /\.txt$/i,
+        use: 'raw-loader',
+      },
+    ],
+  },
   
 };
