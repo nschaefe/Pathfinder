@@ -140,7 +140,7 @@ public DoSomeConcurrentWork(){
 
 To filter and visualize the tracked data we provide an additional tool under ./visualization.
 To use it follow these steps:
-* copy the tracked data under ./visualization/src/tracker_report.txt.
+* copy the tracked data under ./visualization/data/tracker_report.txt. The repo contains a sample dataset.
 * Go to the config section in ./visualization/src/index.js and adjust the config as needed.
 * Build the tool with ./visualization/build.sh. The first time you build it you have to first setup the npm environment with npm install.
 Everytime the tracker data changes build.sh also needs to be executed.
@@ -150,7 +150,7 @@ Everytime the tracker data changes build.sh also needs to be executed.
 #### Visualization Features
 * mouse over a node shows the corresponding stack trace entry, the postifx _R or _W means reader or writer thread
 * press n on your keyboard to make all node labels visible
-*click on a node to mark it. press n to show the labels of all nodes under the marked node
+* click on a node to mark it. press n to show the labels of all nodes under the marked node
 * press r to unselect all 
 * one color corresponds to one class
 * the rectangles at the bottom are the memory addresses of the inter thread communications where one thread wrote to and the other read from
