@@ -3,16 +3,57 @@ import { Graphs } from "./graph.js";
 import { Filters } from "./filtering.js";
 import { Utils } from "./util.js";
 import blacklist from './blacklist.json';
-import txt from './tracker_report.txt';
+import txt from '../data/tracker_report.txt';
 
+//------CUSTOM CONFIG------
+
+// The tag you gave when you started the tracking scope: AccessTracker.startTask(TRACKING_SCOPE_TAG)
+const TRACKING_SCOPE_TAG = "CreateTable_ClientStart"
+
+// Is increased everytime AccessTracker.startTask is called. Can be used to select a particular run. 
+// If you dont know what to set here, run the vis tool here and look for TAGS in the console output. This shows the possibilities.
+const TRACKING_SERIAL = 3
+
+// Use this to iterate through the thread pairs. Each thread pair exists of the writer/producer thread and one consumer thread.
+// Look for Reader-IDs in the console output to see the available consumer what limits the max value for the cursor.
+const THREAD_PAIR_CURSOR = 0
+
+// Truncates the set of ITCs to the first N. Set to 0 to disable the limit
+const ITC_LIMIT = 0
+
+//A regex that filters detection based on the stacktrace of the writer and reader, matched will be excluded
+const STACKTRACE_FILTER_REGEX = "(.*edu\.brown\.cs\.systems.*|java\.lang\.ref\.Finalizer.*|boundarydetection.*|java\.util\.concurrent\.locks.*)"
+
+//A regex that filters detection based on field name, matched will be excluded
+const LOCATION_FILTER_REGEX = "(.*\.bag)|(.*trackerTaskX)"
+
+// Everything before the cutoff entry here will be deleted from the stacktraces. E.g. [Thread.run, ...., cutoffEntry ,...] -> [cutoffEntry,...]
+const STACKTRACE_CUTOFF_UNTIL = "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:630)"
+
+//---VISUALIZATION 
+
+// several nodes representing the same memory address/fields/array positions can be merged or left unique.
+// If merged different accesses to the same field will be represented by one node, otherwise each ITC gets its one location node. 
+const LOCATION_MERGING = 'MERGED'         //'UNIQUE'/'MERGED'
+
+// A stacktrace is represented by a node per entry. Different stacktraces can be merged.
+// "FULL" means that a stacktrace entry does only appear once in the graph.
+// "INCREMENTAL" means that nodes of different stacktraces are only merged if the corresponding stacktrace entries appear at the same position. [A,B,C,G,E] u [A,B,C,O,U] merges [A,B,C] but branches for G and O
+// "UNIQUE" means each entry is unique and never merged with others.
+const STACK_TRACE_MERGING = 'FULL'        //'FULL'/'INCREMENTAL'/'UNIQUE'
+
+// Graph layouting strategy. Always start with fast and use quality if the layouting is bad. QUALITY can lead to errors (fail-stop) in the layouting lib, change to FAST if an error occurs
+const LAYOUTING = 'FAST'                  //'FAST/'QUALITY'
+
+//------CUSTOM CONFIG END------
 
 try {
     var dets = Utils.parseTxtToJSON(txt)
 
-    var tags = [...new Set(dets.map(d => [d.writer_task_tag, d.writer_trace_serial]))]
-    console.log(tags)
+    var tags = [...new Set(dets.map(d => d.writer_task_tag + '; serial:' + d.writer_trace_serial))]
+    console.log("TAGS: " + tags)
 
-    dets = dets.filter(d => d.tag == 'CONCURRENT WRITE/READ DETECTION' && d.writer_task_tag == "CreateTable_ClientStart" && d.writer_trace_serial == 3)
+    dets = dets.filter(d => d.tag == 'CONCURRENT WRITE/READ DETECTION' && d.writer_task_tag == TRACKING_SCOPE_TAG && d.writer_trace_serial == TRACKING_SERIAL)
 
     var events = null//drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
@@ -21,9 +62,9 @@ try {
         dets = Filters.filterDistinct(dets)
         //dets = Filters.filterBlacklist(dets, blacklist)
         //dets = Filters.filterCovered(dets,false)
-        dets = Filters.filterByLocation(dets, "(.*\.bag)|(.*trackerTaskX)")
-        dets = Filters.filterByTraces(dets, "(.*edu\.brown\.cs\.systems.*|java\.lang\.ref\.Finalizer.*|boundarydetection.*|java\.util\.concurrent\.locks.*|.*ConditionObject\.signalAll.*)")
-        // dets = Filters.filterSiblings(dets)
+        dets = Filters.filterByLocation(dets, LOCATION_FILTER_REGEX)
+        dets = Filters.filterByTraces(dets, STACKTRACE_FILTER_REGEX)
+
         // edit distance and sibling filter onyl per thread pair, otherwise we compare things that belong to different channels.
         // What results in showing some detections only for one thread pair even if the communication appears in both (inconsistent, tradeoff)
         var grps = Filters.groupByReaderThreaderId(dets)
@@ -51,11 +92,12 @@ try {
     readerIDs = readerIDs.sort() // to make things reproducible
     console.log("Reader-IDs: " + readerIDs)
 
-    var cursor = 0
-    var threadIDselection = readerIDs[cursor]
+    var threadIDselection = readerIDs[THREAD_PAIR_CURSOR]
     dets = dets.filter(a => a.reader_thread_id == threadIDselection)
-
     dets = dets.sort((a, b) => a.serial - b.serial)
+
+    if (ITC_LIMIT > 0) dets = dets.slice(0, ITC_LIMIT)
+
     const ITCP = Filters.filterDistinctPath(dets)
     console.log("ITCP:")
     console.log(ITCP)
@@ -69,7 +111,7 @@ try {
     console.log("Resources:")
     console.log(resour)
 
-    var startEntry = "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:630)"
+    var startEntry = STACKTRACE_CUTOFF_UNTIL
     dets.forEach(d => {
         d.writer_stacktrace = Utils.cutAfterLast(d.writer_stacktrace, startEntry)
         d.reader_stacktrace = Utils.cutAfterLast(d.reader_stacktrace, startEntry)
@@ -80,10 +122,10 @@ try {
     //"org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:631)"
     //"org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:629)")
     //"org.apache.hadoop.hbase.procedure2.ProcedureExecutor$WorkerThread.run(ProcedureExecutor.java:2058)"
-    var nodes = Graphs.parseDAG(dets, events)
+    var nodes = Graphs.parseDAG(dets, events, LOCATION_MERGING, STACK_TRACE_MERGING)
     console.log("parsed data")
 
-    render(nodes)
+    render(nodes, LAYOUTING)
     console.log("rendered data")
     console.log("done")
 }

@@ -93,7 +93,7 @@ There is a limited support for subsequent calls like pause() pause() resume() re
 
 The instrumentation process with the InstrumentationHelper requires to successively track inter thread communications, traversing a thread dependency graph.
 We start with the thread A1 calling the API method "myAPIRequest" in the target system. If we want to know with which other threads this thread communicates, we enclose the method body with a tracking scope.
-We can compile the code and run the system such that the API method is executed. We shut the system down and look at the the outputs the tool produced. We can do this by using the visualization the tool provides.
+We can compile the code and run the system such that the API method is executed. We shut the system down and look at the the outputs the tool produced. A file starting with tracker_report in the folder the system was started. We can do this by using the visualization (see Visualization chapter below) the tool provides.
 By looking at the outputs we figured out that the thread A1 communicated with another thread B1. From the shown stacktraces and corresponding code we derived that A1 iniated a Runnable in method "DoSomeConcurrentWork" that is executed by B1 that is part of a threadpool.
 This runnable contains work that belongs to the same request. We decide to propagate context here. We do not need to put actual calls to our tracing framework in the code, yet.
 We just mark this code place by extending the tracking scope. We fork and join the tracking scope object as shown in the method "DoSomeConcurrentWork".
@@ -135,3 +135,30 @@ public DoSomeConcurrentWork(){
 
 
 ```
+
+### Filtering and Visualization
+
+To filter and visualize the tracked data we provide an additional tool under ./visualization.
+To use it follow these steps:
+* copy the tracked data under ./visualization/src/tracker_report.txt.
+* Go to the config section in ./visualization/src/index.js and adjust the config as needed.
+* Build the tool with ./visualization/build.sh. The first time you build it you have to first setup the npm environment with npm install.
+Everytime the tracker data changes build.sh also needs to be executed.
+* Now just open index.html under ./visualization/dist/index.html (tested with chrome)
+* If your config is correct you should see a graph, if not look at the browser console output for help.
+
+#### Visualization Features
+* mouse over a node shows the corresponding stack trace entry, the postifx _R or _W means reader or writer thread
+* press n on your keyboard to make all node labels visible
+*click on a node to mark it. press n to show the labels of all nodes under the marked node
+* press r to unselect all 
+* one color corresponds to one class
+* the rectangles at the bottom are the memory addresses of the inter thread communications where one thread wrote to and the other read from
+* if a node has a label like "unknown.." this belongs to an array index access where the field location of the corresponding array could not be automatically inferred
+* double click on a rectangle to see only the part of the graph the rectangle is reachable from.
+
+
+
+
+
+
