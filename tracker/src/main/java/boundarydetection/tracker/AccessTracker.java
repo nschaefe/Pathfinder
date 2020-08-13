@@ -37,6 +37,8 @@ public class AccessTracker {
     private static volatile boolean arrayCopyRedirectEnabled = false;
     private static volatile boolean autoTaskInheritance = false;
 
+    private static final boolean minimalTracking = false;
+
     private static long globalDetectionCounter;
 
     private static void init() {
@@ -372,88 +374,104 @@ public class AccessTracker {
     }
 
     public static void readI(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, int.class, parent);
         readAccess(f);
     }
 
     public static void writeI(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, int.class, parent);
         writeAccess(f, false);
     }
 
     public static void readD(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, double.class, parent);
         readAccess(f);
     }
 
     public static void writeD(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, double.class, parent);
         writeAccess(f, false);
     }
 
     public static void readF(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, float.class, parent);
         readAccess(f);
     }
 
     public static void writeF(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, float.class, parent);
         writeAccess(f, false);
     }
 
     public static void readJ(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, long.class, parent);
         readAccess(f);
     }
 
     public static void writeJ(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, long.class, parent);
         writeAccess(f, false);
     }
 
     public static void readZ(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, boolean.class, parent);
         readAccess(f);
     }
 
     public static void writeZ(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, boolean.class, parent);
         writeAccess(f, false);
     }
 
     public static void readB(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, byte.class, parent);
         readAccess(f);
     }
 
     public static void writeB(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, byte.class, parent);
         writeAccess(f, false);
     }
 
     public static void readC(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, char.class, parent);
         readAccess(f);
     }
 
     public static void writeC(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, char.class, parent);
         writeAccess(f, false);
     }
 
     public static void readS(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, short.class, parent);
         readAccess(f);
     }
 
     public static void writeS(Object parent, String location) {
+        if (minimalTracking) return;
         FieldLocation f = new FieldLocation(location, short.class, parent);
         writeAccess(f, false);
     }
 
-
     public static int arrayReadInt(Object arr, int index) {
         int val = ((int[]) arr)[index];
+        if (minimalTracking) return val;
         ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);
         readAccess(f);
         return val;
@@ -461,6 +479,7 @@ public class AccessTracker {
 
     public static void arrayWriteInt(Object arr, int index, int value) {
         ((int[]) arr)[index] = value;
+        if (minimalTracking) return;
         ArrayFieldLocation f = new ArrayFieldLocation(int[].class, arr, index);
         writeAccess(f);
     }
@@ -480,12 +499,14 @@ public class AccessTracker {
 
     public static void arrayWriteLong(Object arr, int index, long value) {
         ((long[]) arr)[index] = value;
+        if (minimalTracking) return;
         ArrayFieldLocation f = new ArrayFieldLocation(long[].class, arr, index);
         writeAccess(f);
     }
 
     public static long arrayReadLong(Object arr, int index) {
         long val = ((long[]) arr)[index];
+        if (minimalTracking) return val;
         ArrayFieldLocation f = new ArrayFieldLocation(long[].class, arr, index);
         readAccess(f);
         return val;
@@ -500,6 +521,7 @@ public class AccessTracker {
             ((boolean[]) arr)[index] = value == 1;
             type = boolean[].class;
         }
+        if (minimalTracking) return;
         ArrayFieldLocation f = new ArrayFieldLocation(type, arr, index);
         writeAccess(f);
     }
@@ -514,6 +536,7 @@ public class AccessTracker {
             val = (byte) (((boolean[]) arr)[index] ? 1 : 0);
             type = boolean[].class;
         }
+        if (minimalTracking) return val;
         ArrayFieldLocation f = new ArrayFieldLocation(type, arr, index);
         readAccess(f);
         return val;
@@ -521,12 +544,14 @@ public class AccessTracker {
 
     public static void arrayWriteChar(Object arr, int index, char value) {
         ((char[]) arr)[index] = value;
+        if (minimalTracking) return;
         ArrayFieldLocation f = new ArrayFieldLocation(char[].class, arr, index);
         writeAccess(f);
     }
 
     public static char arrayReadChar(Object arr, int index) {
         char val = ((char[]) arr)[index];
+        if (minimalTracking) return val;
         ArrayFieldLocation f = new ArrayFieldLocation(char[].class, arr, index);
         readAccess(f);
         return val;
@@ -534,12 +559,14 @@ public class AccessTracker {
 
     public static void arrayWriteDouble(Object arr, int index, double value) {
         ((double[]) arr)[index] = value;
+        if (minimalTracking) return;
         ArrayFieldLocation f = new ArrayFieldLocation(double[].class, arr, index);
         writeAccess(f);
     }
 
     public static double arrayReadDouble(Object arr, int index) {
         double val = ((double[]) arr)[index];
+        if (minimalTracking) return val;
         ArrayFieldLocation f = new ArrayFieldLocation(double[].class, arr, index);
         readAccess(f);
         return val;
@@ -547,12 +574,14 @@ public class AccessTracker {
 
     public static void arrayWriteFloat(Object arr, int index, float value) {
         ((float[]) arr)[index] = value;
+        if (minimalTracking) return;
         ArrayFieldLocation f = new ArrayFieldLocation(float[].class, arr, index);
         writeAccess(f);
     }
 
     public static float arrayReadFloat(Object arr, int index) {
         float val = ((float[]) arr)[index];
+        if (minimalTracking) return val;
         ArrayFieldLocation f = new ArrayFieldLocation(float[].class, arr, index);
         readAccess(f);
         return val;
@@ -560,12 +589,14 @@ public class AccessTracker {
 
     public static void arrayWriteShort(Object arr, int index, short value) {
         ((short[]) arr)[index] = value;
+        if (minimalTracking) return;
         ArrayFieldLocation f = new ArrayFieldLocation(short[].class, arr, index);
         writeAccess(f);
     }
 
     public static short arrayReadShort(Object arr, int index) {
         short val = ((short[]) arr)[index];
+        if (minimalTracking) return val;
         ArrayFieldLocation f = new ArrayFieldLocation(short[].class, arr, index);
         readAccess(f);
         return val;
