@@ -2,7 +2,8 @@ import { getColor } from "./colors.js"
 import { Graphs } from "./graph.js";
 import { Utils } from "./util.js";
 
-export function render(full_graph) {
+export function render(full_graph, layouting) {
+  if (layouting != 'FAST' && layouting != 'QUALITY') throw new Error("Unknown locationMerging option: " + locationMerging)
 
   var tooltipTextSize = 19
   var margin = { top: tooltipTextSize + 5, right: 0, bottom: 0, left: 0 }
@@ -55,11 +56,12 @@ export function render(full_graph) {
 
   // for starting tree
   var layout = d3.sugiyama()
-    .size([width - (nodeTextSize + 5), height - (nodeTextSize * 2 + 5)]) //lowest nodes must be high enough to show bottom text
+    .size([width - 550 - (nodeTextSize + 5), height - (nodeTextSize * 2 + 5)]) //lowest nodes must be high enough to show bottom text
     .layering(d3.layeringLongestPath())
     .decross(d3.decrossTwoLayer())
-    .coord(d3.coordCenter())
-  //.coord(d3.coordMinCurve())
+
+  if (layouting == 'FAST') layout.coord(d3.coordCenter())
+  else layout.coord(d3.coordMinCurve())
 
   // for reader view
   // var layout = d3.sugiyama()
@@ -70,8 +72,6 @@ export function render(full_graph) {
 
   // var layout = d3.zherebko()
   //   .size([width, height])
-
-
 
   var link = svg.append('g')
     .attr('class', 'links')
@@ -213,8 +213,8 @@ export function render(full_graph) {
           getNode(d).jsons.forEach(j => j.relevant = relev)
         }
         else {
-        toggleHighlighting(d)
-        updateView();
+          toggleHighlighting(d)
+          updateView();
         }
       });
 
@@ -233,10 +233,7 @@ export function render(full_graph) {
     nodeEl.select('.textBottom')
       .attr("font-size", nodeTextSize + "px")
       .attr("visibility", (d) => getNode(d).sink ? "visible" : "hidden");
-    nodeEl.select('.textBottomL1')
-      .attr("x", (d) => - nodeTextSize / 2 + "px")
-      .attr("y", nodeRadius * 3 + 5 + "px")
-      .text((d) => getNode(d).sink && getNode(d).smallestCommonDepthOrder != null ? '|' + getNode(d).smallestCommonDepthOrder + '|' : '');
+
     nodeEl.select('.textBottomL2')
       .attr("x", (d) => - nodeTextSize / 2 + "px")
       .attr("y", nodeRadius * 3 + 5 + nodeTextSize + "px")
@@ -280,8 +277,31 @@ export function render(full_graph) {
       }
       printToBlacklist(Array.from(rs))
     }
+    else if (event.key == 'e') {
+      var sets = dag.descendants().filter(d => getNode(d).sink).map(d => getNode(d).jsons)
+      var rs = new Set()
+      for (var s of sets) {
+        rs = new Set([...rs, ...s])
+      }
+      printForEval(Array.from(rs))
+    }
 
   });
+
+  function printForEval(detections) {
+    //TODO move this somewhere else
+    var str = ""
+    for (var d of detections) {
+      str += d.location + '\n\n'
+      str += Utils.shortenTrace(d.writer_stacktrace).reverse().join('\n') + '\n\n'
+      str += Utils.shortenTrace(d.reader_stacktrace).reverse().join('\n') + '\n'
+    }
+    str = str.substring(0, str.length - 1);
+    const name = "eval"
+    Utils.download(str, name + ".json", "application/json")
+  }
+
+
 
   function printToBlacklist(detections) {
     var str = ""

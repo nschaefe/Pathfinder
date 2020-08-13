@@ -1,6 +1,0 @@
-// To modify older reports with unstructured string stacktraces, the following operations can be used to make them arrays
-\n" TO "]
-writer_stacktrace": TO writer_stacktrace":[
-reader_stacktrace": TO reader_stacktrace":[
-\n TO ","
-

@@ -4,16 +4,19 @@ import { Filters } from "./filtering.js";
 export var Graphs = new Graph()
 function Graph() { }
 
-Graphs.parseDAG = function (dets, events = null, startEntry = "") {
+Graphs.parseDAG = function (dets, events = null, locationMerging, traceMerging) {
+    if (locationMerging != 'UNIQUE' && locationMerging != 'MERGED') throw new Error("Unknown locationMerging option: " + locationMerging)
+    if (traceMerging != 'UNIQUE' && traceMerging != 'FULL' && traceMerging != 'INCREMENTAL') throw new Error("Unknown traceMerging option: " + traceMerging)
+
     var node_map = new Map();
     var id = new Object()
+    var loc_id = 0
     id.val = 0
     for (var i = 0; i < dets.length; i++) {
         var detect = dets[i]
         var w_trace = detect.writer_stacktrace
-        w_trace = cutAfterLast(w_trace, startEntry) //SET THIS TO STARTING POINT E.G org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:601)
         w_trace = w_trace.slice().reverse()
-        var s = detect.location + (detect.parent != null ? "" : "_" + detect.reference)
+        var s = detect.location + (detect.parent != null ? "" : "_" + detect.reference) + (locationMerging == 'UNIQUE' ? "_" + (loc_id++) : '')
         w_trace.push(s)
         var sink = parseTrace(w_trace, node_map, id, true, detect.writer_thread_id)
         sink.sink = true
@@ -49,16 +52,6 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
     c = 1
     for (var sink of sinks) sink.firstWriterHitClock = c++
 
-    var intersectionClasses = Filters.intersectionClasses(dets)
-    console.log(intersectionClasses)
-    c = 1
-    intersectionClasses.forEach(v => {
-        var matches = sinks.filter(x => x.name.startsWith(v))
-        matches = matches.sort((a, b) => a.firstHitClock - b.firstHitClock)
-        var sample = matches[0]
-        if (sample != null) sample.smallestCommonDepthOrder = c++
-    })
-
 
     if (events != null) {
         var depthLimit = 75
@@ -76,29 +69,23 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
     Graphs.getRoots(nodes).forEach(n => Graphs.mergeEqualPathsRecursive(n))
     return nodes
 
-    function cutAfterLast(trace, end) {
-        var i = trace.lastIndexOf(end)
-        if (i < 0) return trace
-        return trace.slice(0, i + 1)
-    }
 
-    function parseTrace(trace, node_map, id, isWriter, thId) {
+    function parseTrace(trace, node_map, globalID, isWriter, thId) {
         var source = null
         var postfix = isWriter ? "W" : "R"
         //is used to avoid recursion loops, count for every element, 
         //elements are merged if they appear in the same order in different stacktraces
-        var unif_id = 0;
+        initUnifyer(traceMerging)
         for (var i = 0; i < trace.length; i++) {
-
-            var entry
+            var entry;
             //last is detection, not part of stacktrace
-            if (i != trace.length - 1) entry = trace[i] + '_' + postfix //+ (unif_id++) + '_'
+            if (i != trace.length - 1) entry = trace[i] + '_' + postfix + getAndIncrementUnifyerPostifx(traceMerging)
             else entry = trace[i]
 
             // get node if existant
             var target = node_map.get(entry)
             if (target == null) {
-                target = getNode(entry, id.val++, isWriter, thId)//this.id++ TODO
+                target = getNode(entry, globalID.val++, isWriter, thId)//this.id++ TODO
                 if (source == null) target.root = true
                 node_map.set(entry, target)
             }
@@ -113,6 +100,26 @@ Graphs.parseDAG = function (dets, events = null, startEntry = "") {
         }
         return source
 
+    }
+
+    var unif;
+    function initUnifyer(traceMerging) {
+        if (traceMerging == 'UNIQUE' && unif == null) {
+            unif = new Object()
+            unif.val = 0
+        }
+        if (traceMerging == 'FULL') {
+            unif = null
+        }
+        if (traceMerging == 'INCREMENTAL') {
+            unif = new Object()
+            unif.val = 0
+        }
+    }
+
+    function getAndIncrementUnifyerPostifx(traceMerging) {
+        if (traceMerging == 'FULL') return ""
+        else return "_" + unif.val++
     }
 
     function parseEventsFromStart(startSinks, eventData, node_map, id, depthLimit) {
