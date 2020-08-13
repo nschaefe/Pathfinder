@@ -8,44 +8,53 @@ import txt from '../data/tracker_report.txt';
 //------CUSTOM CONFIG------
 
 // The tag you gave when you started the tracking scope: AccessTracker.startTask(TRACKING_SCOPE_TAG)
-const TRACKING_SCOPE_TAG = "CreateTable_ClientStart"
+var TRACKING_SCOPE_TAG = "CreateTable_ClientStart"
 
 // Is increased everytime AccessTracker.startTask is called. Can be used to select a particular run. 
 // If you dont know what to set here, run the vis tool here and look for TAGS in the console output. This shows the possibilities.
-const TRACKING_SERIAL = 3
+var TRACKING_SERIAL = 3
 
 // Use this to iterate through the thread pairs. Each thread pair exists of the writer/producer thread and one consumer thread.
 // Look for Reader-IDs in the console output to see the available consumer what limits the max value for the cursor.
-const THREAD_PAIR_CURSOR = 0
+var THREAD_PAIR_CURSOR = 0
 
 // Truncates the set of ITCs to the first N. Set to 0 to disable the limit
-const ITC_LIMIT = 0
+var ITC_LIMIT = 0
 
 //A regex that filters detection based on the stacktrace of the writer and reader, matched will be excluded
-const STACKTRACE_FILTER_REGEX = "(.*edu\.brown\.cs\.systems.*|java\.lang\.ref\.Finalizer.*|boundarydetection.*|java\.util\.concurrent\.locks.*)"
+var STACKTRACE_FILTER_REGEX = "(.*edu\.brown\.cs\.systems.*|java\.lang\.ref\.Finalizer.*|boundarydetection.*|java\.util\.concurrent\.locks.*)"
 
 //A regex that filters detection based on field name, matched will be excluded
-const LOCATION_FILTER_REGEX = "(.*\.bag)|(.*trackerTaskX)"
+var LOCATION_FILTER_REGEX = "(.*\.bag)|(.*trackerTaskX)"
 
 // Everything before the cutoff entry here will be deleted from the stacktraces. E.g. [Thread.run, ...., cutoffEntry ,...] -> [cutoffEntry,...]
-const STACKTRACE_CUTOFF_UNTIL = "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:630)"
+var STACKTRACE_CUTOFF_UNTIL = "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:630)"
 
 //---VISUALIZATION 
 
 // several nodes representing the same memory address/fields/array positions can be merged or left unique.
 // If merged different accesses to the same field will be represented by one node, otherwise each ITC gets its one location node. 
-const LOCATION_MERGING = 'MERGED'         //'UNIQUE'/'MERGED'
+var LOCATION_MERGING = 'MERGED'         //'UNIQUE'/'MERGED'
 
 // A stacktrace is represented by a node per entry. Different stacktraces can be merged.
 // "FULL" means that a stacktrace entry does only appear once in the graph.
 // "INCREMENTAL" means that nodes of different stacktraces are only merged if the corresponding stacktrace entries appear at the same position. [A,B,C,G,E] u [A,B,C,O,U] merges [A,B,C] but branches for G and O
 // "UNIQUE" means each entry is unique and never merged with others.
-const STACK_TRACE_MERGING = 'FULL'        //'FULL'/'INCREMENTAL'/'UNIQUE'
+var STACK_TRACE_MERGING = 'FULL'        //'FULL'/'INCREMENTAL'/'UNIQUE'
 
 // Graph layouting strategy. Always start with fast and use quality if the layouting is bad. QUALITY can lead to errors (fail-stop) in the layouting lib, change to FAST if an error occurs
-const LAYOUTING = 'FAST'                  //'FAST/'QUALITY'
+var LAYOUTING = 'FAST'                  //'FAST/'QUALITY'
+
+
+//---PRESETS
+
+// For investigating ITCs one by one
+// LOCATION_MERGING = 'UNIQUE'
+// STACK_TRACE_MERGING = 'INCREMENTAL'
+// ITC_LIMIT = 30
 
 //------CUSTOM CONFIG END------
+
 
 try {
     var dets = Utils.parseTxtToJSON(txt)
