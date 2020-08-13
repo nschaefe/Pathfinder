@@ -48,7 +48,7 @@ var LAYOUTING = 'FAST'                  //'FAST/'QUALITY'
 
 //---PRESETS
 
-// For investigating ITCs one by one
+// ONE-BY-ONE ITC investigation
 // LOCATION_MERGING = 'UNIQUE'
 // STACK_TRACE_MERGING = 'INCREMENTAL'
 // ITC_LIMIT = 30
