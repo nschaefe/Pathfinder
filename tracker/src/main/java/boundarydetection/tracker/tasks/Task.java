@@ -3,6 +3,7 @@ package boundarydetection.tracker.tasks;
 import boundarydetection.tracker.AbstractFieldLocation;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Immutable task metadata
@@ -29,7 +30,7 @@ public class Task {
 
     private boolean writeCapability;
 
-    private static int globalTaskCounter = 1;
+    private static volatile AtomicInteger globalTaskCounter = new AtomicInteger(1);
 
     public Task(Task t) {
         if (t == null) throw new NullPointerException("Task to copy is null");
@@ -66,7 +67,7 @@ public class Task {
         this.eventIDSeqNum = 0;
         this.eventCounter = 0;
         this.taskInheritanceLocation = new HashSet<>();
-        this.serial = globalTaskCounter++;
+        this.serial = globalTaskCounter.getAndIncrement();
         this.parentTask = null;
         this.stopped = false;
         this.joiners = new HashSet<>();
