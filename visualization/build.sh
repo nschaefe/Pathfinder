@@ -1,2 +1,2 @@
 sh build_bl.sh
-npx webpack --config webpack.config.js
+npx webpack --config webpack.cjs
