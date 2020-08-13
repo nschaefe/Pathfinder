@@ -56,7 +56,7 @@ Provides two ways of testing:
 * JUnit testing: The testing framework and test code is automatically instrumented by **agent** as javaagent.
 * Using a test client as external application that is instrumented by **agent** as javaagent. The maven pom contains several maven:exec calls for this.
 
-### drill
+### drill (deprecated)
 Provides 
 * A SQL query generator framework, to generate SQL queries for filtering and analysing the outputs of **tracker**. These SQL queries are inteded to be used for Apache-Drill. The supported syntax is used.
 * A storage plugin for Apache drill for input and output.
@@ -155,9 +155,21 @@ Everytime the tracker data changes build.sh also needs to be executed.
 * one color corresponds to one class
 * the rectangles at the bottom are the memory addresses of the inter thread communications where one thread wrote to and the other read from
 * if a node has a label like "unknown.." this belongs to an array index access where the field location of the corresponding array could not be automatically inferred
-* double click on a rectangle to see only the part of the graph the rectangle is reachable from.
+* double click on a rectangle to see only the part of the graph the rectangle is reachable from. Refresh the page to come back to the full view.
+* There is a suggested order in which the
 
+#### Investigation Strategies
+There are different use cases for which the tool can be used:
 
+* Identifying Execution Boundaries:\
+The probably easiest and most efficient way for investigating the shown inter thread communications (ITCs) is to look at them one-by-one in the the suggested order (number below the rectangle). Use the one-by-one config preset in index.js.
+Usually the investigation of the first few ITCs is enough to describe what the execution context of the reader and writer is and in which way they communicate on a high level. For example: a Runnable is submitted to an executor that executes it.
+If the communication is not some kind of message passing, it is likely that your are looking at a "submitter relation". For example: Some meta data was made available by the writer at a global point and is now accessed by several other threads. The writer is in that case not responsible for the task the consumers are executing.
+(See Principled workfow-centric tracing of distributed systems by  Sambasivan et al. for more on submitter-preserving vs trigger-preserving)
+Often such relations are not relevant for tracing.
+
+* identifying resources to store the trace context:
+TODO
 
 
 
