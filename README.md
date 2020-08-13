@@ -171,6 +171,10 @@ Often such relations are not relevant for tracing.
 * identifying resources to store the trace context:
 TODO
 
-
+## Troubleshooting
+* The execution is significantly slowed down by the tracking framework. Especially when the program is started and all classes are instrumented. As long as this does not lead to exceeding of timeouts and so changes the behavior of the program this is not a problem. If timeouts appear, try to extend the program timeouts.\
+To speed up the instrumentation time the class filtering can be extended.
+Adjust the EXCLUDED list in ./tracker/src/main/java/boundarydetection/tracker/AccessTracker.java\
+To speed up tracking you can try out the minimal tracking mode. Set minimalTracking to true in ./tracker/src/main/java/boundarydetection/tracker/AccessTracker.java. Be aware that some ITCs might be missed, though.
 
 
