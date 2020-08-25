@@ -93,19 +93,22 @@ There is a limited support for subsequent calls like pause() pause() resume() re
 
 The instrumentation process with the InstrumentationHelper requires to successively track inter thread communications, traversing a thread dependency graph.
 We start with the thread A1 calling the API method "myAPIRequest" in the target system. If we want to know with which other threads this thread communicates, we enclose the method body with a tracking scope.
-We can compile the code and run the system such that the API method is executed. We shut the system down and look at the the outputs the tool produced. A file starting with tracker_report in the folder the system was started. We can do this by using the visualization (see Visualization chapter below) the tool provides.
+We can compile the code and run the system such that the API method is executed. We shut the system down and look at the the outputs the tool produced (a file starting with tracker_report in the folder the system was started). We can do this by using the visualization (see Visualization chapter below) the tool provides.
 By looking at the outputs we figured out that the thread A1 communicated with another thread B1. From the shown stacktraces and corresponding code we derived that A1 iniated a Runnable in method "DoSomeConcurrentWork" that is executed by B1 that is part of a threadpool.
 This runnable contains work that belongs to the same request. We decide to propagate context here. We do not need to put actual calls to our tracing framework in the code, yet.
-We just mark this code place by extending the tracking scope. We fork and join the tracking scope object as shown in the method "DoSomeConcurrentWork".
+We just mark this code place by extending the tracking scope. We fork and join the tracking scope object as shown in the method "doSomeConcurrentWork".
 We recompile the system and run it again such that the API request is executed again. Now we consider the outputs under tag "ConcurrentWorkRunnableExec".
 We continue doing this for all appearing thread relations until no relevant relations with other threads appear or when a all appearing relations were already covered.
+We strongly recommend to track in a request-bounded manner starting at the API end-point following the request along the thread dependecy graph through the system. This strongly improves performance.
+We do not support the instrumentation of inter-process execution boundaries. So if the tracking hits the network you wont see any inter thread communication recorded.
+Usually inter-process communication is exclusivly handled via a small set of RPC libraries (mostly just one). Currently only tracking per process is supported.
 
 ```
 public void myAPIRequest(...){
     try {
       AccessTracker.startTask("ClientStartMyAPIRequest");
 
-      doTheWork();
+      doSomeConcurrentWork();
 
     } finally {
       AccessTracker.stopTask();
@@ -114,7 +117,7 @@ public void myAPIRequest(...){
 }
   
   
-public DoSomeConcurrentWork(){
+public doSomeConcurrentWork(){
  Task trackerTask = AccessTracker.fork();
    customThreadPool.execute(new Runnable() {
      @Override
@@ -172,9 +175,11 @@ Often such relations are not relevant for tracing.
 TODO
 
 ## Troubleshooting
-* The execution is significantly slowed down by the tracking framework. Especially when the program is started and all classes are instrumented. As long as this does not lead to exceeding of timeouts and so changes the behavior of the program this is not a problem. If timeouts appear, try to extend the program timeouts.\
+* The execution is significantly slowed down by the tracking framework. Especially when the program is started and all classes are instrumented. The request bounded tracking strategy effectivly reduces the performance impact of the tool, so do not try to track ITCs starting from a main method as the first approach.
+As long as the slowdown does not lead to exceeding of timeouts and so changes the behavior of the program this is not a problem. If timeouts appear, try to extend the program timeouts.\
 To speed up the instrumentation time the class filtering can be extended.
 Adjust the EXCLUDED list in ./tracker/src/main/java/boundarydetection/tracker/AccessTracker.java\
 To speed up tracking you can try out the minimal tracking mode. Set minimalTracking to true in ./tracker/src/main/java/boundarydetection/tracker/AccessTracker.java. Be aware that some ITCs might be missed, though.
+
 
 
