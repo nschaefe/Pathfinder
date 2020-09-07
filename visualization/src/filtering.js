@@ -59,7 +59,7 @@ function filterSiblings(dets) {
 
     rev_dets = rev_dets.filter((det, i1) => {
         const sibling = rev_dets.find((d, i2) => {
-            var isSibling = i2 > i1 && det.parent == d.parent && JSON.stringify(deleteLastLineNumber(d.writer_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.writer_stacktrace)) &&
+            var isSibling = i2 > i1 && ((det.parent != null && det.parent == d.parent) || det.ref == d.ref) && det.writer_stacktrace.length == d.writer_stacktrace.length && det.reader_stacktrace.length == d.reader_stacktrace.length && JSON.stringify(deleteLastLineNumber(d.writer_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.writer_stacktrace)) &&
                 JSON.stringify(deleteLastLineNumber(d.reader_stacktrace)) == JSON.stringify(deleteLastLineNumber(det.reader_stacktrace))
             return isSibling
         })
