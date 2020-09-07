@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Task {
 
     private Task parentTask; // null by default. Can be set to bind to another task
-    private String traceID; // serial and trace id belong to high level
+    private String traceID; // high level trace id shared by all tasks that originated from the same starting point
     private int serial;
     private String tag;
 
@@ -150,6 +150,19 @@ public class Task {
 
     public void setWriteCapability(boolean writeCapability) {
         this.writeCapability = writeCapability;
+    }
+
+    /**
+     * Returns the trace id.
+     * We only provide a minimal support for the join/fork/discard workflow to cross process boundaries.
+     * The global serial is not maintained across processes.
+     */
+    protected String serialize() {
+        return getTraceID();
+    }
+
+    protected static Task deserialize(String s) {
+          return new Task(s);
     }
 
     //--------------
