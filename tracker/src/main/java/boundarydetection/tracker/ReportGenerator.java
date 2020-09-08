@@ -29,7 +29,7 @@ public class ReportGenerator {
             JsonGenerator g = factory.createGenerator(out);
             g.writeStartObject();
             g.writeNumberField("serial", serial);
-            g.writeStringField("time", getTime());
+           // g.writeStringField("time", getTime());
             g.writeStringField("tag", "CONCURRENT WRITE/READ DETECTION");
             g.writeStringField("writer_task_tag", w.getTask().getTag());
             loc.toJSON(g);

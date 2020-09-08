@@ -22,6 +22,10 @@ public class TestPreInstrumented extends TestBase {
         });
         f.get();
 
+        s.execute(() -> {
+            System.out.println(m);
+        });
+
     }
 
     @Test
@@ -55,8 +59,8 @@ public class TestPreInstrumented extends TestBase {
         });
     }
 
-    private ThreadPoolExecutor getThreadPool(){
-        return  new ThreadPoolExecutor(1,1, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+    private ThreadPoolExecutor getThreadPool() {
+        return new ThreadPoolExecutor(1, 1, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
 
     }
 }

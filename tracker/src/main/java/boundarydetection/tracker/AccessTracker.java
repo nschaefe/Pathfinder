@@ -701,6 +701,16 @@ public class AccessTracker {
         Tasks.resumeTask();
     }
 
+    public static void join(Task t, String tag) {
+        try {
+            if (t != null) AccessTracker.startTracking();
+            Tasks.join(t, tag);
+        } catch (TaskCollisionException e) {
+            init();
+            Logger.log(e.toString() + "\n" + Arrays.toString(e.getStackTrace()), "ERROR");
+        }
+    }
+
     public static void join(Task t) {
         try {
             if (t != null) AccessTracker.startTracking();

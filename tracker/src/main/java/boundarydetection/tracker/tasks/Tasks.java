@@ -91,6 +91,10 @@ public class Tasks {
     }
 
     public static void join(Task t) throws TaskCollisionException {
+        join(t, null);
+    }
+
+    public static void join(Task t, String tag) throws TaskCollisionException {
         if (t == null) return;
         init();
         if (!Tasks.hasTask()) {
@@ -98,6 +102,7 @@ public class Tasks {
             nt.setWriteCapability(true);
             nt.addJoiner(t); // add to joiners
             nt.newSubTraceID();
+            if (tag != null) nt.setTag(tag);
             task.set(nt);
 
         } else if (Tasks.getTask().getTraceID().equals(t.getTraceID())) {
