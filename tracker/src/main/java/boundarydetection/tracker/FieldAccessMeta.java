@@ -13,7 +13,7 @@ public class FieldAccessMeta {
 
     //TODO dont do this here, gloabl writer clock should not be just in the class that needs to access it, it is semantically not related
     // makes a global order assumption, which we assume to be enforced outside because this class is not threadsafe
-    private static long logicalClock = 0L;
+    private static long globalWirterSerial = 0L;
 
     FieldAccessMeta() {
         matched = false;
@@ -29,15 +29,15 @@ public class FieldAccessMeta {
         long id = Thread.currentThread().getId();
         Throwable trace = new Throwable();
 
-        FieldWriter wr = new FieldWriter(id, new Task(Tasks.getTask()), trace, incrementClock());
+        FieldWriter wr = new FieldWriter(id, new Task(Tasks.getTask()), trace, incrementWriterSerial());
         if (writer.size() == 0) writer.add(wr);
         else writer.set(0, wr);
         writeCounter++;
     }
 
-    private static long incrementClock() {
-        long clock = logicalClock;
-        logicalClock++;
+    private static long incrementWriterSerial() {
+        long clock = globalWirterSerial;
+        globalWirterSerial++;
         return clock;
     }
 
