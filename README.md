@@ -175,8 +175,9 @@ Often such relations are not relevant for tracing.
 TODO
 
 ## Troubleshooting
-* The execution is significantly slowed down by the tracking framework. Especially when the program is started and all classes are instrumented. The request bounded tracking strategy effectivly reduces the performance impact of the tool, so do not try to track ITCs starting from a main method as the first approach.
+* Performance: The execution is significantly slowed down by the tracking framework. Especially when the program is started and all loaded classes are instrumented. The request bounded tracking strategy effectivly reduces the performance impact of the tool, so do not try to track ITCs starting from a main method as the first approach.
 As long as the slowdown does not lead to exceeding of timeouts and so changes the behavior of the program this is not a problem. If timeouts appear, try to extend the program timeouts.\
+The tracking framework batches entries for write out. This can consume quite some memory. Increasing the JVM memory (e.g., -Xmx2g) of the target program can significantly improve performance by reducing GC calls.\
 To speed up the instrumentation time the class filtering can be extended.
 Adjust the EXCLUDED list in ./tracker/src/main/java/boundarydetection/tracker/AccessTracker.java\
 To speed up tracking you can try out the minimal tracking mode. Set minimalTracking to true in ./tracker/src/main/java/boundarydetection/tracker/AccessTracker.java. Be aware that some ITCs might be missed, though.
