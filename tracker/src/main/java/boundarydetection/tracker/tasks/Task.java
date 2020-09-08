@@ -12,7 +12,7 @@ public class Task {
 
     private Task parentTask; // null by default. Can be set to bind to another task
     private String traceID; // high level trace id shared by all tasks that originated from the same starting point
-    private int serial;
+    private int serial; // global serial, increased for every Task creation
     private String tag;
 
     private String subTraceID;

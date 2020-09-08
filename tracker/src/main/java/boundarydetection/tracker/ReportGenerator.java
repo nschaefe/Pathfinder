@@ -33,8 +33,11 @@ public class ReportGenerator {
             g.writeStringField("tag", "CONCURRENT WRITE/READ DETECTION");
             g.writeStringField("writer_task_tag", w.getTask().getTag());
             loc.toJSON(g);
-            g.writeNumberField("epoch", epoch);
-            g.writeStringField("eventID", id);
+            g.writeStringField("traceID", w.getTask().getTraceID());
+            g.writeStringField("sub_traceID", w.getTask().getSubTraceID());
+            g.writeNumberField("global_task_serial", w.getTask().getSerial());
+            g.writeNumberField("global_writer_serial", w.getClock());
+            g.writeNumberField("writer_thread_id", w.getThreadID());
             g.writeNumberField("reader_thread_id", readerThreadID);
 
             Task[] joiners;
@@ -44,13 +47,6 @@ public class ReportGenerator {
             writeStringForEach(Arrays.stream(joiners).map(t -> t.getSubTraceID()), g);
             g.writeEndArray();
 
-
-            g.writeNumberField("writer_thread_id", w.getThreadID());
-            g.writeStringField("writer_traceID", w.getTask().getTraceID());
-            g.writeStringField("writer_sub_traceID", w.getTask().getSubTraceID());
-            g.writeNumberField("writer_trace_serial", w.getTask().getSerial());
-            g.writeNumberField("writer_count", meta.getWriteCount());
-            g.writeNumberField("writer_global_clock", w.getClock());
             g.writeArrayFieldStart("reader_stacktrace");
 
             int start = Util.getIndexAfter(readerTrace, 1, CLASS_PREFIX);
@@ -66,6 +62,8 @@ public class ReportGenerator {
             g.close();
             return out.toString();
         } catch (IOException e) {
+            // This can only happen in a bug case. We dont want this method to throw unnecessary exceptions
+            // like this one caused by the JSON lib interface.
             System.err.println("BUG");
             e.printStackTrace();
             return "$$BUG";
