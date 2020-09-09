@@ -17,6 +17,7 @@ public class TrackingRunnable implements Runnable {
     @Override
     public void run() {
         AccessTracker.join(trackerTask);
+        AccessTracker.getTask().setTag("TrackingRunnable");
         try {
             delegate.run();
         } finally {

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Client extends ClientBase {
 
@@ -21,6 +22,7 @@ public class Client extends ClientBase {
     private ConcurrentLinkedQueue<Integer> cq;
     private ConcurrentLinkedDeque<Integer> dq;
     private ConcurrentHashMap<Integer, Integer> ch;
+    private AtomicInteger atI; // not fully supported
 
     private static Integer si;
 
@@ -37,6 +39,7 @@ public class Client extends ClientBase {
         cq = new ConcurrentLinkedQueue<>();
         dq = new ConcurrentLinkedDeque<>();
         ch = new ConcurrentHashMap<>();
+        atI = new AtomicInteger(42);
     }
 
     public synchronized void write(int i) {
@@ -65,6 +68,8 @@ public class Client extends ClientBase {
         cq.add(i);
         dq.add(i);
         ch.put(i, i);
+
+        atI.getAndIncrement();
 
     }
 
@@ -97,7 +102,7 @@ public class Client extends ClientBase {
     }
 
     public synchronized String read() {
-        return "" + ch.get(42) + dq.poll() + cq.poll() + q.getFirst() + a.get(0) + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
+        return "" + atI.get() + ch.get(42) + dq.poll() + cq.poll() + q.getFirst() + a.get(0) + m2[0] + bq.poll() + rr.peek() + Test.y + si + li.toArray().length + li.get(0) + messages[0] + this.i;
     }
 
     public synchronized void setNull() {

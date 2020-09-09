@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.stream.Stream;
 
 public class ReportGenerator {
 
@@ -29,57 +28,57 @@ public class ReportGenerator {
             JsonGenerator g = factory.createGenerator(out);
             g.writeStartObject();
             g.writeNumberField("serial", serial);
-            g.writeStringField("time", getTime());
+            // g.writeStringField("time", getTime());
             g.writeStringField("tag", "CONCURRENT WRITE/READ DETECTION");
             g.writeStringField("writer_task_tag", w.getTask().getTag());
             loc.toJSON(g);
-            g.writeNumberField("epoch", epoch);
-            g.writeStringField("eventID", id);
+            g.writeStringField("traceID", w.getTask().getTraceID());
+            g.writeStringField("sub_traceID", w.getTask().getSubTraceID());
+            g.writeNumberField("global_task_serial", w.getTask().getSerial());
+            g.writeNumberField("global_writer_serial", w.getClock());
+            g.writeNumberField("writer_thread_id", w.getThreadID());
             g.writeNumberField("reader_thread_id", readerThreadID);
 
             Task[] joiners;
             if (readerTask == null) joiners = new Task[0];
             else joiners = readerTask.getJoiners();
             g.writeArrayFieldStart("reader_joined_trace_ids");
-            writeStringForEach(Arrays.stream(joiners).map(t -> t.getSubTraceID()), g);
+            writeAsString(joiners,g);
             g.writeEndArray();
 
-
-            g.writeNumberField("writer_thread_id", w.getThreadID());
-            g.writeStringField("writer_traceID", w.getTask().getTraceID());
-            g.writeStringField("writer_sub_traceID", w.getTask().getSubTraceID());
-            g.writeNumberField("writer_trace_serial", w.getTask().getSerial());
-            g.writeNumberField("writer_count", meta.getWriteCount());
-            g.writeNumberField("writer_global_clock", w.getClock());
             g.writeArrayFieldStart("reader_stacktrace");
 
             int start = Util.getIndexAfter(readerTrace, 1, CLASS_PREFIX);
-            writeStringForEach(Arrays.stream(Arrays.copyOfRange(readerTrace, start, Math.min(readerTrace.length, STACKTRACE_MAX_DEPTH + start))), g);
+            writeAsString(readerTrace, start, Math.min(readerTrace.length, STACKTRACE_MAX_DEPTH + start), g);
             g.writeEndArray();
 
             StackTraceElement[] wtrace = w.getStackTrace();
             start = Util.getIndexAfter(wtrace, 1, CLASS_PREFIX);
             g.writeArrayFieldStart("writer_stacktrace");
-            writeStringForEach(Arrays.stream(Arrays.copyOfRange(wtrace, start, Math.min(wtrace.length, STACKTRACE_MAX_DEPTH + start))), g);
+            writeAsString(wtrace, start, Math.min(wtrace.length, STACKTRACE_MAX_DEPTH + start), g);
             g.writeEndArray();
             g.writeEndObject();
             g.close();
             return out.toString();
         } catch (IOException e) {
+            // This can only happen in a bug case. We dont want this method to throw unnecessary exceptions
+            // like this one caused by the JSON lib interface.
             System.err.println("BUG");
             e.printStackTrace();
             return "$$BUG";
         }
     }
 
-    private static void writeStringForEach(Stream s, JsonGenerator g) {
-        s.forEach(t -> {
-            try {
-                g.writeString(t.toString());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
+    private static void writeAsString(Task[] tasks, JsonGenerator g) throws IOException {
+        for (int i = 0; i < tasks.length; i++) {
+            g.writeString(tasks[i].getSubTraceID());
+        }
+    }
+
+    private static void writeAsString(Object[] trace, int start, int end, JsonGenerator g) throws IOException {
+        for (int i = start; i < end; i++) {
+            g.writeString(trace[i].toString());
+        }
     }
 
     public static String generateAutoInheritanceMessageJSON(String message, String tag, StackTraceElement[] readerTrace, StackTraceElement[] writerTrace) {

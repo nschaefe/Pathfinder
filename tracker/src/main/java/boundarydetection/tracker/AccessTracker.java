@@ -671,10 +671,12 @@ public class AccessTracker {
 
     // FACADE METHODS-------------------------------------
     public static void startTask() {
+        AccessTracker.startTracking();
         Tasks.startTask();
     }
 
     public static void startTask(String tag) {
+        AccessTracker.startTracking();
         Tasks.startTask(tag);
     }
 
@@ -699,8 +701,19 @@ public class AccessTracker {
         Tasks.resumeTask();
     }
 
+    public static void join(Task t, String tag) {
+        try {
+            if (t != null) AccessTracker.startTracking();
+            Tasks.join(t, tag);
+        } catch (TaskCollisionException e) {
+            init();
+            Logger.log(e.toString() + "\n" + Arrays.toString(e.getStackTrace()), "ERROR");
+        }
+    }
+
     public static void join(Task t) {
         try {
+            if (t != null) AccessTracker.startTracking();
             Tasks.join(t);
         } catch (TaskCollisionException e) {
             init();
@@ -719,4 +732,13 @@ public class AccessTracker {
     public static Task fork() {
         return Tasks.fork();
     }
+
+    public static String serialize() {
+        return Tasks.serialize();
+    }
+
+    public static Task deserialize(String s) {
+        return Tasks.deserialize(s);
+    }
+
 }

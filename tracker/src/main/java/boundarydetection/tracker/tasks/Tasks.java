@@ -25,13 +25,11 @@ public class Tasks {
     }
 
     public static void startTask() {
-        AccessTracker.startTracking();
         init();
         task.set(Task.createTask());
     }
 
     public static void startTask(String tag) {
-        AccessTracker.startTracking();
         init();
         task.set(Task.createTask(tag));
     }
@@ -93,13 +91,18 @@ public class Tasks {
     }
 
     public static void join(Task t) throws TaskCollisionException {
+        join(t, null);
+    }
+
+    public static void join(Task t, String tag) throws TaskCollisionException {
         if (t == null) return;
         init();
         if (!Tasks.hasTask()) {
             Task nt = new Task(t);
-            nt.setWriteCapability(false);
+            nt.setWriteCapability(true);
             nt.addJoiner(t); // add to joiners
             nt.newSubTraceID();
+            if (tag != null) nt.setTag(tag);
             task.set(nt);
 
         } else if (Tasks.getTask().getTraceID().equals(t.getTraceID())) {
@@ -123,7 +126,7 @@ public class Tasks {
         if (!Tasks.hasTask()) return null;
         init();
         Task parent = Tasks.getTask();
-        Task t = new Task(parent);
+        Task t = new Task(parent); //copy the task
         // we inherit joiners. This allows to detect transitive joins.
         // let a,b,c be threads; if context prop a->b->c and c reads from a, c will have a as joiner.
         // however this hides the case of an explicit join of a to c.
@@ -132,4 +135,13 @@ public class Tasks {
         return t;
     }
 
+    public static String serialize() {
+        if (!Tasks.hasTask()) return null;
+        return Tasks.getTask().serialize();
+    }
+
+    public static Task deserialize(String s) {
+        if (s == null) return null;
+        return Task.deserialize(s);
+    }
 }
