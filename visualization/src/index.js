@@ -59,10 +59,10 @@ var LAYOUTING = 'FAST'                  //'FAST/'QUALITY'
 try {
     var dets = Utils.parseTxtToJSON(txt)
 
-    var tags = [...new Set(dets.map(d => d.writer_task_tag + '; serial:' + d.writer_trace_serial))]
-    console.log("TAGS: " + tags)
+    var tags = [...new Set(dets.map(d => "TRACEID: " + d.traceID + "; TAG: " + d.writer_task_tag + '; SERIAL:' + d.global_task_serial))]
+    console.log("TAGS:\n" + tags.join("\n"))
 
-    dets = dets.filter(d => d.tag == 'CONCURRENT WRITE/READ DETECTION' && d.writer_task_tag == TRACKING_SCOPE_TAG && d.writer_trace_serial == TRACKING_SERIAL)
+    dets = dets.filter(d => d.tag == 'CONCURRENT WRITE/READ DETECTION' && d.writer_task_tag == TRACKING_SCOPE_TAG && d.global_task_serial == TRACKING_SERIAL)
 
     var events = null//drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
@@ -101,6 +101,8 @@ try {
     readerIDs = readerIDs.sort() // to make things reproducible
     console.log("Reader-IDs: " + readerIDs)
 
+    if (readerIDs.length == 0) alert("No detections to show")
+    else if (THREAD_PAIR_CURSOR >= readerIDs.length) alert("THREAD_PAIR_CURSOR is out of bounds")
     var threadIDselection = readerIDs[THREAD_PAIR_CURSOR]
     dets = dets.filter(a => a.reader_thread_id == threadIDselection)
     dets = dets.sort((a, b) => a.serial - b.serial)

@@ -33,7 +33,7 @@ Graphs.parseDAG = function (dets, events = null, locationMerging, traceMerging) 
         sink.minSerial = Math.min(sink.minSerial, detect.serial)
 
         if (sink.minWriterSerial == null) sink.minWriterSerial = Number.MAX_SAFE_INTEGER
-        sink.minWriterSerial = Math.min(sink.minWriterSerial, detect.writer_global_clock)
+        sink.minWriterSerial = Math.min(sink.minWriterSerial, detect.global_writer_serial)
 
         var r_trace = detect.reader_stacktrace
         r_trace = r_trace.slice().reverse()

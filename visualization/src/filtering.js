@@ -8,7 +8,7 @@ Filters.filterCovered = filterCovered
 function filterCovered(dets, ignoreIfOneChannelCovered) {
     var coveredReader = new Set()
     dets = dets.filter(d => {
-        const a = d.reader_joined_trace_ids.includes(d.writer_sub_traceID)
+        const a = d.reader_joined_trace_ids.includes(d.sub_traceID)
         if (a) coveredReader.add(d.reader_thread_id);
         return !a
     })

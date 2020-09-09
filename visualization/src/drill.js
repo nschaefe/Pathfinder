@@ -15,7 +15,7 @@ DrillDriver.prototype.fetchDetections = function (serial = 1, taskTag = null, fi
     var query = "WITH " +
         "t1 AS (SELECT * FROM rep.root.`" + file + "`), " +
         "t11 AS (SELECT * FROM t1 WHERE tag = 'CONCURRENT WRITE/READ DETECTION' ), " +
-        "t111 AS (SELECT * FROM t11 WHERE writer_trace_serial=" + serial
+        "t111 AS (SELECT * FROM t11 WHERE global_task_serial=" + serial
     if (taskTag != null) {
         query += " and writer_task_tag='" + taskTag + "'"
     }
@@ -31,12 +31,12 @@ DrillDriver.prototype.locationHistogram = function (file = "./tracker_report.jso
 };
 
 DrillDriver.prototype.fetchTaskTags = function (file = "./tracker_report.json") {
-    var query = "SELECT DISTINCT writer_task_tag, writer_trace_serial FROM rep.root.`" + file + "`"
+    var query = "SELECT DISTINCT writer_task_tag, global_task_serial FROM rep.root.`" + file + "`"
     return sendQuery(query, this.baseUrl)
 };
 
 DrillDriver.prototype.fetchTraceSerials = function (file = "./tracker_report.json") {
-    var query = "SELECT DISTINCT writer_trace_serial FROM rep.root.`" + file + "`"
+    var query = "SELECT DISTINCT global_task_serial FROM rep.root.`" + file + "`"
     return sendQuery(query, this.baseUrl)
 };
 
