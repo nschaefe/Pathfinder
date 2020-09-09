@@ -111,6 +111,37 @@ public class TestTaskForkJoinDiscard extends TestBase {
     }
 
     @Test
+    public void testMultiHop2() throws InterruptedException {
+
+        int i=42;
+        String mess = "message"+i;
+        Task trackerTask = AccessTracker.fork();
+        Thread t1 = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                AccessTracker.join(trackerTask);
+
+                Task trackerTask2 = AccessTracker.fork();
+                Thread t2 = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        AccessTracker.join(trackerTask2);
+                        System.out.println(mess);
+                        //mess should be covered
+                    }
+                });
+                t2.start();
+                assertDoesNotThrow(() -> t2.join());
+            }
+
+
+        });
+        t1.start();
+        t1.join();
+    }
+
+
+    @Test
     public void testDoubleJoin() throws InterruptedException {
         RR r = new RR(AccessTracker.fork()) {
             @Override
@@ -155,7 +186,6 @@ public class TestTaskForkJoinDiscard extends TestBase {
         AccessTracker.join(r.innerTask);
         System.out.print(r.inToOut1);
     }
-
 
 
     private class RR implements Runnable {
