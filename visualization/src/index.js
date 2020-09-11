@@ -10,9 +10,9 @@ import txt from '../data/tracker_report.txt';
 // The tag you gave when you started the tracking scope: AccessTracker.startTask(TRACKING_SCOPE_TAG)
 var TRACKING_SCOPE_TAG = "CreateTable_ClientStart"
 
-// Is increased everytime AccessTracker.startTask is called. Can be used to select a particular run. 
+// Is increased everytime AccessTracker.startTask is called or if AccessTracker.join creates a new Task. Can be used to select a particular run. 
 // If you dont know what to set here, run the vis tool here and look for TAGS in the console output. This shows the possibilities.
-var TRACKING_SERIAL = 3
+var TRACKING_SERIAL = 14
 
 // Use this to iterate through the thread pairs. Each thread pair exists of the writer/producer thread and one consumer thread.
 // Look for Reader-IDs in the console output to see the available consumer what limits the max value for the cursor.
@@ -28,7 +28,7 @@ var STACKTRACE_FILTER_REGEX = "(.*edu\.brown\.cs\.systems.*|java\.lang\.ref\.Fin
 var LOCATION_FILTER_REGEX = "(.*\.bag)|(.*trackerTaskX)"
 
 // Everything before the cutoff entry here will be deleted from the stacktraces. E.g. [Thread.run, ...., cutoffEntry ,...] -> [cutoffEntry,...]
-var STACKTRACE_CUTOFF_UNTIL = "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:630)"
+var STACKTRACE_CUTOFF_UNTIL = "org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:628)"
 
 //---VISUALIZATION 
 
