@@ -124,7 +124,6 @@ public doSomeConcurrentWork(){
      public void run() {
         try {
           AccessTracker.join(trackerTask, "ConcurrentWorkRunnableExec");
-        }
           doWork();
         } finally {
           AccessTracker.discard();
