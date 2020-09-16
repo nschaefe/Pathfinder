@@ -122,16 +122,13 @@ public doSomeConcurrentWork(){
    customThreadPool.execute(new Runnable() {
      @Override
      public void run() {
-       try {
-         if (trackerTask != null) {
-           AccessTracker.join(trackerTask);
-           AccessTracker.getTask().setTag("ConcurrentWorkRunnableExec");
-           AccessTracker.getTask().setWriteCapability(true);
-         }
-         doWork();
-       } finally {
-         AccessTracker.discard();
-       }
+        try {
+          AccessTracker.join(trackerTask, "ConcurrentWorkRunnableExec");
+        }
+          doWork();
+        } finally {
+          AccessTracker.discard();
+        }
      }
    });
 }
