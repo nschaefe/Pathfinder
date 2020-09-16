@@ -118,18 +118,19 @@ public void myAPIRequest(...){
   
   
 public doSomeConcurrentWork(){
- Task trackerTask = AccessTracker.fork();
-   customThreadPool.execute(new Runnable() {
+  WorkItem item = new WorkItem(...);
+  Task trackerTask = AccessTracker.fork();
+  customThreadPool.execute(new Runnable() {
      @Override
      public void run() {
         try {
           AccessTracker.join(trackerTask, "ConcurrentWorkRunnableExec");
-          doWork();
+          doWork(item);
         } finally {
           AccessTracker.discard();
         }
      }
-   });
+  });
 }
 
 
