@@ -28,13 +28,13 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
                 while (!buffer.isEmpty() || !Thread.interrupted()) {
                     writeBatch(buffer, out);
                 }
-                out.append("DONE");
                 out.flush();
                 out.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         });
+        t.setDaemon(true);
         t.start();
 
     }
