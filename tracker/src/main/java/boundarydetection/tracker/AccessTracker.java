@@ -4,10 +4,7 @@ import boundarydetection.tracker.tasks.Task;
 import boundarydetection.tracker.tasks.TaskCollisionException;
 import boundarydetection.tracker.tasks.Tasks;
 import boundarydetection.tracker.util.Pair;
-import boundarydetection.tracker.util.logging.FileLoggerEngine;
-import boundarydetection.tracker.util.logging.LazyLoggerFactory;
-import boundarydetection.tracker.util.logging.Logger;
-import boundarydetection.tracker.util.logging.StreamLoggerEngine;
+import boundarydetection.tracker.util.logging.*;
 import sun.misc.Unsafe;
 
 import java.io.OutputStream;
@@ -50,7 +47,16 @@ public class AccessTracker {
                 globalDetectionCounter = 0;
 
                 int random = (new Random()).nextInt(Integer.MAX_VALUE);
-                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new FileLoggerEngine("./tracker_report_" + random + ".json")));
+                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new HeavyBufferFileLoggerEngine(50000, "./tracker_report_" + random + ".json")));
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    public void run() {
+                        try {
+                            Logger.shutdown();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
 
                 accesses = new HashMap<>(MAP_INIT_SIZE);
                 insideTracker = new InheritableThreadLocal<>();
@@ -293,7 +299,7 @@ public class AccessTracker {
     }
 
     public static void enableWriterEventLogging() {
-       writerEventLoggingEnabled = true;
+        writerEventLoggingEnabled = true;
     }
 
     public static void disableWriterEventLogging() {
