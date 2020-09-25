@@ -6,6 +6,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.*;
@@ -30,6 +31,7 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
                 }
                 out.flush();
                 out.close();
+                System.out.println("LoggerThreadFinished");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -58,8 +60,10 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
             out.newLine();
         }
 
+        out.flush();
+
         try {
-            Thread.sleep(1);
+            Thread.sleep(5);
         } catch (InterruptedException ei) {
             Thread.currentThread().interrupt();
         }
@@ -70,7 +74,14 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
         try {
             buffer.put(mess);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            // Interrupt comes from outside (application code) we have to continue the interrupt effect back to the caller
+            // we retry once again to not loose data
+            try {
+                buffer.put(mess);
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+            Thread.currentThread().interrupt();
         }
     }
 
