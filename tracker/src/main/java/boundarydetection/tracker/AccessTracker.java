@@ -632,7 +632,10 @@ public class AccessTracker {
     public static long objectFieldOffset(Field f) {
         initUnsafe();
         long valueOffset = UNSAFE.objectFieldOffset(f);
+        //TODO this is called before thread locals are loaded. We could try to pause at least later when they are available
+        //pauseTask();
         setAlias(valueOffset, f.getDeclaringClass(), f);
+        //resumeTask();
         return valueOffset;
     }
 

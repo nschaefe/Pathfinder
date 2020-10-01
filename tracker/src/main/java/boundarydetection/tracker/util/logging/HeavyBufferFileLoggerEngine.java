@@ -24,7 +24,7 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
 
         t = new Thread(() -> {
             try {
-                BufferedWriter out = new BufferedWriter(new FileWriter("./" + fileName + ".json"), (bufferSize / 2) * 4000);
+                BufferedWriter out = new BufferedWriter(new FileWriter("./" + fileName), (bufferSize / 2) * 4000);
 
                 while (!buffer.isEmpty() || !Thread.interrupted()) {
                     writeBatch(buffer, out);
@@ -63,7 +63,7 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
         out.flush();
 
         try {
-            Thread.sleep(5);
+            Thread.sleep(1);
         } catch (InterruptedException ei) {
             Thread.currentThread().interrupt();
         }
@@ -79,7 +79,7 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
             try {
                 buffer.put(mess);
             } catch (InterruptedException ex) {
-                ex.printStackTrace();
+                System.err.println("thread tried to log but got interrupted:\n" + mess);
             }
             Thread.currentThread().interrupt();
         }
@@ -87,7 +87,7 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
 
     @Override
     public void log(String mess, String tag) {
-        throw new NotImplementedException();
+        log(tag + ": " + mess);
     }
 
     public void shutdown() throws InterruptedException {

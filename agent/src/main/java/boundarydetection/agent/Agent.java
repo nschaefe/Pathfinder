@@ -17,6 +17,9 @@ import java.util.function.Predicate;
 
 public class Agent implements ClassFileTransformer {
 
+    //TODO to improve performance when classload heavy disable tracking on
+    //java.util.zip.ZipFile.releaseInflater
+    //and java.util.zip.ZipFile.getInflater which is heavily used at classloading time
 
     private static final String[] EXCLUDES = new String[]{
             // JAVA INTERNALS
