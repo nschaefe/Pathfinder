@@ -16,7 +16,7 @@ import java.util.Random;
 
 public class AccessTracker {
 
-    private static final int MAP_INIT_SIZE = 10000;
+    private static final int MAP_INIT_SIZE = 655360;
     public static volatile int MAX_EVENT_COUNT = 75;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
@@ -47,7 +47,8 @@ public class AccessTracker {
                 globalDetectionCounter = 0;
 
                 int random = (new Random()).nextInt(Integer.MAX_VALUE);
-                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new HeavyBufferFileLoggerEngine(50000, "./tracker_report_" + random + ".json")));
+                // avg log entries have 4000 bytes
+                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new HeavyBufferFileLoggerEngine(32768*4000, "./tracker_report_" + random + ".json")));
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     public void run() {
                         try {

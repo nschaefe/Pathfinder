@@ -9,12 +9,12 @@ import java.io.IOException;
 
 public class TestLogging {
 
-    private static final int bufferSize = 50000;
+    private static final int bufferSize = 25000;
     private static final int writeCount = 200000;
 
     @Test
     public void testHeavyBufferFileLoggerEngine() throws InterruptedException {
-        LoggerEngine logger = new HeavyBufferFileLoggerEngine(bufferSize, "loggerTest");
+        LoggerEngine logger = new HeavyBufferFileLoggerEngine(bufferSize*3800, "loggerTest");
         String pre = "{\"serial\":0,\"tag\":\"CONCURRENT WRITE/READ DETECTION\",\"writer_task_tag\":null," +
                 "\"location\":\"core.Main$$Lambda$3.arg$1\",\"field_object_type\":\"class java.lang.Object\"," +
                 "\"parent\":933646237,\"traceID\":\"e3c41f0b-5c90-4dd8-9383-6abb698e1271\"," +
@@ -41,10 +41,13 @@ public class TestLogging {
         long endTime = System.nanoTime();
 
         logger.shutdown();
+        long endTime2 = System.nanoTime();
+
 
         long timeElapsed = endTime - startTime;
+        long timeElapsed2 = endTime2 - startTime;
         System.out.println("Execution time in milliseconds : " +
-                timeElapsed / 1000000);
+                timeElapsed / 1000000+" full:"+timeElapsed2/1000000);
     }
 
     @Test

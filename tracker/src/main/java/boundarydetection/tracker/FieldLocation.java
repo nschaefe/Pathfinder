@@ -21,11 +21,15 @@ public final class FieldLocation extends AbstractFieldLocation {
         return parent;
     }
 
+    private int hash = 0;
+
     @Override
     public int hashCode() {
-        int hash = 17;
-        hash = hash * 31 + getLocation().hashCode();
-        hash = hash * 31 + getParentRef();
+        if (hash == 0) {
+            hash = 17;
+            hash = hash * 31 + getLocation().hashCode();
+            hash = hash * 31 + getParentRef();
+        }
         return hash;
     }
 
@@ -33,13 +37,12 @@ public final class FieldLocation extends AbstractFieldLocation {
     public boolean equals(Object o) {
         if (!(o instanceof FieldLocation)) return false;
         FieldLocation other = (FieldLocation) o;
-        return other.getLocation().equals(getLocation()) &&
-                other.getParentRef() == getParentRef();
+        return other.getParentRef() == getParentRef() && other.getLocation().equals(getLocation());
     }
 
     @Override
     public String getUniqueIdentifier() {
-        return getLocation()+'_'+getParentRef();
+        return getLocation() + '_' + getParentRef();
     }
 
     @Override
@@ -50,6 +53,6 @@ public final class FieldLocation extends AbstractFieldLocation {
 
     @Override
     public String toString() {
-        return "parent: "+parent+" "+super.toString();
+        return "parent: " + parent + " " + super.toString();
     }
 }

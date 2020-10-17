@@ -150,7 +150,7 @@ public class Agent implements ClassFileTransformer {
     }
 
     public void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
-        if (ctCl.isInterface()) return;
+        if (ctCl.isInterface() || ctCl.isFrozen()) return;
 
         ClassPool cp = getClassPool();
         if (logging_enabled) System.out.println("INST: " + ctCl.getName());
