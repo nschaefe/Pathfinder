@@ -170,7 +170,7 @@ public class Agent implements ClassFileTransformer {
         conv.reformatConstructor();
         ctCl.instrument(conv);
 
-        logMethodBeginAsEvent(ctCl);
+        //logMethodBeginAsEvent(ctCl);
     }
 
 
