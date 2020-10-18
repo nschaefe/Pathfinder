@@ -10,6 +10,25 @@ import java.util.concurrent.*;
 public class TestPreInstrumented extends TestBase {
 
 
+
+    @Test
+    public void executorServiceSimpleCallable() throws ExecutionException, InterruptedException {
+        AccessTracker.stopTask();
+        ExecutorService s = new TrackingExecutorService(getThreadPool());
+
+        AccessTracker.startTask();
+        String m = "message";
+        Future f = s.submit(new Callable<Object>() {
+
+            @Override
+            public Object call() throws Exception {
+                return m;
+            }
+        });
+        f.get();
+
+    }
+
     @Test
     public void executorServiceSimple() throws ExecutionException, InterruptedException {
         AccessTracker.stopTask();
