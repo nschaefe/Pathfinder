@@ -1,22 +1,27 @@
 package boundarydetection.tracker.util.logging;
 
+import boundarydetection.tracker.util.LinkedList;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.concurrent.*;
+
 
 public class HeavyBufferFileLoggerEngine extends LoggerEngine {
 
-    private ConcurrentLinkedQueue<String[]> blockBuffer;
+    // Use a simple data structure which we can copy into the code base to prevent instrumentation for that class
+    private LinkedList<String[]> blockBuffer;
     private String[] block;
     private int cursor;
+
     private Thread t;
+
+    private Object mutex = new Object();
 
     private static final int BLOCK_SIZE = 512;
 
     //4000 avg bytes per JSON entry
     public HeavyBufferFileLoggerEngine(int fileBufferSize, String fileName) {
-        blockBuffer = new ConcurrentLinkedQueue<String[]>();
+        blockBuffer = new LinkedList<>();
         block = new String[BLOCK_SIZE];
         cursor = 0;
 
@@ -40,8 +45,11 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
 
     }
 
-    private void writeBlock(ConcurrentLinkedQueue<String[]> buffer, BufferedWriter out) throws IOException {
-        String[] entryBuffer = buffer.poll();
+    private void writeBlock(LinkedList<String[]> buffer, BufferedWriter out) throws IOException {
+        String[] entryBuffer;
+        synchronized (mutex) {
+            entryBuffer = buffer.poll();
+        }
         if (entryBuffer == null) {
             try {
                 Thread.sleep(1);
@@ -60,7 +68,9 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
     @Override
     public void log(String mess) {
         if (cursor >= block.length) {
-            blockBuffer.add(block);
+            synchronized (mutex) {
+                blockBuffer.add(block);
+            }
             block = new String[BLOCK_SIZE];
             cursor = 0;
         }

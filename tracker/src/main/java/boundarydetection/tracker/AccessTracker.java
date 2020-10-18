@@ -3,6 +3,7 @@ package boundarydetection.tracker;
 import boundarydetection.tracker.tasks.Task;
 import boundarydetection.tracker.tasks.TaskCollisionException;
 import boundarydetection.tracker.tasks.Tasks;
+import boundarydetection.tracker.util.HashMap;
 import boundarydetection.tracker.util.Pair;
 import boundarydetection.tracker.util.logging.*;
 import sun.misc.Unsafe;
@@ -10,7 +11,6 @@ import sun.misc.Unsafe;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
