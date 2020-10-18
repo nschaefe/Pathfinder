@@ -89,8 +89,8 @@ public class RTInstrumentation {
 //
 //        applet- no!
 //        awt - no!
-//        beans - (no) (to support bean handling (generators, encoder, decoder for serialization)
-//        io - (no) (streams)
+//        beans - (yes) (to support bean handling (generators, encoder, decoder for serialization)
+//        io - (yes) (streams)
 //                lang - (yes) (only basic types,ref; reflection is just a runtime filed, method ref, rest is runtime related)
 //        math - no!
 //        net - (yes)
@@ -98,8 +98,8 @@ public class RTInstrumentation {
 //        rmi - (no) (inter JVM communication)
 //        security - (no) (to realize security in an app, encryption, access control)
 //        sql - (no) (just SQL Driver stuff)
-//        text - (no)
-//        time - (no)
+//        text - (yes)
+//        time - (yes)
 //        util - yes
 
 
@@ -107,6 +107,7 @@ public class RTInstrumentation {
         return (clName.startsWith("java/util") && !clName.startsWith("java/util/concurrent/locks")) ||
                 clName.startsWith("java/nio") ||
                 clName.startsWith("java/net") ||
+                clName.startsWith("java/math") ||
                 clName.startsWith("java/time") ||
                 clName.startsWith("java/text") ||
                 clName.startsWith("java/io") ||
