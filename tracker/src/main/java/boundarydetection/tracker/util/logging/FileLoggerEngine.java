@@ -34,7 +34,7 @@ public class FileLoggerEngine extends LoggerEngine {
 
     @Override
     public void shutdown() throws InterruptedException {
-        tinylog.shutdown();
+        //tinylog.shutdown();
     }
 
 }

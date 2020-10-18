@@ -56,11 +56,17 @@ public final class ArrayFieldLocation extends AbstractFieldLocation {
     }
 
     //TODO use type to reduce collision prob for reference
+
+    private int hash=0;
+
     @Override
     public int hashCode() {
-        int hash = 17;
-        hash = hash * 31 + getArrayObjectReference();
-        hash = hash * 31 + index;
+        if (hash == 0) {
+            hash = 17;
+            hash = hash * 31 + index;
+            hash = hash * 31 + getArrayObjectReference();
+        }
+
         return hash;
     }
 
@@ -69,8 +75,7 @@ public final class ArrayFieldLocation extends AbstractFieldLocation {
         if (!(o instanceof ArrayFieldLocation)) return false;
         ArrayFieldLocation other = (ArrayFieldLocation) o;
 
-        return other.getArrayObjectReference() == getArrayObjectReference() &&
-                other.index == index;
+        return other.index == index && other.getArrayObjectReference() == getArrayObjectReference();
     }
 
     @Override

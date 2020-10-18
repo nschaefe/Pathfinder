@@ -143,6 +143,7 @@
                 <version>2.22.2</version>
                 <configuration>
                     <argLine>
+                        -Xmx2g
                         -javaagent:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar=no_logging
                         -Xbootclasspath/p:${project.build.directory}/../../javaRT/rt_inst.jar:${project.build.directory}/../../tracker/target/tracker-0.1-SNAPSHOT-jar-with-dependencies.jar:${project.build.directory}/../../agent/target/agent-0.1-SNAPSHOT-jar-with-dependencies.jar
                     </argLine>

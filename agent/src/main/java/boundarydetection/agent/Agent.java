@@ -17,6 +17,9 @@ import java.util.function.Predicate;
 
 public class Agent implements ClassFileTransformer {
 
+    //TODO to improve performance when classload heavy disable tracking on
+    //java.util.zip.ZipFile.releaseInflater
+    //and java.util.zip.ZipFile.getInflater which is heavily used at classloading time
 
     private static final String[] EXCLUDES = new String[]{
             // JAVA INTERNALS
@@ -147,7 +150,7 @@ public class Agent implements ClassFileTransformer {
     }
 
     public void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
-        if (ctCl.isInterface()) return;
+        if (ctCl.isInterface() || ctCl.isFrozen()) return;
 
         ClassPool cp = getClassPool();
         if (logging_enabled) System.out.println("INST: " + ctCl.getName());
@@ -167,7 +170,7 @@ public class Agent implements ClassFileTransformer {
         conv.reformatConstructor();
         ctCl.instrument(conv);
 
-        logMethodBeginAsEvent(ctCl);
+        //logMethodBeginAsEvent(ctCl);
     }
 
 

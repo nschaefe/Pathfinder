@@ -21,13 +21,13 @@ public class LazyLoggerFactory extends LoggerEngine {
     }
 
     @Override
-    void log(String mess) {
+    public void log(String mess) {
         init();
         engine.log(mess);
     }
 
     @Override
-    void log(String mess, String tag) {
+    public void log(String mess, String tag) {
         init();
         engine.log(mess, tag);
     }

@@ -3,23 +3,20 @@ package boundarydetection.tracker;
 import boundarydetection.tracker.tasks.Task;
 import boundarydetection.tracker.tasks.TaskCollisionException;
 import boundarydetection.tracker.tasks.Tasks;
+import boundarydetection.tracker.util.HashMap;
 import boundarydetection.tracker.util.Pair;
-import boundarydetection.tracker.util.logging.FileLoggerEngine;
-import boundarydetection.tracker.util.logging.LazyLoggerFactory;
-import boundarydetection.tracker.util.logging.Logger;
-import boundarydetection.tracker.util.logging.StreamLoggerEngine;
+import boundarydetection.tracker.util.logging.*;
 import sun.misc.Unsafe;
 
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
 public class AccessTracker {
 
-    private static final int MAP_INIT_SIZE = 10000;
+    private static final int MAP_INIT_SIZE = 655360;
     public static volatile int MAX_EVENT_COUNT = 75;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
@@ -50,7 +47,17 @@ public class AccessTracker {
                 globalDetectionCounter = 0;
 
                 int random = (new Random()).nextInt(Integer.MAX_VALUE);
-                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new FileLoggerEngine("./tracker_report_" + random + ".json")));
+                // avg log entries have 4000 bytes
+                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new HeavyBufferFileLoggerEngine(32768 * 4000, "./tracker_report_" + random + ".json")));
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    public void run() {
+                        try {
+                            Logger.shutdown();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
 
                 accesses = new HashMap<>(MAP_INIT_SIZE);
                 insideTracker = new InheritableThreadLocal<>();
@@ -193,7 +200,6 @@ public class AccessTracker {
         FieldWriter writer = l.get(0);
 
         // a write can be read several times, so we use a global id to make all event ids unique
-        String eventID = field.getUniqueIdentifier() + '_' + meta.getWriteCount() + '_' + (AccessTracker.globalDetectionCounter++);
         Logger.log(
                 ReportGenerator.generateDetectionReportJSON(epoch,
                         readSerial++,
@@ -201,48 +207,8 @@ public class AccessTracker {
                         Thread.currentThread().getStackTrace(),
                         Tasks.getTask(),
                         field,
-                        writer, meta, eventID));
+                        writer, meta));
 
-
-        if (!autoTaskInheritance) return;
-        // Auto inheritance of task
-        if (writer.getTask().getAutoInheritanceCount() == 0) { //inherit only one step down
-            if (!Tasks.hasTask()) Tasks.inheritTask(writer.getTask());
-            else {
-                // there is already another task present in the target thread
-                // undesired situations that need to be reported
-
-                // if there is another main task running (inheritance count = 0)
-                // we should not inherit
-                Task present = Tasks.getTask();
-                if (present.getAutoInheritanceCount() == 0) {
-                    Logger.log(ReportGenerator.generateAutoInheritanceMessageJSON("Auto task inheritance failed. There is already a main task present in the target thread", "ERROR", Thread.currentThread().getStackTrace(), writer.getStackTrace()));
-                    return;
-                }
-
-                // if there is already a reader task running (inheritance count > 0)
-                // we should only override if the bounded parent task is dead already
-                if (present.getAutoInheritanceCount() > 0 && !present.getParentTask().getSubTraceID().equals(writer.getTask().getSubTraceID()) && present.getParentTask().isAlive()) {
-                    Logger.log(ReportGenerator.generateAutoInheritanceMessageJSON(" Auto task inheritance: task is inherited to a thread that still has another inherited task running which parent is still alive", "WARNING", Thread.currentThread().getStackTrace(), writer.getStackTrace()));
-                    return;
-                }
-
-                // else if there is already another reader task running (inheritance count > 0)
-                // but parent already died, we overtake the task of the writer. This is when a new task was started and replaces
-                // the old inherited task now
-                if (present.getAutoInheritanceCount() > 0 && !present.getParentTask().getSubTraceID().equals(writer.getTask().getSubTraceID()) && !present.getParentTask().isAlive()) {
-                    Tasks.inheritTask(writer.getTask());
-                }
-            }
-
-            assert (Tasks.hasTask());
-            Tasks.getTask().addAsParentEventID(eventID);
-            //Tasks.getTask().getEventCounter() < 10 * MAX_EVENT_COUNT
-            if (!Tasks.getTask().hasInheritanceLocation(field)) {
-                Tasks.getTask().resetEventCounter();
-            }
-            Tasks.getTask().addInheritanceLocation(field);
-        }
     }
 
     private static void registerArrayLocation(Object value, String location) {
@@ -293,7 +259,7 @@ public class AccessTracker {
     }
 
     public static void enableWriterEventLogging() {
-       writerEventLoggingEnabled = true;
+        writerEventLoggingEnabled = true;
     }
 
     public static void disableWriterEventLogging() {
@@ -626,7 +592,10 @@ public class AccessTracker {
     public static long objectFieldOffset(Field f) {
         initUnsafe();
         long valueOffset = UNSAFE.objectFieldOffset(f);
+        //TODO this is called before thread locals are loaded. We could try to pause at least later when they are available
+        //pauseTask();
         setAlias(valueOffset, f.getDeclaringClass(), f);
+        //resumeTask();
         return valueOffset;
     }
 

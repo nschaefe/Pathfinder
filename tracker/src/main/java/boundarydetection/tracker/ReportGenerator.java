@@ -21,7 +21,7 @@ public class ReportGenerator {
 
 
     public static String generateDetectionReportJSON(int epoch, long serial, long readerThreadID, StackTraceElement[] readerTrace, Task readerTask,
-                                                     AbstractFieldLocation loc, FieldWriter w, FieldAccessMeta meta, String id) {
+                                                     AbstractFieldLocation loc, FieldWriter w, FieldAccessMeta meta) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // ByteArrayOutputStream.close has no effect, no closing neccessary
         try {
