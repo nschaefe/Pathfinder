@@ -38,7 +38,7 @@ public class Task {
         this.traceID = t.traceID;
         this.subTraceID = t.subTraceID;
         this.autoInheritanceCount = t.autoInheritanceCount;
-        this.serial = t.serial;
+        this.serial = globalTaskCounter.getAndIncrement();
         this.eventIdPrefix = t.eventIdPrefix;
         this.eventIDSeqNum = t.eventIDSeqNum;
         this.parentEventIDs = new ArrayList<>(t.parentEventIDs);
