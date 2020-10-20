@@ -33,7 +33,7 @@ public class AccessTracker {
     private static volatile boolean writerEventLoggingEnabled = false;
     private static volatile boolean arrayCopyRedirectEnabled = false;
     private static volatile boolean autoTaskInheritance = false;
-    private static volatile boolean allowCrossTraceTracking = false;
+    private static volatile boolean allowCrossTraceTracking = true;
 
     private static final boolean minimalTracking = false;
 
@@ -49,7 +49,7 @@ public class AccessTracker {
 
                 int random = (new Random()).nextInt(Integer.MAX_VALUE);
                 // avg log entries have 4000 bytes
-                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new HeavyBufferFileLoggerEngine(32768 * 4000, "./tracker_report_" + random + ".json")));
+                Logger.setLoggerIfNo(new LazyLoggerFactory(() -> new HeavyBufferFileLoggerEngine(52428800, "./tracker_report_" + random + ".json")));
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     public void run() {
                         try {

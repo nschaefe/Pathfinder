@@ -31,7 +31,11 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
                 BufferedWriter out = new BufferedWriter(new FileWriter("./" + fileName), fileBufferSize);
 
                 while (!blockBuffer.isEmpty() || !Thread.interrupted()) {
-                    writeBlock(blockBuffer, out);
+                    consumeWriteBlock(blockBuffer, out);
+                }
+
+                synchronized (mutex) {
+                     writeBlock(block, cursor, out);
                 }
                 out.flush();
                 out.close();
@@ -45,7 +49,7 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
 
     }
 
-    private void writeBlock(LinkedList<String[]> buffer, BufferedWriter out) throws IOException {
+    private void consumeWriteBlock(LinkedList<String[]> buffer, BufferedWriter out) throws IOException {
         String[] entryBuffer;
         synchronized (mutex) {
             entryBuffer = buffer.poll();
@@ -58,25 +62,29 @@ public class HeavyBufferFileLoggerEngine extends LoggerEngine {
             }
             return;
         }
-        for (String entry : entryBuffer) {
+        writeBlock(entryBuffer, entryBuffer.length, out);
+    }
+
+    private void writeBlock(String[] buffer, int end, BufferedWriter out) throws IOException {
+        for (int i = 0; i < end; i++) {
+            String entry = buffer[i];
             out.append(entry);
             out.newLine();
         }
-        //out.flush();
     }
 
     @Override
     public void log(String mess) {
-        if (cursor >= block.length) {
-            synchronized (mutex) {
+        synchronized (mutex) {
+            if (cursor >= block.length) {
                 blockBuffer.add(block);
+                block = new String[BLOCK_SIZE];
+                cursor = 0;
             }
-            block = new String[BLOCK_SIZE];
-            cursor = 0;
-        }
 
-        block[cursor] = mess;
-        cursor++;
+            block[cursor] = mess;
+            cursor++;
+        }
     }
 
     @Override
