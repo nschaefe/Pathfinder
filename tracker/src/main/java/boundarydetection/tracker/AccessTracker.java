@@ -33,6 +33,7 @@ public class AccessTracker {
     private static volatile boolean writerEventLoggingEnabled = false;
     private static volatile boolean arrayCopyRedirectEnabled = false;
     private static volatile boolean autoTaskInheritance = false;
+    private static volatile boolean allowCrossTraceTracking = false;
 
     private static final boolean minimalTracking = false;
 
@@ -199,6 +200,7 @@ public class AccessTracker {
 
         FieldWriter writer = l.get(0);
 
+        if(!allowCrossTraceTracking && Tasks.hasTask() && !Tasks.getTask().getTraceID().equals(writer.getTask().getTraceID())) return;
         // a write can be read several times, so we use a global id to make all event ids unique
         Logger.log(
                 ReportGenerator.generateDetectionReportJSON(epoch,

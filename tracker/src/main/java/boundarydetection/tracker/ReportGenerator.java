@@ -43,11 +43,12 @@ public class ReportGenerator {
             if (readerTask == null) joiners = new Task[0];
             else joiners = readerTask.getJoiners();
             g.writeArrayFieldStart("reader_joined_trace_ids");
-            writeAsString(joiners,g);
+            writeAsString(joiners, g);
             g.writeEndArray();
 
-            g.writeArrayFieldStart("reader_stacktrace");
+            if (readerTask != null) g.writeStringField("reader_traceID", readerTask.getTraceID());
 
+            g.writeArrayFieldStart("reader_stacktrace");
             int start = Util.getIndexAfter(readerTrace, 1, CLASS_PREFIX);
             writeAsString(readerTrace, start, Math.min(readerTrace.length, STACKTRACE_MAX_DEPTH + start), g);
             g.writeEndArray();

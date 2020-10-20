@@ -29,7 +29,7 @@ public class FieldAccessMeta {
         long id = Thread.currentThread().getId();
         Throwable trace = new Throwable();
 
-        FieldWriter wr = new FieldWriter(id, new Task(Tasks.getTask()), trace, incrementWriterSerial());
+        FieldWriter wr = new FieldWriter(id, new Task(Tasks.getTask(),false), trace, incrementWriterSerial());
         if (writer.size() == 0) writer.add(wr);
         else writer.set(0, wr);
         writeCounter++;

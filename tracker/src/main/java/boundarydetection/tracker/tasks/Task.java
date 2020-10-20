@@ -12,7 +12,7 @@ public class Task {
 
     private Task parentTask; // null by default. Can be set to bind to another task
     private String traceID; // high level trace id shared by all tasks that originated from the same starting point
-    private int serial; // global serial, increased for every Task creation
+    private int serial; // global serial, increased on task creation  //TODO actually obsolete, we can just use subTraceID, would be nice to include a serial in the subtraceID to infer order
     private String tag;
 
     private String subTraceID;
@@ -32,13 +32,14 @@ public class Task {
 
     private static volatile AtomicInteger globalTaskCounter = new AtomicInteger(1);
 
-    public Task(Task t) {
+    public Task(Task t, boolean incrementSerial) {
         if (t == null) throw new NullPointerException("Task to copy is null");
         //copy construc.
         this.traceID = t.traceID;
         this.subTraceID = t.subTraceID;
         this.autoInheritanceCount = t.autoInheritanceCount;
-        this.serial = globalTaskCounter.getAndIncrement();
+        if (incrementSerial) this.serial = globalTaskCounter.getAndIncrement();
+        else this.serial = t.serial;
         this.eventIdPrefix = t.eventIdPrefix;
         this.eventIDSeqNum = t.eventIDSeqNum;
         this.parentEventIDs = new ArrayList<>(t.parentEventIDs);
@@ -55,7 +56,7 @@ public class Task {
     }
 
     public Task(String traceID) {
-        this(traceID,null);
+        this(traceID, null);
     }
 
     public Task(String traceID, String tag) {
@@ -124,6 +125,7 @@ public class Task {
     }
 
     public void newSubTraceID() {
+        //TODO ugly
         String[] s = subTraceID.split("_");
         subTraceID = s[0] + "_" + (Double.parseDouble(s[1]) * 17 + Math.random());
     }
@@ -162,7 +164,7 @@ public class Task {
     }
 
     protected static Task deserialize(String s) {
-          return new Task(s);
+        return new Task(s);
     }
 
     //--------------

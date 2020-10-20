@@ -36,7 +36,7 @@ public class Tasks {
 
     public static void inheritTask(Task parent) {
         init();
-        Task t = new Task(parent);
+        Task t = new Task(parent, false);
         t.setAutoInheritanceCount(parent.getAutoInheritanceCount() + 1);
         t.setWriteCapability(false);
         t.setParentTask(parent);
@@ -98,7 +98,7 @@ public class Tasks {
         if (t == null) return;
         init();
         if (!Tasks.hasTask()) {
-            Task nt = new Task(t);
+            Task nt = new Task(t, true);
             nt.setWriteCapability(true);
             nt.addJoiner(t); // add to joiners
             nt.newSubTraceID();
@@ -126,7 +126,7 @@ public class Tasks {
         if (!Tasks.hasTask()) return null;
         init();
         Task parent = Tasks.getTask();
-        Task t = new Task(parent); //copy the task
+        Task t = new Task(parent, false); //copy the task
         // we inherit joiners. This allows to detect transitive joins.
         // let a,b,c be threads; if context prop a->b->c and c reads from a, c will have a as joiner.
         // however this hides the case of an explicit join of a to c.
