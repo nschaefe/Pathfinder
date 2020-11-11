@@ -60,6 +60,18 @@ function download(data, filename, type) {
     }
 }
 
+
+Utils.downloadArrayToJSONRows = downloadArrayToJSONRows
+function downloadArrayToJSONRows(jsonEntries, name) {
+    var str = ""
+    for (var d of jsonEntries) {
+        str += JSON.stringify(d) + '\n'
+    }
+    str = str.substring(0, str.length - 1);
+    download(str, name, "application/json")
+}
+
+
 Utils.levDist = levDist
 function levDist(s, t) {
     var d = []; //2d matrix
@@ -113,7 +125,7 @@ function levDist(s, t) {
 
 }
 
-Utils. parseTxtToJSON =  parseTxtToJSON
+Utils.parseTxtToJSON = parseTxtToJSON
 function parseTxtToJSON(txt) {
     var lines = txt.split('\n').filter(d => d != "");
     var jsn = lines.map(l => JSON.parse(l))

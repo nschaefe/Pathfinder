@@ -165,7 +165,7 @@ export function render(full_graph, layouting) {
     nodeEl.attr('transform', ({ x, y }) => `translate(${x}, ${y})`)
       .on("mouseover", function (d) {
         var unrwapNode = getNode(d)
-        var txt = unrwapNode.name + "; rid=" + unrwapNode.threadID
+        var txt = unrwapNode.name + "; tid=" + unrwapNode.threadID
 
         tooltip
           .style("visibility", "visible")
@@ -301,16 +301,21 @@ export function render(full_graph, layouting) {
     Utils.download(str, name + ".json", "application/json")
   }
 
-
-
-  function printToBlacklist(detections) {
+  function printForEval2(detections) {
+    //TODO move this somewhere else
     var str = ""
     for (var d of detections) {
-      str += JSON.stringify(d) + '\n'
+      str += d.location + '\n\n'
+      str += d.writer_stacktrace.substring(str.indexOf('_')).reverse().join('\n') + '\n\n'
+      str += d.reader_stacktrace.substring(str.indexOf('_')).reverse().join('\n') + '\n'
     }
-    str = str.substring(0, str.length - 1);
-    const name = "report"
-    Utils.download(str, name + ".bl.json", "application/json")
+    const name = "eval"
+    Utils.download(str, name + ".json", "application/json")
+  }
+
+  function printToBlacklist(detections) {
+    const name = "report.bl.json"
+    Utils.downloadArrayToJSONRows(detections,name)
   }
 
   function resetHighlighting(node) {
