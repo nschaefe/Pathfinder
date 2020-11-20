@@ -115,8 +115,10 @@ public class RTInstrumentation {
                 clName.startsWith("java/security/spec") ||
                 clName.startsWith("java/security/acl") ||
                 clName.startsWith("java/security/interfaces") ||
-                clName.startsWith("java/security/cert") ||
-                isBasicType(clName);
+                clName.startsWith("java/security/cert") ;
+               // isBasicType(clName);
+                // It does not make sense to enable basic types because they are immutable,
+                // so the parent field of the object must be set what will be tracked
 
     }
 

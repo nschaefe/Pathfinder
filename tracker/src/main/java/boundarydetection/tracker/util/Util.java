@@ -81,6 +81,15 @@ public class Util {
         return host;
     }
 
+
+    public static int fastHashCode(String s, int count) {
+        int hash = 5381;
+        for (int i = s.length() - 1; i >= 0 && count > 0; i--, count--) {
+            hash = ((hash << 5) + hash) + s.charAt(i);
+        }
+        return hash;
+    }
+
     public static int getIndexAfter(StackTraceElement[] trace, int start, String classPrefix) {
         for (int i = start; i < trace.length; i++) {
             if (!trace[i].getClassName().startsWith(classPrefix)) return i;

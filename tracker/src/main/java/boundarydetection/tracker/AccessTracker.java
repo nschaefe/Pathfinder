@@ -19,6 +19,8 @@ public class AccessTracker {
     private static final int MAP_INIT_SIZE = 655360;
     public static volatile int MAX_EVENT_COUNT = 75;
 
+    public static volatile int MAX_TRACKING = 30;
+
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
     private static volatile InheritableThreadLocal<Boolean> insideTracker;
@@ -61,6 +63,7 @@ public class AccessTracker {
                 });
 
                 accesses = new HashMap<>(MAP_INIT_SIZE);
+                trackerLog = new HashMap<>(200);
                 insideTracker = new InheritableThreadLocal<>();
             }
         }
@@ -189,6 +192,7 @@ public class AccessTracker {
     }
 
     private static long readSerial = 0L;
+    private static HashMap<Pair<Long, Long>, Integer> trackerLog;
 
     private static void readAccessInner(AbstractFieldLocation field) {
         FieldAccessMeta meta = accesses.get(field);
@@ -202,6 +206,10 @@ public class AccessTracker {
 
         if(!allowCrossTraceTracking && Tasks.hasTask() && !Tasks.getTask().getTraceID().equals(writer.getTask().getTraceID())) return;
         // a write can be read several times, so we use a global id to make all event ids unique
+
+        long rid = Thread.currentThread().getId();
+        long wid = writer.getThreadID();
+        if (!checkTrackerLog(rid, wid)) return;
         Logger.log(
                 ReportGenerator.generateDetectionReportJSON(epoch,
                         readSerial++,
@@ -211,6 +219,20 @@ public class AccessTracker {
                         field,
                         writer, meta));
 
+    }
+
+
+    private static boolean checkTrackerLog(long rid, long wid) {
+        Pair<Long, Long> p = Pair.from(wid, rid);
+        Integer count = trackerLog.get(p);
+        if (count == null) {
+            trackerLog.put(p, 1);
+            return true;
+        }
+        if (count < MAX_TRACKING) {
+            trackerLog.put(p, count + 1);
+            return true;
+        } else return false;
     }
 
     private static void registerArrayLocation(Object value, String location) {
