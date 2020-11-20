@@ -6,7 +6,9 @@ then
 	exit 1
 fi
 
-cat $blDir/* > $blName
+> $blName
+for f in $blDir/* ; do (cat "${f}"; echo) >> $blName; done
+#cat $blDir/* > $blName
 if [ -s "$blName" ] 
 then
 	sed -i  '1s/^/[/;$!s/$/,/;$s/$/]/' $blName

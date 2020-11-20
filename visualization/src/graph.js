@@ -4,7 +4,7 @@ import { Filters } from "./filtering.js";
 export var Graphs = new Graph()
 function Graph() { }
 
-Graphs.parseDAG = function (dets, events = null, locationMerging, traceMerging) {
+Graphs.parseDAG = function (dets, events = null, locationMerging, traceMerging, traceProc) {
     if (locationMerging != 'UNIQUE' && locationMerging != 'MERGED') throw new Error("Unknown locationMerging option: " + locationMerging)
     if (traceMerging != 'UNIQUE' && traceMerging != 'FULL' && traceMerging != 'INCREMENTAL') throw new Error("Unknown traceMerging option: " + traceMerging)
 
@@ -14,7 +14,7 @@ Graphs.parseDAG = function (dets, events = null, locationMerging, traceMerging) 
     id.val = 0
     for (var i = 0; i < dets.length; i++) {
         var detect = dets[i]
-        var w_trace = detect.writer_stacktrace
+        var w_trace = detect.writer_stacktrace.map(traceProc)
         w_trace = w_trace.slice().reverse()
         var s = detect.location + (detect.parent != null ? "" : "_" + detect.reference) + (locationMerging == 'UNIQUE' ? "_" + (loc_id++) : '')
         w_trace.push(s)
@@ -35,7 +35,7 @@ Graphs.parseDAG = function (dets, events = null, locationMerging, traceMerging) 
         if (sink.minWriterSerial == null) sink.minWriterSerial = Number.MAX_SAFE_INTEGER
         sink.minWriterSerial = Math.min(sink.minWriterSerial, detect.global_writer_serial)
 
-        var r_trace = detect.reader_stacktrace
+        var r_trace = detect.reader_stacktrace.map(traceProc)
         r_trace = r_trace.slice().reverse()
         r_trace.push(s)
         sink = parseTrace(r_trace, node_map, id, false, detect.reader_thread_id)

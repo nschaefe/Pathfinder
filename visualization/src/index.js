@@ -8,11 +8,11 @@ import txt from '../data/tracker_report.txt';
 //------CUSTOM CONFIG------
 
 // The tag you gave when you started the tracking scope: AccessTracker.startTask(TRACKING_SCOPE_TAG)
-var TRACKING_SCOPE_TAG = "CreateTable_ClientStart"
+var TRACKING_SCOPE_TAG = "MIGRATION"
 
 // Is increased everytime AccessTracker.startTask is called or if AccessTracker.join creates a new Task. Can be used to select a particular run. 
 // If you dont know what to set here, run the vis tool here and look for TAGS in the console output. This shows the possibilities.
-var TRACKING_SERIAL = 14
+var TRACKING_SERIAL = 2
 
 // Use this to iterate through the thread pairs. Each thread pair exists of the writer/producer thread and one consumer thread.
 // Look for Reader-IDs in the console output to see the available consumer what limits the max value for the cursor.
@@ -58,56 +58,31 @@ var LAYOUTING = 'FAST'                  //'FAST/'QUALITY'
 
 try {
     var dets = Utils.parseTxtToJSON(txt)
+    dets = dets.filter(d => d.tag == 'CONCURRENT WRITE/READ DETECTION')
 
-    var tags = [...new Set(dets.map(d => "TRACEID: " + d.traceID + "; TAG: " + d.writer_task_tag + '; SERIAL:' + d.global_task_serial))]
-    console.log("TAGS:\n" + tags.join("\n"))
+    //filterAndPrint(dets)
 
-    dets = dets.filter(d => d.tag == 'CONCURRENT WRITE/READ DETECTION' && d.writer_task_tag == TRACKING_SCOPE_TAG && d.global_task_serial == TRACKING_SERIAL)
+    var tagInfo = [...new Set(dets.map(d => "TRACEID: " + d.traceID + "; TAG: " + d.writer_task_tag + '; SERIAL:' + d.global_task_serial))]
+    console.log("TAGS:\n" + tagInfo.join("\n"))
+
+    dets = dets.filter(d => d.writer_task_tag == TRACKING_SCOPE_TAG && d.global_task_serial == TRACKING_SERIAL)
+   
 
     var events = null//drill.fetchEvents(dets[0].writer_taskID)
     console.log("fetched data")
-
-    function filtering(dets) {
-        dets = Filters.filterDistinct(dets)
-        //dets = Filters.filterBlacklist(dets, blacklist)
-        //dets = Filters.filterCovered(dets,false)
-        dets = Filters.filterByLocation(dets, LOCATION_FILTER_REGEX)
-        dets = Filters.filterByTraces(dets, STACKTRACE_FILTER_REGEX)
-
-        // edit distance and sibling filter onyl per thread pair, otherwise we compare things that belong to different channels.
-        // What results in showing some detections only for one thread pair even if the communication appears in both (inconsistent, tradeoff)
-        var grps = Filters.groupByReaderThreaderId(dets)
-        var dd = grps.map((grpTuple) => {
-            var grp = grpTuple[1]
-            grp = Filters.filterSiblings(grp)
-            //d = Filters.filterEditDistance(d, 0.95, true)
-
-            //grp = grp.sort((a, b) => a.serial - b.serial)
-            //if (Filters.filterCoveredGrpInteractive(grp, covered)) return null
-            return grp
-        })
-        dd = dd.filter(e => e != null)
-        var dets = [].concat.apply([], dd);
-
-        dets = Filters.filterDuplicateCommunication(dets)
-        // dets = Filters.filterSimilarCommunication(dets, [], 0.95)
-        return dets
-    }
 
     dets = filtering(dets)
     console.log("filtered data")
 
     var readerIDs = Array.from(new Set(dets.map(a => a.reader_thread_id)))
     readerIDs = readerIDs.sort() // to make things reproducible
-    console.log("Reader-IDs: " + readerIDs)
+    console.log("Reader-IDs(" + readerIDs.length + "): " + readerIDs)
 
     if (readerIDs.length == 0) alert("No detections to show")
     else if (THREAD_PAIR_CURSOR >= readerIDs.length) alert("THREAD_PAIR_CURSOR is out of bounds")
     var threadIDselection = readerIDs[THREAD_PAIR_CURSOR]
     dets = dets.filter(a => a.reader_thread_id == threadIDselection)
     dets = dets.sort((a, b) => a.serial - b.serial)
-
-    if (ITC_LIMIT > 0) dets = dets.slice(0, ITC_LIMIT)
 
     const ITCP = Filters.filterDistinctPath(dets)
     console.log("ITCP:")
@@ -123,17 +98,9 @@ try {
     console.log(resour)
 
     var startEntry = STACKTRACE_CUTOFF_UNTIL
-    dets.forEach(d => {
-        d.writer_stacktrace = Utils.cutAfterLast(d.writer_stacktrace, startEntry)
-        d.reader_stacktrace = Utils.cutAfterLast(d.reader_stacktrace, startEntry)
-    })
+    var traceProcessor = trace => Utils.cutAfterLast(trace, startEntry)
 
-    //"org.apache.hadoop.hbase.client.HTable.put(HTable.java:566)"
-    //"org.apache.hadoop.hbase.ipc.RpcExecutor$Handler.run(RpcExecutor.java:324)"
-    //"org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:631)"
-    //"org.apache.hadoop.hbase.client.HBaseAdmin.createTable(HBaseAdmin.java:629)")
-    //"org.apache.hadoop.hbase.procedure2.ProcedureExecutor$WorkerThread.run(ProcedureExecutor.java:2058)"
-    var nodes = Graphs.parseDAG(dets, events, LOCATION_MERGING, STACK_TRACE_MERGING)
+    var nodes = Graphs.parseDAG(dets, events, LOCATION_MERGING, STACK_TRACE_MERGING, traceProcessor)
     console.log("parsed data")
 
     render(nodes, LAYOUTING)
@@ -142,4 +109,50 @@ try {
 }
 catch (e) {
     alert("Errors, see browser console.\n" + e)
+}
+
+function filtering(dets) {
+    //dets = Filters.filterBlacklist(dets, blacklist)
+    dets = Filters.filterDistinct(dets)
+    //dets = Filters.filterCovered(dets, true)
+    dets = Filters.filterByLocation(dets, LOCATION_FILTER_REGEX)
+    dets = Filters.filterByTraces(dets, STACKTRACE_FILTER_REGEX)
+
+    // edit distance and sibling filter onyl per thread pair, otherwise we compare things that belong to different channels.
+    // What results in showing some detections only for one thread pair even if the communication appears in both (inconsistent, tradeoff)
+    var grps = Filters.groupByReaderThreaderId(dets)
+    var dd = grps.map((grpTuple) => {
+        var grp = grpTuple[1]
+        grp = Filters.filterSiblings(grp)
+        //d = Filters.filterEditDistance(d, 0.95, true)
+        const ITCMACP = Filters.filterDistinctMemoryAddressCodePlace(grp)
+        if (ITCMACP.length <= 2) return null
+        grp = grp.sort((a, b) => a.serial - b.serial)
+        if (ITC_LIMIT > 0) grp = grp.slice(0, ITC_LIMIT)
+        //grp = Filters.filterBlacklist(grp, blacklist)
+        //if (Filters.filterCoveredGrpInteractive(grp, covered)) return null
+        return grp
+    })
+    dd = dd.filter(e => e != null)
+    var dets = [].concat.apply([], dd);
+
+    dets = Filters.filterDuplicateCommunication(dets)
+    // dets = Filters.filterSimilarCommunication(dets, [], 0.95)
+    return dets
+}
+
+function filterAndPrint(dets) {
+    // Can be used to speed things up. Filters the given detections and prints a new file which can be used as source.
+    var tags = [...new Set(dets.map(d => d.writer_task_tag))]
+    var taskSerials = [...new Set(dets.map(d => d.global_task_serial))]
+
+    var concatDets = []
+    for (var tag of tags) {
+        for (var ser of taskSerials) { //serials are a superset here but just returns an empty list that is not printed if serial does not exist for tag
+            var detsPerTag = dets.filter(d => d.writer_task_tag == tag && d.global_task_serial == ser)
+            detsPerTag = filtering(detsPerTag)
+            if (detsPerTag.length > 0) concatDets = concatDets.concat(detsPerTag)
+        }
+    }
+    Utils.downloadArrayToJSONRows(concatDets, "tracker_report_filtered.json")
 }
