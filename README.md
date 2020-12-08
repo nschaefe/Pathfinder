@@ -1,41 +1,17 @@
-The tool hooks into compiled java classes by inserting method calls to a central tracking framework on field/array accesses.  
-Classes of the java lib (e.g. java.util) are statically instrumented by rewriting the rt.jar.  
-Application specific and thirdparty classes are instrumented at runtime when these are loaded (using javaagent support).  
-At runtime, when the instrumented code is executed, inserted methods are invoked when a field/array is accessed.
-Field/array location information is passed along with these calls. In addtion, the tracking framework captures thread related information on each call.  
-Incoming data is correlated with tracked data to detect inter thread communication.  
-If thread A writes to a field or array and thread B reads from the same location and A!=B and A did the last write, an inter thread communication is reported.  
+Pathfinder aids a developer with instrumenting a software system for request context propagation such as needed for distributed tracing.
 
-Example (java.util.LinkedList.set):
+To realize tracing request context must be propagated alongside the request everywhere the request goes. Manually implementing context propagation involves identifying and implementing all thread exectution boundaries (e.g. propagating runnables to execution services). This can be challenging.
+Pathfinder helps to identify such thread execution boundaries by tracking inter-thread communication in program runs.
 
-```
-public E set(int index, E element) {
-        checkElementIndex(index);
-        Node<E> x = node(index);
-        E oldVal = x.item;
-        x.item = element;
-        return oldVal;
-}
-```
+Pathfinder rewrites Java classes to track memory accesses and reports inter-thread communication events. 
 
+An inter-thread communication event occurs at time t2 if following conditions hold:  
+Thread A writes to a memory address X at time t1.  
+Thread B reads from memory address X at time t2, with t1 < t2 and A != B.  
+There does not exist a point in time t3 where t1 < t3 <t2 and a write happens to memory address X.
 
-is rewritten to:
-
-```
-public E set(int index, E element) {
-        checkElementIndex(index);
-        Node<E> x = node(index);
-        AccessTracker.readObject(x, "java.util.LinkedList$Node.item");
-        E oldVal = x.item;
-        AccessTracker.writeObject(x, element, "java.util.LinkedList$Node.item");
-        x.item = element;
-        return oldVal;
-}
-```
-
-If thread A executes set(1,"value1") and thread B executes set(1,"value2") afterwards,
-thread B will read "value1" before writing "value2" what leads to a inter thread communication report.
-This is a toy example and demonstrates a rather uninteresting case. This inter thread communication is rather a side effect.
+If a inter-thread communcation event is detected, the stacktrace of the wirter and read thread are logged.
+Tracked data can be inspected with an additional investigation tool.
 
 ## Project Structure
 
@@ -56,6 +32,9 @@ Provides two ways of testing:
 * JUnit testing: The testing framework and test code is automatically instrumented by **agent** as javaagent.
 * Using a test client as external application that is instrumented by **agent** as javaagent. The maven pom contains several maven:exec calls for this.
 
+### visualization
+A tool to select, filter and visualize the tracked data.
+
 ### drill (deprecated)
 Provides 
 * A SQL query generator framework, to generate SQL queries for filtering and analysing the outputs of **tracker**. These SQL queries are inteded to be used for Apache-Drill. The supported syntax is used.
@@ -65,7 +44,7 @@ Provides
 * install the custom javassist version under ./lib 
 * mvn clean install
 
-This builds everything, instruments the rt.jar and runs the tests.
+This builds everything and instruments the shipped rt.jar.
 
 ## Installation
 To install the tool in an application, the instrumented rt.jar and the javaagent must be provided.
@@ -75,35 +54,26 @@ java -Xbootclasspath/p:/some/path/InstrumentationHelper/javaRT/rt_inst.jar:/some
 
 
 ## Getting Started
+Pathfinder provides an API to control what is tracked.
 The framework captures any write by threads that have a taskID. TaskIDs are not inherited to forked threads. Reads are captured independed of the taskID (so just all are captured).
-If there is a write and read to/from the same location by different threads, this is reported. 
+If there is a write and read to/from the same location by different threads this is reported. 
 
-**AccessTracker.startTask** starts a tracking scope for the current thread.\
-**AccessTracker.stopTask**  stops the tracking scope if there is any for the current thread.\
-**AccessTracker.hasTask**   returns true if there is an active tracking scope.\
-**AccessTracker.getTask**   returns the current tracking scope object if there is any, null otherwise.
+**AccessTracker.startTask** starts a tracking task for the current thread. Thereby gets a taskID\
+**AccessTracker.stopTask**  stops the task if there is any for the current thread. This removes the taskID.\
+**AccessTracker.hasTask**   returns true if there is an active tracking task.\
+**AccessTracker.getTask**   returns the current tracking task object if there is any, null otherwise.
    
-**AccessTracker.pauseTask** copies the thread local to somewhere else and removes the taskID in the thread local\
-**AccessTracker.resumeTask** brings the copied version back.
-There is a limited support for subsequent calls like pause() pause() resume() resume(). The taskID is only copied on the first pause() and brought back on the last resume().
+**AccessTracker.pauseTask**  pauses the tracking task and so temporarily removes the taskID from the thread\
+**AccessTracker.resumeTask** brings the paused tracking task back.
+There is a limited support for subsequent calls like pause() pause() resume() resume(). The task is only brought back on the last resume(). Intermediate resumes have no observable effects and caused writes are still not tracked.
 
-**AccessTracker.fork**      copies and returns the current tracking scope object to pass it over to another thread.\
+**AccessTracker.fork**      copies and returns the current tracking task object to pass it over to another thread.\
 **AccessTracker.join**      continues the given task. If there is already a task present, joins the given task into the existing one.\
 **AccessTracker.discard**   equivalent to stopTask.
 
-The instrumentation process with the InstrumentationHelper requires to successively track inter thread communications, traversing a thread dependency graph.
-We start with the thread A1 calling the API method "myAPIRequest" in the target system. If we want to know with which other threads this thread communicates, we enclose the method body with a tracking scope.
-We can compile the code and run the system such that the API method is executed. We shut the system down and look at the the outputs the tool produced (a file starting with tracker_report in the folder the system was started). We can do this by using the visualization (see Visualization chapter below) the tool provides.
-By looking at the outputs we figured out that the thread A1 communicated with another thread B1. From the shown stacktraces and corresponding code we derived that A1 iniated a Runnable in method "DoSomeConcurrentWork" that is executed by B1 that is part of a threadpool.
-This runnable contains work that belongs to the same request. We decide to propagate context here. We do not need to put actual calls to our tracing framework in the code, yet.
-We just mark this code place by extending the tracking scope. We fork and join the tracking scope object as shown in the method "doSomeConcurrentWork".
-We recompile the system and run it again such that the API request is executed again. Now we consider the outputs under tag "ConcurrentWorkRunnableExec".
-We continue doing this for all appearing thread relations until no relevant relations with other threads appear or when a all appearing relations were already covered.
-We strongly recommend to track in a request-bounded manner starting at the API end-point following the request along the thread dependecy graph through the system. This strongly improves performance.
-We do not support the instrumentation of inter-process execution boundaries. So if the tracking hits the network you wont see any inter thread communication recorded.
-Usually inter-process communication is exclusivly handled via a small set of RPC libraries (mostly just one). Currently only tracking per process is supported.
+In the following we present an example of the application of this API.
 
-```
+```java
 public void myAPIRequest(...){
     try {
       AccessTracker.startTask("ClientStartMyAPIRequest");
@@ -133,8 +103,16 @@ public doSomeConcurrentWork(){
   });
 }
 
-
 ```
+The code might be part of a server that processes requests.
+As part of processing a request that starts at "myAPIRequest" a thread pool is used in "doSomeConcurrentWork" to perform some work. 
+We can use Pathfinder here to detect the place where the Runnable is submitted to the thread pool and where we usually need to propagate request context.
+
+We place AccessTracker.startTask() at the beginning of the request and end the task at the end of the method. When we run the system under Pathfinder (run the server with the JVM options for installation), Pathfinder will detect several inter-thread communications between the thread that started the tracking task and the thread pool thread that performs the work.
+Those events will be logged to disk in a tracker report file that will be automatically generated in the folder where the server was started.
+We can investigate the tracked data with the visualization tool. 
+Now we know where this boundary is and so as a next step we can extend the tracking along the request path across this thread execution boundary by propagating the task over to the thread pool thread with AccessTracker.fork and AccessTracker.join.
+
 
 ### Filtering and Visualization
 
