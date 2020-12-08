@@ -19,7 +19,7 @@ public class AccessTracker {
     private static final int MAP_INIT_SIZE = 655360;
     public static volatile int MAX_EVENT_COUNT = 75;
 
-    public static volatile int MAX_TRACKING = 30;
+    public static volatile int MAX_TRACKING = 100;
 
     // REMARK: recursion at runtime and while classloading can lead to complicated deadlocks (more on voice record)
     // is used to break the recursion. Internally used classes also access fields and arrays which leads to recursion.
@@ -33,7 +33,7 @@ public class AccessTracker {
 
     private static volatile boolean readerEventLoggingEnabled = false;
     private static volatile boolean writerEventLoggingEnabled = false;
-    private static volatile boolean arrayCopyRedirectEnabled = false;
+    private static volatile boolean arrayCopyRedirectEnabled = true;
     private static volatile boolean autoTaskInheritance = false;
     private static volatile boolean allowCrossTraceTracking = true;
 
@@ -311,7 +311,7 @@ public class AccessTracker {
         // the results contain only about two entries out of >2000
         System.arraycopy(src, srcPos, dest, destPos, length);
         if (!arrayCopyRedirectEnabled) return;
-        if (!(src instanceof Object[])) return;
+        //if (!(src instanceof Object[])) return;
 
         if (!enabled) return;
         init();
@@ -321,8 +321,8 @@ public class AccessTracker {
         insideTracker.set(true);
         try {
             synchronized (AccessTracker.class) {
-                if (!Tasks.hasTask()) return;
-
+                if (!Tasks.hasTask()) return; // We actually have to place this one paragraph lower when we consider reads
+                // however it causes to much overhead to track all reads
                 Class sc = Object[].class;
                 int srcEnd = srcPos + length;
                 for (int i = srcPos; i < srcEnd; i++) readAccessInner(new ArrayFieldLocation(sc, src, i));
