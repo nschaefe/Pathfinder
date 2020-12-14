@@ -1,7 +1,7 @@
 Pathfinder aids a developer with instrumenting a software system for request context propagation such as needed for distributed tracing.
 
-To realize tracing request context must be propagated alongside the request everywhere the request goes. Manually implementing context propagation involves identifying and implementing all thread exectution boundaries (e.g. propagating runnables to execution services). This can be challenging.
-Pathfinder helps to identify such thread execution boundaries by tracking inter-thread communication in program runs.
+To realize distributed tracing, request context must be propagated alongside the request everywhere the request goes. Manually implementing context propagation involves identifying and implementing all thread exectution boundaries (e.g. propagating runnables to execution services). This can be challenging.
+Pathfinder helps to identify such thread execution boundaries by tracking inter-thread communication events in program runs.
 
 Pathfinder rewrites Java classes to track memory accesses and reports inter-thread communication events. 
 
