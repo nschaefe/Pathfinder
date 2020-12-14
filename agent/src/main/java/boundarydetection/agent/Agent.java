@@ -18,8 +18,8 @@ import java.util.function.Predicate;
 public class Agent implements ClassFileTransformer {
 
     //TODO to improve performance when classload heavy disable tracking on
-    //java.util.zip.ZipFile.releaseInflater
-    //and java.util.zip.ZipFile.getInflater which is heavily used at classloading time
+    // java.util.zip.ZipFile.releaseInflater
+    // and java.util.zip.ZipFile.getInflater which is heavily used at classloading time
 
     private static final String[] EXCLUDES = new String[]{
             // JAVA INTERNALS
@@ -53,11 +53,6 @@ public class Agent implements ClassFileTransformer {
 
             // APPLICATION PACKAGES BLACKLIST (HBase)
             "org.aspectj",
-            "org.jruby",
-            "jnr",
-            "org.apache.hbase.thirdparty.com.google.common.util.concurrent.Monitor", //TODO Stackmap in excpetion handler problem
-            "org.apache.hadoop.hbase.regionserver.HRegion", //TODO Stackmap in excpetion handler problem
-            "org.apache.zookeeper", //TODO there seems to be a caching/persistence mechanism that leads to persistece of instrumentation, only VM reset is possible then
             "org.apache.htrace", //built in tracing
 
             // APPLICATION PACKAGES BLACKLIST (JUnit)
@@ -69,23 +64,6 @@ public class Agent implements ClassFileTransformer {
             //TODO static instrumentation does not refer to this list here and might instrument a subset.
             "java"
     };
-
-
-    private static final String[] INCLUDES = new String[]{
-            "client/Client",
-            "java/util/ArrayDeque",
-            //"java/util/AbstractCollection",
-
-            "java/util/ArrayList",
-            "java/util/LinkedList",
-            //"java/util/AbstractList",
-            //"java/util/AbstractCollection",
-            "org/apache/hadoop/hbase",
-
-            "java/util/concurrent/ArrayBlockingQueue"};
-//            "java/util/concurrent/BlockingQueue",
-//            "java/util/AbstractQueue",
-//            "java/util/AbstractCollection"};
 
 
     private static final String HOOK_CLASS = "boundarydetection.tracker.AccessTracker";
@@ -151,6 +129,8 @@ public class Agent implements ClassFileTransformer {
 
     public void transformClass(CtClass ctCl) throws CannotCompileException, NotFoundException {
         if (ctCl.isInterface() || ctCl.isFrozen()) return;
+
+        //classMetrics(ctCl);
 
         ClassPool cp = getClassPool();
         if (logging_enabled) System.out.println("INST: " + ctCl.getName());
@@ -249,6 +229,15 @@ public class Agent implements ClassFileTransformer {
         });
     }
 
+    private static void classMetrics(CtClass ctCl) {
+        String clName = ctCl.getName();
+        CtField[] fields = ctCl.getDeclaredFields();
+        for (CtField field : fields) {
+            String fname = field.getName();
+            System.out.println("METRICS: " + clName + '.' + fname);
+        }
+    }
+
     private static Agent agentInstance = null;
     private static boolean entered = false; //for recursion breaking, lambdas that are accessed within the framework are ignored.
     //TODO verify that thread independent recursion breaking is enough, or thread local is needed
@@ -284,7 +273,7 @@ public class Agent implements ClassFileTransformer {
     }
 
     private static boolean dynamicallyTransform(String clName) {
-        return (true || isIncluded(clName)) && !isExcluded(clName) && !isStaticallyInstrumented(clName);
+        return !isExcluded(clName) && !isStaticallyInstrumented(clName);
     }
 
     //TODO can be optimized (binary search)
@@ -304,12 +293,5 @@ public class Agent implements ClassFileTransformer {
         return false;
     }
 
-    private static boolean isIncluded(String name) {
-        String nameDot = name.replace('/', '.');
-        for (int i = 0; i < INCLUDES.length; i++) {
-            if (nameDot.startsWith(INCLUDES[i])) return true;
-        }
-        return false;
-    }
 
 }
